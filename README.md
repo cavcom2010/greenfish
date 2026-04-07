@@ -229,12 +229,31 @@ tar -czf media_backup_$(date +%Y%m%d).tar.gz media/
 
 ---
 
+## 📂 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | For restaurant staff using the system |
+| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | For administrators configuring the platform |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment instructions |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Codebase structure and architecture |
+| [docs/MULTI_CLIENT_SETUP.md](docs/MULTI_CLIENT_SETUP.md) | **Using this for multiple clients** |
+
+## 🏢 Multi-Client Setup
+
+This codebase is designed to be deployed for multiple restaurants. Each client gets their own isolated instance with:
+- Separate Git repository
+- Separate database
+- Separate deployment
+- Custom branding via SiteSettings
+
+See [docs/MULTI_CLIENT_SETUP.md](docs/MULTI_CLIENT_SETUP.md) for the complete workflow.
+
 ## 📞 Support
 
 For technical support or customization:
 - Email: support@yourdomain.com
-- Documentation: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
-- Admin Guide: [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md)
+- Documentation: See links above
 
 ---
 

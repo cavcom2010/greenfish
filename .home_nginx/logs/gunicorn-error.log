@@ -2750,3 +2750,62 @@ AttributeError: 'SiteSettings' object has no attribute 'theme_color'
 [2026-04-07 14:33:15 +0100] [852101] [INFO] Booting worker with pid: 852101
 [2026-04-07 14:33:15 +0100] [852102] [INFO] Booting worker with pid: 852102
 [2026-04-07 14:33:15 +0100] [852088] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 15:15:50 +0100] [852102] [INFO] Worker exiting (pid: 852102)
+[2026-04-07 15:15:50 +0100] [852101] [INFO] Worker exiting (pid: 852101)
+[2026-04-07 15:15:50 +0100] [852100] [INFO] Worker exiting (pid: 852100)
+[2026-04-07 15:15:50 +0100] [852088] [INFO] Handling signal: term
+[2026-04-07 15:15:50 +0100] [852088] [INFO] Worker (pid:852100) was sent SIGTERM!
+[2026-04-07 15:15:50 +0100] [852088] [INFO] Worker (pid:852101) was sent SIGTERM!
+[2026-04-07 15:15:50 +0100] [852088] [INFO] Worker (pid:852102) was sent SIGTERM!
+[2026-04-07 15:15:50 +0100] [852088] [INFO] Shutting down: Master
+[2026-04-07 15:15:51 +0100] [869518] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 15:15:51 +0100] [869518] [INFO] Listening at: http://127.0.0.1:8026 (869518)
+[2026-04-07 15:15:51 +0100] [869518] [INFO] Using worker: sync
+[2026-04-07 15:15:51 +0100] [869528] [INFO] Booting worker with pid: 869528
+[2026-04-07 15:15:51 +0100] [869530] [INFO] Booting worker with pid: 869530
+[2026-04-07 15:15:51 +0100] [869531] [INFO] Booting worker with pid: 869531
+[2026-04-07 15:15:51 +0100] [869518] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 15:16:28 +0100] [869518] [INFO] Handling signal: term
+[2026-04-07 15:16:28 +0100] [869531] [INFO] Worker exiting (pid: 869531)
+[2026-04-07 15:16:28 +0100] [869530] [INFO] Worker exiting (pid: 869530)
+[2026-04-07 15:16:28 +0100] [869528] [INFO] Worker exiting (pid: 869528)
+[2026-04-07 15:16:28 +0100] [869518] [INFO] Worker (pid:869530) was sent SIGTERM!
+[2026-04-07 15:16:28 +0100] [869518] [INFO] Worker (pid:869531) was sent SIGTERM!
+[2026-04-07 15:16:28 +0100] [869518] [INFO] Shutting down: Master
+[2026-04-07 15:16:28 +0100] [869830] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 15:16:28 +0100] [869830] [INFO] Listening at: http://127.0.0.1:8026 (869830)
+[2026-04-07 15:16:28 +0100] [869830] [INFO] Using worker: sync
+[2026-04-07 15:16:28 +0100] [869842] [INFO] Booting worker with pid: 869842
+[2026-04-07 15:16:28 +0100] [869843] [INFO] Booting worker with pid: 869843
+[2026-04-07 15:16:28 +0100] [869844] [INFO] Booting worker with pid: 869844
+[2026-04-07 15:16:28 +0100] [869830] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 15:18:57 +0100] [869830] [INFO] Handling signal: term
+[2026-04-07 15:18:57 +0100] [869843] [INFO] Worker exiting (pid: 869843)
+[2026-04-07 15:18:57 +0100] [869844] [INFO] Worker exiting (pid: 869844)
+[2026-04-07 15:18:57 +0100] [869842] [INFO] Worker exiting (pid: 869842)
+[2026-04-07 15:18:57 +0100] [869830] [INFO] Worker (pid:869842) was sent SIGTERM!
+[2026-04-07 15:18:57 +0100] [869830] [INFO] Worker (pid:869843) was sent SIGTERM!
+[2026-04-07 15:18:57 +0100] [869830] [INFO] Worker (pid:869844) was sent SIGTERM!
+[2026-04-07 15:18:57 +0100] [869830] [INFO] Shutting down: Master
+[2026-04-07 15:18:58 +0100] [870820] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 15:18:58 +0100] [870820] [INFO] Listening at: http://127.0.0.1:8026 (870820)
+[2026-04-07 15:18:58 +0100] [870820] [INFO] Using worker: sync
+[2026-04-07 15:18:58 +0100] [870831] [INFO] Booting worker with pid: 870831
+[2026-04-07 15:18:58 +0100] [870832] [INFO] Booting worker with pid: 870832
+[2026-04-07 15:18:58 +0100] [870833] [INFO] Booting worker with pid: 870833
+[2026-04-07 15:18:58 +0100] [870820] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 15:20:01 +0100] [870820] [INFO] Handling signal: term
+[2026-04-07 15:20:01 +0100] [870833] [INFO] Worker exiting (pid: 870833)
+[2026-04-07 15:20:01 +0100] [870832] [INFO] Worker exiting (pid: 870832)
+[2026-04-07 15:20:01 +0100] [870831] [INFO] Worker exiting (pid: 870831)
+[2026-04-07 15:20:01 +0100] [870820] [INFO] Worker (pid:870831) was sent SIGTERM!
+[2026-04-07 15:20:01 +0100] [870820] [INFO] Worker (pid:870832) was sent SIGTERM!
+[2026-04-07 15:20:01 +0100] [870820] [INFO] Worker (pid:870833) was sent SIGTERM!
+[2026-04-07 15:20:01 +0100] [870820] [INFO] Shutting down: Master
+[2026-04-07 15:20:02 +0100] [871301] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 15:20:02 +0100] [871301] [INFO] Listening at: http://127.0.0.1:8026 (871301)
+[2026-04-07 15:20:02 +0100] [871301] [INFO] Using worker: sync
+[2026-04-07 15:20:02 +0100] [871311] [INFO] Booting worker with pid: 871311
+[2026-04-07 15:20:02 +0100] [871312] [INFO] Booting worker with pid: 871312
+[2026-04-07 15:20:02 +0100] [871314] [INFO] Booting worker with pid: 871314
+[2026-04-07 15:20:02 +0100] [871301] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
