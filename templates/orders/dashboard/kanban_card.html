@@ -1,0 +1,117 @@
+{% load duration_filters %}
+<div class="kanban-card status-{{ order.status }}" data-order-id="{{ order.id }}" data-created-at="{{ order.created_at|date:'c' }}">
+    {% if order.requested_pickup_time %}
+    <div class="pickup-indicator {% if order.minutes_elapsed > 15 %}urgent{% endif %}" title="Pickup time: {{ order.requested_pickup_time|time:'H:i' }}">
+        <i class="ph-fill ph-clock"></i>
+        <span class="pickup-time">{{ order.requested_pickup_time|time:"H:i" }}</span>
+    </div>
+    {% endif %}
+    
+    <div class="timer-indicator" data-created="{{ order.created_at|date:'c' }}">
+        <span class="elapsed-time">--:--</span>
+    </div>
+    
+    <div class="card-header">
+        <span class="order-number">#{{ order.order_number }}</span>
+        <span class="order-time">{{ order.created_at|time:"H:i" }}</span>
+    </div>
+    
+    <div class="card-customer">{{ order.customer_name|default:"Guest" }}</div>
+    <div class="card-phone">{{ order.customer_phone|default:"" }}</div>
+    
+    {% if order.special_instructions %}
+    <div class="card-notes">
+        <i class="ph-fill ph-warning"></i> {{ order.special_instructions|truncatechars:30 }}
+    </div>
+    {% endif %}
+    
+    <div class="card-items">
+        {% for item in order.items.all|slice:":3" %}
+        <div class="card-item">
+            <span>{{ item.quantity }}x {{ item.item_name|truncatechars:20 }}</span>
+            <span>£{{ item.line_total }}</span>
+        </div>
+        {% endfor %}
+        {% if order.items.count > 3 %}
+        <div class="card-item" style="color: var(--text-secondary);">
+            <span>+{{ order.items.count|add:"-3" }} more items</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-total">£{{ order.total_amount }}</div>
+    
+    <div class="card-actions">
+        {% if order.status == 'confirmed' or order.status == 'pending' %}
+        <button class="action-btn btn-prepare" onclick="moveOrder({{ order.id }}, 'preparing')">
+            <i class="ph-fill ph-fire"></i>
+            Start Cooking
+        </button>
+        {% elif order.status == 'preparing' %}
+        <button class="action-btn btn-ready" onclick="moveOrder({{ order.id }}, 'ready')">
+            <i class="ph-fill ph-check-circle"></i>
+            Mark Ready
+        </button>
+        {% elif order.status == 'ready' %}
+        <button class="action-btn btn-complete" onclick="moveOrder({{ order.id }}, 'completed')">
+            <i class="ph-fill ph-check"></i>
+            Complete
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.pickup-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--success);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.pickup-indicator.urgent {
+    background: #EF4444;
+    animation: pulse 2s infinite;
+}
+
+.timer-indicator {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--bg);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: monospace;
+    color: var(--text-secondary);
+}
+
+.timer-indicator.overdue {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.timer-indicator.warning {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.card-notes {
+    background: #FFF3E0;
+    color: #E65100;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+</style>

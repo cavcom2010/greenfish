@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Demo Checkout - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="{% url 'orders:checkout' %}" class="back-btn">
+        <i class="ph ph-arrow-left"></i>
+    </a>
+    <h1>Demo Payment</h1>
+</div>
+
+<div class="checkout-container" style="max-width: 480px; margin: 0 auto; padding: 20px;">
+    <!-- Demo Badge -->
+    <div style="background: #FFF3E0; border: 2px dashed #FF6B35; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 24px;">
+        <i class="ph ph-test-tube" style="font-size: 32px; color: #FF6B35; margin-bottom: 8px;"></i>
+        <h2 style="font-size: 18px; font-weight: 700; color: #E65100; margin-bottom: 4px;">DEMO MODE</h2>
+        <p style="font-size: 14px; color: #666; margin: 0;">No real payment will be charged</p>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="checkout-section" style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow);">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Order Summary</h3>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+            <span style="color: var(--text-secondary);">Order Number</span>
+            <span style="font-weight: 600;">{{ order.order_number }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+            <span style="color: var(--text-secondary);">Customer</span>
+            <span style="font-weight: 600;">{{ order.customer_name }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+            <span style="color: var(--text-secondary);">Items</span>
+            <span style="font-weight: 600;">{{ order.items.count }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 2px solid #eee;">
+            <span style="font-size: 18px; font-weight: 700;">Total</span>
+            <span style="font-size: 24px; font-weight: 800; color: var(--brand);">£{{ order.total_amount }}</span>
+        </div>
+    </div>
+
+    <!-- Payment Actions -->
+    <div class="checkout-section" style="background: white; border-radius: 16px; padding: 20px; box-shadow: var(--shadow);">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Simulate Payment</h3>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <button type="submit" name="action" value="pay" 
+                    style="width: 100%; padding: 16px; background: var(--brand); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(255,107,53,0.3);">
+                <i class="ph ph-check-circle" style="margin-right: 8px;"></i>
+                Simulate Successful Payment
+            </button>
+            
+            <button type="submit" name="action" value="cancel"
+                    style="width: 100%; padding: 16px; background: white; color: var(--text-secondary); border: 2px solid #ddd; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                <i class="ph ph-x-circle" style="margin-right: 8px;"></i>
+                Cancel Order
+            </button>
+        </form>
+    </div>
+
+    <!-- Note -->
+    <p style="text-align: center; font-size: 12px; color: #999; margin-top: 24px;">
+        <i class="ph ph-info" style="margin-right: 4px;"></i>
+        This is a demo checkout for testing purposes. No actual payment will be processed.
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+"""
+Accounts app - Authentication and user management.
+
+This app contains:
+- User model (authentication)
+- CustomerProfile (business logic)
+
+Note: User is kept here to maintain database compatibility.
+In a new project, User would be in 'authentication' app.
+"""
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+
+
+class UserManager(BaseUserManager):
+    """Custom user manager that uses email instead of username."""
+    
+    use_in_migrations = True
+    
+    def _create_user(self, email, password, **extra_fields):
+        """Create and save a user with the given email and password."""
+        if not email:
+            raise ValueError("Email must be set")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
+        return self._create_user(email, password, **extra_fields)
+    
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+        
+        return self._create_user(email, password, **extra_fields)
+
+
+class User(AbstractUser):
+    """
+    Custom user model using email as the unique identifier.
+    
+    Authentication-only fields here.
+    Business data (loyalty points, etc.) is in CustomerProfile.
+    """
+    
+    username = None
+    email = models.EmailField(unique=True, verbose_name="email address")
+    phone_number = models.CharField(max_length=30, blank=True)
+    is_email_verified = models.BooleanField(default=False)
+    
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["first_name", "last_name"]
+    
+    objects = UserManager()
+    
+    class Meta:
+        db_table = "accounts_user"
+        verbose_name = "User"
+        verbose_name_plural = "Users"
+    
+    def __str__(self):
+        return self.email
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip() or self.email
+
+
+class CustomerProfile(models.Model):
+    """
+    Extended profile for customers - business logic layer.
+    
+    This separates business data (loyalty, preferences) from
+    authentication data (in User model).
+    """
+    
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
+    
+    # Preferences & Business Data
+    favorite_items = models.ManyToManyField(
+        "menu.MenuItem",
+        blank=True,
+        related_name="favorited_by"
+    )
+    notifications_enabled = models.BooleanField(default=True)
+    marketing_consent = models.BooleanField(default=False)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = "accounts_customerprofile"
+        verbose_name = "Customer Profile"
+        verbose_name_plural = "Customer Profiles"
+    
+    def __str__(self):
+        return f"Profile for {self.user.email}"

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}{{ deal.name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<style>
+.builder-header {
+    background: linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%);
+    color: white;
+    padding: 1.5rem 1rem;
+    margin: -1rem -1rem 1rem -1rem;
+}
+.builder-header a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+.builder-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+.builder-header p {
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+.deal-summary {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    margin: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.deal-summary .price {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #FF6B35;
+}
+.deal-summary .savings {
+    color: #10B981;
+    font-weight: 600;
+}
+.deal-section {
+    background: white;
+    border-radius: 1rem;
+    margin: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.section-header {
+    background: #F9FAFB;
+    padding: 1rem;
+    border-bottom: 1px solid #E5E7EB;
+}
+.section-header h3 {
+    font-size: 1rem;
+    margin: 0;
+}
+.section-header span {
+    font-size: 0.8rem;
+    color: #6B7280;
+}
+.option-list {
+    padding: 0.5rem;
+}
+.option-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.option-item:hover {
+    background: #F9FAFB;
+}
+.option-item input[type="radio"] {
+    margin-right: 0.75rem;
+}
+.option-info {
+    flex: 1;
+}
+.option-info h4 {
+    font-size: 0.95rem;
+    margin-bottom: 0.125rem;
+}
+.option-info p {
+    font-size: 0.8rem;
+    color: #6B7280;
+    margin: 0;
+}
+.option-price {
+    font-weight: 600;
+    color: #FF6B35;
+}
+.option-price.included {
+    color: #10B981;
+}
+.builder-footer {
+    position: fixed;
+    bottom: calc(70px + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #E5E7EB;
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+.btn-add {
+    flex: 1;
+    background: #FF6B35;
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 2rem;
+    font-weight: 700;
+    font-size: 1rem;
+}
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #F3F4F6;
+    border-radius: 2rem;
+    padding: 0.5rem;
+}
+.quantity-selector button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: white;
+    font-weight: 700;
+    cursor: pointer;
+}
+.quantity-selector span {
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+}
+</style>
+
+<div class="builder-header">
+    <a href="{% url 'mealdeals:list' %}"><i class="fas fa-arrow-left"></i></a>
+    <h1>{{ deal.name }}</h1>
+    <p>{{ deal.description }}</p>
+</div>
+
+<div class="deal-summary">
+    <div class="price">£{{ deal.deal_price }}</div>
+    <div class="savings">Save £{{ deal.savings }} ({{ deal.savings_percent }}% off)</div>
+</div>
+
+<form method="post" action="{% url 'orders:add_to_cart' %}">
+    {% csrf_token %}
+    <input type="hidden" name="deal_id" value="{{ deal.id }}">
+    
+    {% for item in deal.items.all %}
+    <div class="deal-section">
+        <div class="section-header">
+            <h3><i class="fas fa-check-circle" style="color: #FF6B35;"></i> {{ item.name }}</h3>
+            <span>Choose {{ item.min_quantity }}{% if item.max_quantity > item.min_quantity %}-{{ item.max_quantity }}{% endif %}</span>
+        </div>
+        <div class="option-list">
+            {% for option in item.options.all %}
+            {% if option.is_available %}
+            <label class="option-item">
+                <input type="radio" name="item_{{ item.id }}" value="{{ option.menu_item.id }}" 
+                       {% if forloop.first %}checked{% endif %}>
+                <div class="option-info">
+                    <h4>{{ option.menu_item.name }}</h4>
+                    <p>{{ option.menu_item.description|truncatewords:10 }}</p>
+                </div>
+                <div class="option-price {% if option.upgrade_price == 0 %}included{% endif %}">
+                    {% if option.upgrade_price > 0 %}
+                        +£{{ option.upgrade_price }}
+                    {% else %}
+                        Included
+                    {% endif %}
+                </div>
+            </label>
+            {% endif %}
+            {% empty %}
+            <p style="padding: 1rem; color: #6B7280; text-align: center;">No options available</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    <div style="height: 100px;"></div>
+    
+    <div class="builder-footer">
+        <div class="quantity-selector">
+            <button type="button" onclick="this.nextElementSibling.value--;">-</button>
+            <span>1</span>
+            <input type="hidden" name="quantity" value="1">
+            <button type="button" onclick="this.previousElementSibling.previousElementSibling.value++;">+</button>
+        </div>
+        <button type="submit" class="btn-add">
+            Add to Cart - £{{ deal.deal_price }}
+        </button>
+    </div>
+</form>
+
+{% endblock %}

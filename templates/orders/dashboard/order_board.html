@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Order Board - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Order Board{% endblock %}
+
+{% block header %}
+<div class="status-bar" style="background: var(--text); color: white;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 style="color: white;">Order Board</h1>
+        <div style="display: flex; gap: 16px; font-size: 14px;">
+            <span style="background: var(--brand); padding: 4px 12px; border-radius: 12px;">
+                Confirmed: {{ confirmed_count }}
+            </span>
+            <span style="background: #F59E0B; padding: 4px 12px; border-radius: 12px;">
+                Preparing: {{ preparing_count }}
+            </span>
+            <span style="background: var(--success); padding: 4px 12px; border-radius: 12px;">
+                Ready: {{ ready_count }}
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<style>
+    .order-board {
+        padding: 16px;
+        padding-bottom: 100px;
+    }
+    
+    .status-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        overflow-x: auto;
+    }
+    
+    .status-tab {
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: white;
+        white-space: nowrap;
+    }
+    
+    .status-tab.active {
+        background: var(--brand);
+        color: white;
+        border-color: var(--brand);
+    }
+    
+    .order-card {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow);
+        border-left: 4px solid var(--brand);
+    }
+    
+    .order-card.status-confirmed { border-left-color: #F59E0B; }
+    .order-card.status-preparing { border-left-color: #3B82F6; }
+    .order-card.status-ready { border-left-color: var(--success); }
+    
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    
+    .order-number {
+        font-size: 18px;
+        font-weight: 800;
+    }
+    
+    .order-time {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    .order-customer {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .order-phone {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+    
+    .order-items {
+        background: var(--bg);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    
+    .order-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+    
+    .order-total {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--brand);
+        margin-bottom: 12px;
+    }
+    
+    .order-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .action-btn {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+    
+    .action-btn:hover {
+        opacity: 0.9;
+    }
+    
+    .btn-confirm {
+        background: #F59E0B;
+        color: white;
+    }
+    
+    .btn-preparing {
+        background: #3B82F6;
+        color: white;
+    }
+    
+    .btn-ready {
+        background: var(--success);
+        color: white;
+    }
+    
+    .btn-complete {
+        background: var(--text);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    /* Sound notification indicator */
+    .sound-toggle {
+        position: fixed;
+        bottom: calc(100px + var(--safe-bottom));
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+        z-index: 100;
+        font-size: 24px;
+    }
+    
+    .sound-toggle.muted {
+        color: var(--text-muted);
+    }
+    
+    .sound-toggle:not(.muted) {
+        color: var(--brand);
+    }
+</style>
+
+<div class="order-board">
+    <!-- Status Tabs -->
+    <div class="status-tabs">
+        <button class="status-tab active" onclick="filterOrders('all')">All Active</button>
+        <button class="status-tab" onclick="filterOrders('confirmed')">Confirmed</button>
+        <button class="status-tab" onclick="filterOrders('preparing')">Preparing</button>
+        <button class="status-tab" onclick="filterOrders('ready')">Ready</button>
+    </div>
+    
+    <!-- Orders Container -->
+    <div id="ordersContainer" hx-get="{% url 'orders:order_list_fragment' %}" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <div style="text-align: center; padding: 40px;">
+            <i class="ph ph-spinner animate-spin" style="font-size: 32px; color: var(--brand);"></i>
+            <p style="margin-top: 16px; color: var(--text-secondary);">Loading orders...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Sound Toggle -->
+<button class="sound-toggle" id="soundToggle" onclick="toggleSound()">
+    <i class="ph-fill ph-speaker-high" id="soundIcon"></i>
+</button>
+
+<!-- Audio for notifications -->
+<audio id="newOrderSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-back-2575.mp3" type="audio/mpeg">
+</audio>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let soundEnabled = true;
+let previousOrderCount = 0;
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundToggle');
+    const icon = document.getElementById('soundIcon');
+    
+    if (soundEnabled) {
+        btn.classList.remove('muted');
+        icon.classList.remove('ph-speaker-slash');
+        icon.classList.add('ph-speaker-high');
+    } else {
+        btn.classList.add('muted');
+        icon.classList.remove('ph-speaker-high');
+        icon.classList.add('ph-speaker-slash');
+    }
+}
+
+function filterOrders(status) {
+    // Update active tab
+    document.querySelectorAll('.status-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Update HTMX request with filter
+    const container = document.getElementById('ordersContainer');
+    const url = status === 'all' 
+        ? '{% url "orders:order_list_fragment" %}' 
+        : '{% url "orders:order_list_fragment" %}?status=' + status;
+    
+    container.setAttribute('hx-get', url);
+    htmx.trigger(container, 'load');
+}
+
+function updateOrderStatus(orderId, newStatus) {
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`/orders/dashboard/orders/${orderId}/update/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(() => {
+        // Refresh orders
+        htmx.trigger('#ordersContainer', 'load');
+    });
+}
+
+// Play sound on new orders
+document.addEventListener('htmx:afterSwap', (evt) => {
+    if (evt.detail.target.id === 'ordersContainer') {
+        const orderCards = evt.detail.target.querySelectorAll('.order-card');
+        const currentCount = orderCards.length;
+        
+        if (currentCount > previousOrderCount && previousOrderCount > 0 && soundEnabled) {
+            const audio = document.getElementById('newOrderSound');
+            audio.play().catch(() => {});
+        }
+        
+        previousOrderCount = currentCount;
+    }
+});
+
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+</script>
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Offline - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Offline{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<div class="page-content" style="text-align: center; padding: 60px 20px;">
+    <div style="width: 100px; height: 100px; background: var(--brand-light); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+        <i class="ph-fill ph-wifi-slash" style="font-size: 48px; color: var(--brand);"></i>
+    </div>
+    
+    <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px;">You're offline</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 32px;">
+        Don't worry! You can still browse the menu. Your order will be sent when you're back online.
+    </p>
+    
+    <a href="{% url 'menu:menu' %}" class="btn btn-brand" style="display: inline-block; margin-bottom: 12px;">
+        Browse Menu
+    </a>
+    
+    <button onclick="window.location.reload()" class="btn btn-secondary" style="display: block; width: 100%;">
+        Try Again
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-reload when back online
+window.addEventListener('online', () => {
+    window.location.reload();
+});
+</script>
+{% endblock %}

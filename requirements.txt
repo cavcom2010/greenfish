@@ -1,0 +1,27 @@
+Django>=6.0,<7.0
+Pillow>=10.0
+gunicorn>=21.2
+python-decouple>=3.8
+dj-database-url>=2.2
+psycopg[binary]>=3.1
+
+# API and Frontend
+djangorestframework>=3.14
+django-htmx>=1.17
+django-allauth>=0.60
+
+# Mollie Payments
+mollie-api-python>=2.15
+
+# Utilities
+django-extensions>=3.2
+requests>=2.31
+python-dateutil>=2.8
+
+# Celery for async tasks (optional but recommended)
+celery>=5.3
+redis>=5.0
+
+# SSL Certificate Automation (DigitalOcean deployment)
+certbot>=2.8.0
+certbot-nginx>=2.8.0

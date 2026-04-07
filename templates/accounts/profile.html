@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}My Account - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Account{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<div class="account-page">
+    {% if request.user.is_authenticated %}
+    <!-- Logged In -->
+    <div class="account-avatar">
+        <i class="ph-fill ph-user"></i>
+    </div>
+    
+    <h2>{{ request.user.full_name }}</h2>
+    <p>{{ request.user.email }}</p>
+    
+    <!-- Edit Profile Form -->
+    <form method="post" style="text-align: left; margin-top: 24px;">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input type="text" name="first_name" class="form-input" value="{{ request.user.first_name }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input type="text" name="last_name" class="form-input" value="{{ request.user.last_name }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" name="phone_number" class="form-input" value="{{ request.user.phone_number }}">
+        </div>
+        
+        <button type="submit" class="btn btn-brand">Save Changes</button>
+    </form>
+    
+    <!-- Quick Links -->
+    <div style="margin-top: 32px; text-align: left;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; padding: 0 4px;">Quick Links</h3>
+        
+        <a href="{% url 'accounts:order_history' %}" class="list-item" style="margin-bottom: 8px;">
+            <i class="ph ph-receipt" style="font-size: 24px; margin-right: 16px; color: var(--brand);"></i>
+            <div class="list-content">
+                <div class="list-title">Order History</div>
+                <div class="list-desc">View your past orders</div>
+            </div>
+            <i class="ph-bold ph-caret-right list-arrow"></i>
+        </a>
+        
+        <a href="{% url 'menu:menu' %}" class="list-item" style="margin-bottom: 8px;">
+            <i class="ph ph-french-fries" style="font-size: 24px; margin-right: 16px; color: var(--brand);"></i>
+            <div class="list-content">
+                <div class="list-title">Browse Menu</div>
+                <div class="list-desc">Order your favourites</div>
+            </div>
+            <i class="ph-bold ph-caret-right list-arrow"></i>
+        </a>
+    </div>
+    
+    <!-- Logout -->
+    <form method="post" action="{% url 'account_logout' %}" style="margin-top: 32px;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary" style="color: var(--error);">
+            <i class="ph ph-sign-out" style="margin-right: 8px;"></i>
+            Sign Out
+        </button>
+    </form>
+    
+    {% else %}
+    <!-- Guest User -->
+    <div class="account-avatar">
+        <i class="ph-fill ph-user"></i>
+    </div>
+    
+    <h2>Guest User</h2>
+    <p>Sign in to save orders and earn rewards</p>
+    
+    <a href="{% url 'account_login' %}" class="btn btn-primary">Sign In</a>
+    <a href="{% url 'account_signup' %}" class="btn btn-secondary">Create Account</a>
+    
+    <!-- Continue as Guest -->
+    <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border);">
+        <a href="{% url 'menu:menu' %}" class="btn btn-brand">
+            Continue as Guest
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

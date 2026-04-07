@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Menu - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Menu{% endblock %}
+
+{% block content %}
+<!-- Categories -->
+<div class="categories">
+    <a href="{% url 'menu:menu' %}" class="category-pill {% if not active_category %}active{% endif %}">All</a>
+    {% for category in categories %}
+    <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-pill {% if active_category == category %}active{% endif %}">{{ category.name }}</a>
+    {% endfor %}
+</div>
+
+<!-- Menu Grid -->
+<h2 class="section-title">{{ active_category.name|default:"All Items" }}</h2>
+<div class="menu-grid">
+    {% for item in items %}
+    <div class="food-card" onclick="openItemModal({{ item.id }})">
+        <div class="food-image">
+            {% if item.image %}
+            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+            {% else %}
+            <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
+            {% endif %}
+        </div>
+        <div class="food-name">{{ item.name }}</div>
+        <div class="food-price">£{{ item.price }}</div>
+        {% if item.dietary_tags %}
+        <div style="font-size: 11px; color: var(--success); margin-top: 4px;">
+            {{ item.dietary_tags_display }}
+        </div>
+        {% endif %}
+        <button class="add-btn" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})">
+            <i class="ph-bold ph-plus"></i>
+        </button>
+    </div>
+    {% empty %}
+    <p style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">
+        No items available in this category.
+    </p>
+    {% endfor %}
+</div>
+
+<div style="height: 100px;"></div>
+
+<!-- Item Modal -->
+<div id="itemModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: flex-end;" onclick="closeItemModal(event)">
+    <div style="background: white; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; width: 100%; max-width: 430px; margin: 0 auto; animation: slideUp 0.3s ease;" onclick="event.stopPropagation()">
+        <div id="modalContent">
+            <div style="text-align: center; padding: 40px;">
+                <i class="ph ph-spinner animate-spin" style="font-size: 32px; color: var(--brand);"></i>
+                <p style="margin-top: 16px; color: var(--text-secondary);">Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function quickAddToCart(itemId) {
+    fetch('{% url "orders:add_to_cart" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `menu_item_id=${itemId}&quantity=1&modifiers=[]`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (navigator.vibrate) navigator.vibrate(50);
+            window.location.reload();
+        }
+    });
+}
+
+function openItemModal(itemId) {
+    const modal = document.getElementById('itemModal');
+    const content = document.getElementById('modalContent');
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    fetch(`/menu/item/${itemId}/`, {
+        headers: {
+            'HX-Request': 'true'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        content.innerHTML = html;
+    })
+    .catch(() => {
+        content.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <i class="ph ph-warning-circle" style="font-size: 48px; color: var(--error);"></i>
+                <p style="margin-top: 16px;">Error loading item. Please try again.</p>
+                <button onclick="closeItemModal({target: {id: 'itemModal'}})" class="btn btn-brand mt-4">Close</button>
+            </div>
+        `;
+    });
+}
+
+function closeItemModal(event) {
+    if (event.target.id === 'itemModal') {
+        document.getElementById('itemModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// Close on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeItemModal({target: {id: 'itemModal'}});
+    }
+});
+</script>
+{% endblock %}

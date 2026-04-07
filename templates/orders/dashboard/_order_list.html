@@ -1,0 +1,50 @@
+{% for order in orders %}
+<div class="order-card status-{{ order.status }}">
+    <div class="order-header">
+        <span class="order-number">#{{ order.order_number }}</span>
+        <span class="order-time">{{ order.created_at|time:"H:i" }}</span>
+    </div>
+    
+    <div class="order-customer">{{ order.customer_name }}</div>
+    <div class="order-phone">{{ order.customer_phone }}</div>
+    
+    <div class="order-items">
+        {% for item in order.items.all %}
+        <div class="order-item">
+            <span>{{ item.quantity }}x {{ item.item_name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="order-total">£{{ order.total_amount }}</div>
+    
+    <div class="order-actions">
+        {% if order.status == 'confirmed' %}
+        <button class="action-btn btn-preparing" onclick="updateOrderStatus({{ order.id }}, 'preparing')">
+            Start Preparing
+        </button>
+        {% elif order.status == 'preparing' %}
+        <button class="action-btn btn-ready" onclick="updateOrderStatus({{ order.id }}, 'ready')">
+            Ready
+        </button>
+        {% elif order.status == 'ready' %}
+        <button class="action-btn btn-complete" onclick="updateOrderStatus({{ order.id }}, 'completed')">
+            Complete
+        </button>
+        {% endif %}
+    </div>
+    
+    {% if order.special_instructions %}
+    <div style="margin-top: 12px; padding: 8px 12px; background: var(--error-bg); border-radius: 8px; font-size: 13px; color: var(--error);">
+        <i class="ph-fill ph-warning-circle"></i>
+        {{ order.special_instructions }}
+    </div>
+    {% endif %}
+</div>
+{% empty %}
+<div class="empty-state">
+    <i class="ph ph-check-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
+    <h3>No active orders</h3>
+    <p>New orders will appear here automatically</p>
+</div>
+{% endfor %}

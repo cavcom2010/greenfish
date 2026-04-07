@@ -1,0 +1,157 @@
+{% load static %}
+
+<div style="position: relative;" data-item-id="{{ item.id }}" data-base-price="{{ item.price }}">
+    <!-- Close button -->
+    <button onclick="closeItemModal({target: {id: 'itemModal'}})" style="position: absolute; top: -8px; right: -8px; width: 32px; height: 32px; border: none; background: var(--bg); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+        <i class="ph ph-x"></i>
+    </button>
+    
+    <!-- Item Image -->
+    <div style="width: 100%; height: 200px; background: var(--bg); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; overflow: hidden;">
+        {% if item.image %}
+        <img src="{{ item.image.url }}" alt="{{ item.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+        {% else %}
+        <span style="font-size: 80px;">{{ item.category.icon|default:"🍽️" }}</span>
+        {% endif %}
+    </div>
+    
+    <!-- Item Info -->
+    <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">{{ item.name }}</h2>
+    <p style="color: var(--text-secondary); font-size: 15px; margin-bottom: 16px;">{{ item.description }}</p>
+    
+    <!-- Dietary Tags -->
+    {% if item.dietary_tags %}
+    <div style="margin-bottom: 16px;">
+        {% for tag in item.dietary_tags %}
+        <span style="display: inline-block; background: var(--success-bg); color: var(--success); padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-right: 8px; margin-bottom: 4px;">
+            {{ tag }}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Preparation Time -->
+    <div style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+        <i class="ph ph-clock"></i>
+        <span>{{ item.preparation_time }} mins prep time</span>
+    </div>
+    
+    <!-- Nutritional Info -->
+    {% if item.calories or item.protein or item.carbs or item.fat %}
+    <div style="background: #F8FAFC; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <i class="ph ph-chart-bar" style="color: var(--brand);"></i>
+            <span style="font-weight: 600; font-size: 14px;">Nutritional Info (per serving)</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
+            {% if item.calories %}
+            <div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.calories }}</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">kcal</div>
+            </div>
+            {% endif %}
+            {% if item.protein %}
+            <div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.protein }}g</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">protein</div>
+            </div>
+            {% endif %}
+            {% if item.carbs %}
+            <div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.carbs }}g</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">carbs</div>
+            </div>
+            {% endif %}
+            {% if item.fat %}
+            <div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.fat }}g</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">fat</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if item.salt %}
+        <div style="text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #E2E8F0;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Salt: {{ item.salt }}g</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Allergens -->
+    {% if item.allergens %}
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px; background: #FEF3C7; border-radius: 8px;">
+        <i class="ph ph-warning" style="color: #D97706;"></i>
+        <span style="font-size: 13px; color: #92400E;">
+            <strong>Allergens:</strong> {{ item.allergens|join:", " }}
+        </span>
+    </div>
+    {% endif %}
+    
+    <!-- Customers Also Ordered -->
+    {% if recommendations %}
+    <div style="margin-bottom: 20px;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">
+            <i class="ph ph-users" style="color: var(--brand);"></i> Customers also ordered
+        </h3>
+        <div style="display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+            {% for rec in recommendations %}
+            <div onclick="openItemModal({{ rec.id }})" 
+                 style="flex-shrink: 0; width: 120px; background: var(--bg); border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;"
+                 onmouseover="this.style.borderColor='var(--brand)'" 
+                 onmouseout="this.style.borderColor='transparent'">
+                <div style="width: 60px; height: 60px; background: white; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                    {% if rec.image %}
+                    <img src="{{ rec.image.url }}" alt="{{ rec.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    {% else %}
+                    {{ rec.category.icon|default:"🍽️" }}
+                    {% endif %}
+                </div>
+                <div style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ rec.name }}</div>
+                <div style="font-size: 13px; font-weight: 700; color: var(--brand);">£{{ rec.price }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Add-ons Section (Always Visible for Consistency) -->
+    <div style="margin-bottom: 20px;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Add-ons</h3>
+        {% if item.modifiers.exists %}
+            {% for modifier in item.modifiers.all %}
+            <label class="modifier-option" style="display: flex; align-items: center; padding: 12px; background: var(--bg); border-radius: 12px; margin-bottom: 8px; cursor: pointer;">
+                <input type="checkbox" class="modifier-checkbox" value="{{ modifier.id }}" data-name="{{ modifier.name }}" data-price="{{ modifier.price_adjustment }}" style="margin-right: 12px; width: 20px; height: 20px; accent-color: var(--brand);">
+                <span style="flex: 1;">{{ modifier.name }}</span>
+                {% if modifier.price_adjustment > 0 %}
+                <span class="modifier-price" style="font-weight: 600; color: var(--brand);">+£{{ modifier.price_adjustment }}</span>
+                {% endif %}
+            </label>
+            {% endfor %}
+        {% else %}
+            <div style="padding: 16px; background: var(--bg); border-radius: 12px; color: var(--text-secondary); text-align: center; font-size: 14px;">
+                No add-ons available for this item
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Quantity -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <span style="font-weight: 600;">Quantity</span>
+        <div style="display: flex; align-items: center; gap: 16px; background: var(--bg); padding: 8px 16px; border-radius: 24px;">
+            <button class="qty-btn" data-change="-1" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">-</button>
+            <span id="modal-quantity" style="font-weight: 700; min-width: 24px; text-align: center;">1</span>
+            <button class="qty-btn" data-change="1" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">+</button>
+        </div>
+    </div>
+    
+    <!-- Add to Cart Button -->
+    <button id="modal-add-btn" data-item-id="{{ item.id }}" data-base-price="{{ item.price }}"
+            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: var(--brand); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(255,107,53,0.3); transition: transform 0.2s, box-shadow 0.2s;"
+            onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 6px 16px rgba(255,107,53,0.4)'"
+            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255,107,53,0.3)'"
+            onmousedown="this.style.transform='scale(0.98)'"
+            onmouseup="this.style.transform='scale(1.02)'">
+        <span>Add to Basket</span>
+        <span id="modal-total-price" style="font-weight: 800;">£{{ item.price }}</span>
+    </button>
+</div>

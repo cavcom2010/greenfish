@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <form method="post" action="{% url 'payments:create' %}" id="checkoutForm">
+        {% csrf_token %}
+        
+        <!-- Customer Details -->
+        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Your Details</h3>
+            
+            <div class="form-group">
+                <label class="form-label">Full Name *</label>
+                <input type="text" name="customer_name" class="form-input" required 
+                       value="{{ request.user.full_name|default:'' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Phone Number *</label>
+                <input type="tel" name="customer_phone" class="form-input" required
+                       value="{{ request.user.phone_number|default:'' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email (optional)</label>
+                <input type="email" name="customer_email" class="form-input"
+                       value="{{ request.user.email|default:'' }}">
+            </div>
+        </div>
+        
+        <!-- Order Summary -->
+        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Order Summary</h3>
+            
+            {% for item in cart_items %}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                <div>
+                    <span style="font-weight: 600;">{{ item.name }}</span>
+                    {% if item.modifiers %}
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                        {% for mod in item.modifiers %}+ {{ mod.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                    <div style="font-size: 13px; color: var(--text-secondary);">x{{ item.quantity }}</div>
+                </div>
+                <span style="font-weight: 600;">£{{ item.line_total|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+            
+            <!-- Voucher Code -->
+            <div style="margin: 16px 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Voucher Code</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="voucher_code_input" class="form-input" placeholder="Enter code" 
+                           value="{{ voucher_code }}" style="flex: 1; text-transform: uppercase;">
+                    <button type="button" onclick="applyVoucher()" class="btn btn-secondary" style="width: auto; padding: 14px 20px; margin: 0;">
+                        Apply
+                    </button>
+                </div>
+                {% if voucher_error %}
+                <p style="color: var(--error); font-size: 13px; margin-top: 8px;">{{ voucher_error }}</p>
+                {% endif %}
+                {% if discount > 0 %}
+                <p style="color: var(--success); font-size: 13px; margin-top: 8px;">Discount applied: -£{{ discount|floatformat:2 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Totals -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-secondary);">Subtotal</span>
+                <span>£{{ subtotal|floatformat:2 }}</span>
+            </div>
+            {% if discount > 0 %}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--success);">
+                <span>Discount</span>
+                <span>-£{{ discount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--border);">
+                <span>Total</span>
+                <span>£{{ total|floatformat:2 }}</span>
+            </div>
+        </div>
+        
+        <!-- Pickup Time -->
+        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
+                <i class="ph ph-clock" style="color: var(--brand);"></i> Pickup Time
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">When would you like to collect your order?</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                <label style="padding: 14px; border: 2px solid var(--brand); border-radius: 12px; cursor: pointer; background: rgba(255,107,53,0.05); text-align: center;">
+                    <input type="radio" name="pickup_time" value="15" checked style="display: none;">
+                    <div style="font-weight: 700; color: var(--brand);">ASAP</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">~15 mins</div>
+                </label>
+                
+                <label style="padding: 14px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; text-align: center;">
+                    <input type="radio" name="pickup_time" value="30" style="display: none;">
+                    <div style="font-weight: 600;">In 30 mins</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">~30 mins</div>
+                </label>
+                
+                <label style="padding: 14px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; text-align: center;">
+                    <input type="radio" name="pickup_time" value="45" style="display: none;">
+                    <div style="font-weight: 600;">In 45 mins</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">~45 mins</div>
+                </label>
+                
+                <label style="padding: 14px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; text-align: center;">
+                    <input type="radio" name="pickup_time" value="60" style="display: none;">
+                    <div style="font-weight: 600;">In 1 hour</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">~60 mins</div>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Special Instructions -->
+        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Special Instructions</h3>
+            <textarea name="special_instructions" class="form-input" rows="3" placeholder="Any allergies or special requests?"></textarea>
+        </div>
+        
+        <!-- Payment Method -->
+        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Payment Method</h3>
+            
+            <label style="display: flex; align-items: center; padding: 16px; border: 2px solid var(--brand); border-radius: 12px; margin-bottom: 12px; cursor: pointer; background: rgba(255,107,53,0.05);">
+                <input type="radio" name="payment_method" value="online" checked style="margin-right: 12px; width: 20px; height: 20px; accent-color: var(--brand);">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">
+                        <i class="ph ph-credit-card" style="margin-right: 8px; color: var(--brand);"></i>
+                        Pay Online
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Secure card payment now</div>
+                </div>
+            </label>
+            
+            <label style="display: flex; align-items: center; padding: 16px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer;">
+                <input type="radio" name="payment_method" value="instore" style="margin-right: 12px; width: 20px; height: 20px; accent-color: var(--brand);">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">
+                        <i class="ph ph-storefront" style="margin-right: 8px; color: var(--brand);"></i>
+                        Pay in Store
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Pay when you collect with order number</div>
+                </div>
+            </label>
+        </div>
+        
+        <!-- Submit Button -->
+        <button type="submit" id="submitBtn" class="btn btn-brand" style="width: 100%; margin-bottom: 12px;">
+            <span id="btnText">Pay £{{ total|floatformat:2 }}</span>
+        </button>
+        
+        <p id="paymentNote" style="text-align: center; font-size: 13px; color: var(--text-secondary);">
+            <i class="ph ph-lock-key" style="vertical-align: middle;"></i>
+            Secure payment powered by Mollie
+        </p>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyVoucher() {
+    const code = document.querySelector('input[name="voucher_code_input"]').value;
+    
+    fetch('{% url "orders:apply_voucher" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `code=${encodeURIComponent(code)}`
+    })
+    .then(response => response.text())
+    .then(() => {
+        window.location.reload();
+    });
+}
+
+// Pickup time selection
+document.querySelectorAll('input[name="pickup_time"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('input[name="pickup_time"]').forEach(r => {
+            r.closest('label').style.borderColor = 'var(--border)';
+            r.closest('label').style.background = 'transparent';
+            r.closest('label').querySelector('div').style.color = 'var(--text-primary)';
+        });
+        this.closest('label').style.borderColor = 'var(--brand)';
+        this.closest('label').style.background = 'rgba(255,107,53,0.05)';
+        this.closest('label').querySelector('div').style.color = 'var(--brand)';
+    });
+});
+
+// Payment method toggle
+const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
+const submitBtn = document.getElementById('submitBtn');
+const btnText = document.getElementById('btnText');
+const paymentNote = document.getElementById('paymentNote');
+const checkoutForm = document.getElementById('checkoutForm');
+
+paymentRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+        // Update styling
+        document.querySelectorAll('input[name="payment_method"]').forEach(r => {
+            r.closest('label').style.borderColor = 'var(--border)';
+            r.closest('label').style.background = 'transparent';
+        });
+        this.closest('label').style.borderColor = 'var(--brand)';
+        this.closest('label').style.background = 'rgba(255,107,53,0.05)';
+        
+        if (this.value === 'online') {
+            btnText.textContent = 'Pay £{{ total|floatformat:2 }}';
+            paymentNote.innerHTML = '<i class="ph ph-lock-key" style="vertical-align: middle;"></i> Secure payment powered by Mollie';
+            checkoutForm.action = '{% url "payments:create" %}';
+        } else {
+            btnText.textContent = 'Place Order (Pay in Store)';
+            paymentNote.innerHTML = '<i class="ph ph-storefront" style="vertical-align: middle;"></i> Your order number will be shown after placing order';
+            checkoutForm.action = '{% url "orders:pay_instore" %}';
+        }
+    });
+});
+
+// Phone validation
+document.querySelector('input[name="customer_phone"]').addEventListener('blur', function() {
+    const phone = this.value.replace(/\s/g, '');
+    const ukRegex = /^(07\d{9}|\+447\d{9})$/;
+    if (phone && !ukRegex.test(phone)) {
+        this.style.borderColor = 'var(--error)';
+        // Remove existing error message
+        const existingError = this.parentElement.querySelector('.phone-error');
+        if (existingError) existingError.remove();
+        
+        const errorMsg = document.createElement('p');
+        errorMsg.className = 'phone-error';
+        errorMsg.style.cssText = 'color: var(--error); font-size: 13px; margin-top: 8px;';
+        errorMsg.textContent = 'Please enter a valid UK mobile number (e.g., 07747055935)';
+        this.parentElement.appendChild(errorMsg);
+    } else {
+        this.style.borderColor = '';
+        const existingError = this.parentElement.querySelector('.phone-error');
+        if (existingError) existingError.remove();
+    }
+});
+</script>
+{% endblock %}

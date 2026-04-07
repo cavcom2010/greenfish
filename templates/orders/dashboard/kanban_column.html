@@ -1,0 +1,8 @@
+{% for order in orders %}
+{% include "orders/dashboard/kanban_card.html" %}
+{% empty %}
+<div class="column-empty">
+    <i class="ph ph-tray"></i>
+    <p>No orders</p>
+</div>
+{% endfor %}

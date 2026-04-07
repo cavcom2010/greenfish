@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Order{% endblock %}
+
+{% block content %}
+<!-- Service Toggle -->
+<div class="service-toggle">
+    <button class="toggle-option active" onclick="switchService(this, 'pickup')">Pickup</button>
+    <button class="toggle-option" onclick="switchService(this, 'delivery')">Delivery</button>
+</div>
+
+<!-- Hero Banner -->
+{% if hero_offers %}
+{% with offer=hero_offers.0 %}
+<div class="hero">
+    <div class="hero-content">
+        <h3>{{ offer.hero_title|default:offer.name }}</h3>
+        <p>{{ offer.hero_subtitle|default:offer.description }}</p>
+        <a href="#menu-section" class="hero-btn">
+            Order Now <i class="ph-bold ph-arrow-right"></i>
+        </a>
+    </div>
+</div>
+{% endwith %}
+{% else %}
+<div class="hero">
+    <div class="hero-content">
+        <h3>Authentic Zimbabwean Cuisine!</h3>
+        <p>Sadza, Nyama, Muriwo & more. Taste of home.</p>
+        <a href="#menu-section" class="hero-btn">
+            Order Now <i class="ph-bold ph-arrow-right"></i>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Popular Items (Quick Picks) -->
+<h2 class="section-title">Popular Now</h2>
+<div class="menu-grid">
+    {% for item in popular_items %}
+    <div class="food-card" onclick="openItemModal({{ item.id }})">
+        <div class="food-image">
+            {% if item.image %}
+            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+            {% else %}
+            <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
+            {% endif %}
+        </div>
+        <div class="food-name">{{ item.name }}</div>
+        <div class="food-price">£{{ item.price }}</div>
+    </div>
+    {% empty %}
+    <p style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 20px;">
+        No popular items yet.
+    </p>
+    {% endfor %}
+</div>
+
+<!-- Full Menu Section -->
+<div id="menu-section" style="scroll-margin-top: 20px;">
+    <!-- Categories -->
+    <h2 class="section-title">
+        {% if active_category %}
+            {{ active_category.name }}
+        {% else %}
+            Full Menu
+        {% endif %}
+    </h2>
+    
+    <!-- Categories -->
+    <div class="categories">
+        <a href="{% url 'core:home' %}#menu-section" class="category-pill {% if not active_category %}active{% endif %}">All</a>
+        {% for category in categories %}
+        <a href="{% url 'core:home' %}?category={{ category.id }}#menu-section" class="category-pill {% if active_category == category %}active{% endif %}">{{ category.name }}</a>
+        {% endfor %}
+    </div>
+    
+    <!-- Dietary Filters -->
+    <div style="display: flex; gap: 8px; padding: 0 16px 16px; overflow-x: auto; scrollbar-width: none;">
+        <a href="{% url 'core:home' %}?dietary=vegetarian{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section" 
+           class="dietary-pill {% if dietary_filter == 'vegetarian' %}active{% endif %}" 
+           style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'vegetarian' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'vegetarian' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'vegetarian' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            🥬 Vegetarian
+        </a>
+        <a href="{% url 'core:home' %}?dietary=vegan{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section" 
+           class="dietary-pill {% if dietary_filter == 'vegan' %}active{% endif %}"
+           style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'vegan' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'vegan' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'vegan' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            🌱 Vegan
+        </a>
+        <a href="{% url 'core:home' %}?dietary=gluten-free{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section" 
+           class="dietary-pill {% if dietary_filter == 'gluten-free' %}active{% endif %}"
+           style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'gluten-free' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'gluten-free' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'gluten-free' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            🌾 Gluten-Free
+        </a>
+        <a href="{% url 'core:home' %}?dietary=halal{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section" 
+           class="dietary-pill {% if dietary_filter == 'halal' %}active{% endif %}"
+           style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'halal' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'halal' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'halal' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            ☪️ Halal
+        </a>
+        {% if dietary_filter %}
+        <a href="{% url 'core:home' %}{% if active_category %}?category={{ active_category.id }}{% endif %}#menu-section" 
+           style="flex-shrink: 0; padding: 8px 16px; background: var(--error-bg); border: 2px solid var(--error); border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--error); text-decoration: none;">
+            ✕ Clear Filter
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Full Menu Grid -->
+    <div class="menu-grid">
+        {% for item in items %}
+        <div class="food-card" onclick="openItemModal({{ item.id }})">
+            <div class="food-image">
+                {% if item.image %}
+                <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                {% else %}
+                <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
+                {% endif %}
+            </div>
+            <div class="food-name">{{ item.name }}</div>
+            <div class="food-price">£{{ item.price }}</div>
+            {% if item.dietary_tags %}
+            <div style="font-size: 11px; color: var(--success); margin-top: 4px;">
+                {{ item.dietary_tags_display }}
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">
+            No items available in this category.
+        </p>
+        {% endfor %}
+    </div>
+</div>
+
+<div style="height: 100px;"></div>
+
+<!-- Item Modal (hidden by default) -->
+<div id="itemModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: flex-end;" onclick="closeItemModal(event)">
+    <div style="background: white; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; width: 100%; max-width: 430px; margin: 0 auto; animation: slideUp 0.3s ease;" onclick="event.stopPropagation()">
+        <div id="modalContent">Loading...</div>
+    </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentService = 'pickup';
+
+function switchService(element, service) {
+    document.querySelectorAll('.toggle-option').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    currentService = service;
+    
+    // Store preference
+    localStorage.setItem('service_type', service);
+}
+
+function addToCart(itemId) {
+    // Use HTMX to add to cart
+    fetch('{% url "orders:add_to_cart" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `menu_item_id=${itemId}&quantity=1&modifiers=[]`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success feedback
+            if (navigator.vibrate) navigator.vibrate(50);
+            
+            // Update cart badge
+            const badge = document.getElementById('cartBadge');
+            if (badge) {
+                badge.textContent = data.cart_count;
+                badge.style.display = 'flex';
+            }
+            
+            // Show basket bar
+            const basketBar = document.getElementById('basketBar');
+            if (basketBar) {
+                basketBar.classList.add('show');
+            }
+            
+            // Reload to update cart
+            window.location.reload();
+        }
+    });
+}
+
+function openItemModal(itemId) {
+    const modal = document.getElementById('itemModal');
+    const content = document.getElementById('modalContent');
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Load item details with HTMX header to get HTML
+    fetch(`/menu/item/${itemId}/`, {
+        headers: {
+            'HX-Request': 'true'
+        }
+    })
+        .then(response => response.text())
+        .then(html => {
+            content.innerHTML = html;
+            
+            // Initialize modal state after content loaded
+            modalQuantity = 1;
+            const modalDiv = content.querySelector('div[data-item-id]');
+            if (modalDiv) {
+                modalItemId = modalDiv.dataset.itemId;
+                modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
+                updateModalTotal();
+            }
+        })
+        .catch(() => {
+            content.innerHTML = '<p style="padding: 20px; text-align: center;">Error loading item. Please try again.</p>';
+        });
+}
+
+function closeItemModal(event) {
+    if (event.target.id === 'itemModal') {
+        document.getElementById('itemModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// Restore service preference
+const savedService = localStorage.getItem('service_type');
+if (savedService) {
+    document.querySelectorAll('.toggle-option').forEach(el => {
+        if (el.textContent.toLowerCase() === savedService) {
+            el.click();
+        }
+    });
+}
+
+// Scroll to menu section if category is selected
+if (window.location.search.includes('category=')) {
+    const menuSection = document.getElementById('menu-section');
+    if (menuSection) {
+        menuSection.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// ==================== MODAL FUNCTIONS ====================
+let modalQuantity = 1;
+let modalBasePrice = 0;
+let modalItemId = null;
+
+// Handle modal content loaded
+document.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'modalContent') {
+        // Reset modal state
+        modalQuantity = 1;
+        const modalDiv = document.querySelector('#modalContent > div');
+        if (modalDiv) {
+            modalItemId = modalDiv.dataset.itemId;
+            modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
+            updateModalTotal();
+        }
+    }
+});
+
+// Event delegation for modal buttons (clicks)
+document.getElementById('modalContent').addEventListener('click', function(e) {
+    // Quantity buttons
+    if (e.target.classList.contains('qty-btn')) {
+        const change = parseInt(e.target.dataset.change);
+        modalQuantity = Math.max(1, modalQuantity + change);
+        document.getElementById('modal-quantity').textContent = modalQuantity;
+        updateModalTotal();
+    }
+    
+    // Add to basket button
+    if (e.target.id === 'modal-add-btn' || e.target.closest('#modal-add-btn')) {
+        const btn = document.getElementById('modal-add-btn');
+        const itemId = btn.dataset.itemId;
+        addToCartFromModal(itemId);
+    }
+});
+
+// Event delegation for modal checkboxes (change events)
+document.getElementById('modalContent').addEventListener('change', function(e) {
+    // Modifier checkboxes - update price in real-time
+    if (e.target.classList.contains('modifier-checkbox')) {
+        updateModalTotal();
+    }
+});
+
+function updateModalTotal() {
+    if (!modalBasePrice) return;
+    
+    let modifiersTotal = 0;
+    document.querySelectorAll('.modifier-checkbox:checked').forEach(cb => {
+        modifiersTotal += parseFloat(cb.dataset.price) || 0;
+    });
+    
+    const total = (modalBasePrice + modifiersTotal) * modalQuantity;
+    const priceEl = document.getElementById('modal-total-price');
+    if (priceEl) {
+        priceEl.textContent = '£' + total.toFixed(2);
+    }
+}
+
+function addToCartFromModal(itemId) {
+    const btn = document.getElementById('modal-add-btn');
+    const originalText = btn.innerHTML;
+    
+    // Show loading state
+    btn.innerHTML = '<span>Adding...</span><span>⏳</span>';
+    btn.style.opacity = '0.7';
+    btn.disabled = true;
+    
+    // Collect modifiers
+    const modifiers = [];
+    document.querySelectorAll('.modifier-checkbox:checked').forEach(cb => {
+        modifiers.push({
+            id: cb.value,
+            name: cb.dataset.name,
+            price: parseFloat(cb.dataset.price) || 0
+        });
+    });
+    
+    fetch('{% url "orders:add_to_cart" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `menu_item_id=${itemId}&quantity=${modalQuantity}&modifiers=${encodeURIComponent(JSON.stringify(modifiers))}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.innerHTML = '<span>✓ Added!</span>';
+            btn.style.background = '#22C55E';
+            if (navigator.vibrate) navigator.vibrate(50);
+            
+            setTimeout(() => {
+                closeItemModal({target: {id: 'itemModal'}});
+                window.location.reload();
+            }, 600);
+        } else {
+            throw new Error('Failed to add item');
+        }
+    })
+    .catch(err => {
+        btn.innerHTML = '<span>❌ Error</span>';
+        btn.style.background = '#EF4444';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.opacity = '1';
+            btn.disabled = false;
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

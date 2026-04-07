@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Rewards - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+<style>
+.loyalty-header {
+    background: linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%);
+    color: white;
+    padding: 2rem 1rem;
+    text-align: center;
+    border-radius: 0 0 2rem 2rem;
+    margin: -1rem -1rem 1.5rem -1rem;
+}
+.loyalty-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+.points-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin: 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.points-display {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #FF6B35;
+    line-height: 1;
+}
+.points-label {
+    color: #6B7280;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+.points-value {
+    color: #10B981;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+.tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    background: {{ tier.color }}20;
+    color: {{ tier.color }};
+}
+.tier-badge span {
+    font-size: 1.2rem;
+}
+.benefits-list {
+    background: white;
+    border-radius: 1rem;
+    padding: 1rem 1.5rem;
+    margin: 1rem;
+}
+.benefits-list h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #1F2937;
+}
+.benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    color: #4B5563;
+    font-size: 0.9rem;
+}
+.benefit-item i {
+    color: #10B981;
+}
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1rem;
+}
+.action-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+.action-card:active {
+    transform: scale(0.98);
+}
+.action-card i {
+    font-size: 1.5rem;
+    color: #FF6B35;
+    margin-bottom: 0.5rem;
+}
+.action-card h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+.action-card p {
+    font-size: 0.75rem;
+    color: #6B7280;
+}
+.recent-transactions {
+    background: white;
+    border-radius: 1rem;
+    margin: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.recent-transactions h3 {
+    padding: 1rem 1rem 0.5rem;
+    font-size: 1rem;
+}
+.transaction-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #F3F4F6;
+}
+.transaction-item:last-child {
+    border-bottom: none;
+}
+.transaction-info h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.125rem;
+}
+.transaction-info span {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+}
+.transaction-points {
+    font-weight: 700;
+}
+.points-positive {
+    color: #10B981;
+}
+.points-negative {
+    color: #EF4444;
+}
+.view-all-link {
+    display: block;
+    text-align: center;
+    padding: 1rem;
+    color: #FF6B35;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-top: 1px solid #F3F4F6;
+}
+.referral-preview {
+    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    margin: 1rem;
+}
+.referral-preview h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+.referral-preview p {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+}
+.referral-code-box {
+    background: rgba(255,255,255,0.2);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    text-align: center;
+    font-family: monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+</style>
+
+<div class="loyalty-header">
+    <h1>🎁 Rewards</h1>
+    <p>Earn points, get rewards! <em>Tinotenda!</em> (Thank you!)</p>
+</div>
+
+<div class="points-card">
+    <div class="points-display">{{ current_points }}</div>
+    <div class="points-label">Points Available</div>
+    <div class="points-value">≈ £{{ points_value }} value</div>
+    <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;"><em>Makorokoto!</em> (Congratulations!)</div>
+    <div class="tier-badge" style="background: {{ tier.color }}20; color: {{ tier.color }};">
+        <span>{{ tier.emoji }}</span>
+        {{ tier.name }} 
+    </div>
+</div>
+
+<div class="benefits-list">
+    <h3>Your Benefits</h3>
+    {% for benefit in tier.benefits %}
+    <div class="benefit-item">
+        <i class="fas fa-check-circle"></i>
+        <span>{{ benefit }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="quick-actions">
+    <a href="{% url 'loyalty:refer' %}" class="action-card">
+        <i class="fas fa-gift"></i>
+        <h4>Refer a Friend</h4>
+        <p>Earn {{ settings.referral_points }} points</p>
+    </a>
+    <a href="{% url 'menu:menu' %}" class="action-card">
+        <i class="fas fa-utensils"></i>
+        <h4>Order Now</h4>
+        <p>Earn {{ settings.points_per_pound }} pts per £1</p>
+    </a>
+</div>
+
+<div class="referral-preview">
+    <h3><i class="fas fa-share-alt"></i> Share & Earn</h3>
+    <p>Give friends {{ settings.welcome_bonus }} points, earn {{ settings.referral_points }} when they order!</p>
+    <div class="referral-code-box">{{ referral_code }}</div>
+</div>
+
+<div class="recent-transactions">
+    <h3>Recent Activity</h3>
+    {% for tx in recent_transactions|slice:":5" %}
+    <div class="transaction-item">
+        <div class="transaction-info">
+            <h4>{{ tx.get_transaction_type_display }}</h4>
+            <span>{{ tx.created_at|date:"d M" }}</span>
+        </div>
+        <div class="transaction-points {% if tx.points > 0 %}points-positive{% else %}points-negative{% endif %}">
+            {% if tx.points > 0 %}+{% endif %}{{ tx.points }}
+        </div>
+    </div>
+    {% empty %}
+    <div class="transaction-item" style="justify-content: center; color: #9CA3AF;">
+        No activity yet. Start ordering to earn points!
+    </div>
+    {% endfor %}
+    <a href="{% url 'loyalty:transactions' %}" class="view-all-link">View All Activity →</a>
+</div>
+
+{% endblock %}

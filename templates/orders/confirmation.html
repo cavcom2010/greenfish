@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmed - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Order Confirmed{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<div class="page-content" style="text-align: center; padding: 40px 20px;">
+    <!-- Success Icon -->
+    <div style="width: 100px; height: 100px; background: var(--success-bg); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+        <i class="ph-fill ph-check-circle" style="font-size: 60px; color: var(--success);"></i>
+    </div>
+    
+    <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Thank You!</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">Your order has been confirmed.</p>
+    
+    <!-- Order Details -->
+    <div style="background: var(--surface); border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow); text-align: left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+            <span style="color: var(--text-secondary);">Order Number</span>
+            <span style="font-weight: 700; font-size: 18px;">{{ order.order_number }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span style="color: var(--text-secondary);">Status</span>
+            <span style="background: var(--success-bg); color: var(--success); padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span style="color: var(--text-secondary);">Pickup Time</span>
+            <span style="font-weight: 600;">{{ order.pickup_time|default:"TBD"|date:"H:i" }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--border);">
+            <span style="font-weight: 700;">Total Paid</span>
+            <span style="font-weight: 800; font-size: 20px; color: var(--brand);">£{{ order.total_amount }}</span>
+        </div>
+    </div>
+    
+    <!-- What Happens Next -->
+    <div style="background: var(--brand-light); border-radius: 16px; padding: 20px; margin-bottom: 24px; text-align: left;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--brand-dark);">What happens next?</h3>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <i class="ph-fill ph-check-circle" style="color: var(--success); flex-shrink: 0; margin-top: 2px;"></i>
+                <span style="font-size: 14px;">We'll confirm your order shortly</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <i class="ph ph-hourglass" style="color: var(--warning); flex-shrink: 0; margin-top: 2px;"></i>
+                <span style="font-size: 14px;">We'll prepare your food fresh</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; gap: 12px;">
+                <i class="ph ph-bell" style="color: var(--brand); flex-shrink: 0; margin-top: 2px;"></i>
+                <span style="font-size: 14px;">We'll notify you when it's ready</span>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- Actions -->
+    <a href="{% url 'core:home' %}" class="btn btn-brand" style="display: block; margin-bottom: 12px;">
+        Back to Home
+    </a>
+    
+    {% if request.user.is_authenticated %}
+    <a href="{% url 'accounts:order_history' %}" class="btn btn-secondary" style="display: block;">
+        View Order History
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

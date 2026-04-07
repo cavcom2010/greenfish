@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Offers - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Offers{% endblock %}
+
+{% block content %}
+<h2 class="section-title">Latest Offers</h2>
+
+{% for offer in offers %}
+<div class="offer-card" style="{% if forloop.counter == 2 %}background: linear-gradient(135deg, #FF6B6B 0%, #EE5A5A 100%);{% elif forloop.counter == 3 %}background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);{% endif %}">
+    <div class="offer-content">
+        <h3>{{ offer.name }}</h3>
+        <p>{{ offer.description }}</p>
+        {% if offer.offer_type == 'percentage' %}
+        <span style="display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 13px; margin-top: 8px;">
+            Save {{ offer.value|floatformat:0 }}%
+        </span>
+        {% elif offer.offer_type == 'fixed' %}
+        <span style="display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 13px; margin-top: 8px;">
+            Save £{{ offer.value }}
+        </span>
+        {% endif %}
+        <div style="margin-top: 12px;">
+            <a href="{% url 'orders:checkout' %}" class="offer-btn" onclick="applyOfferAndGo('{{ offer.id }}')">Order Now</a>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+    <i class="ph ph-tag" style="font-size: 48px; margin-bottom: 16px;"></i>
+    <p>No active offers at the moment.</p>
+    <p style="font-size: 14px;">Check back soon for great deals!</p>
+</div>
+{% endfor %}
+
+<div style="height: 100px;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyOfferAndGo(offerId) {
+    // Store offer in session for automatic application at checkout
+    sessionStorage.setItem('applied_offer_id', offerId);
+}
+</script>
+{% endblock %}

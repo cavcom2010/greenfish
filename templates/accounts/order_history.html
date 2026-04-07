@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Order History - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}My Orders{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    {% if orders %}
+    <div class="menu-list" style="padding: 0;">
+        {% for order in orders %}
+        <div class="list-item" style="flex-direction: column; align-items: flex-start;">
+            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                <span style="font-weight: 700;">{{ order.order_number }}</span>
+                <span style="font-size: 13px; color: var(--text-secondary);">{{ order.created_at|date:"d M Y" }}</span>
+            </div>
+            
+            <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">
+                {{ order.item_count }} items
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <span style="font-weight: 700; font-size: 16px;">£{{ order.total_amount }}</span>
+                <span style="
+                    background: {% if order.status == 'completed' %}var(--success-bg){% elif order.status == 'cancelled' %}var(--error-bg){% else %}var(--brand-light){% endif %};
+                    color: {% if order.status == 'completed' %}var(--success){% elif order.status == 'cancelled' %}var(--error){% else %}var(--brand){% endif %};
+                    padding: 4px 12px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                ">
+                    {{ order.get_status_display }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px;">
+        <i class="ph ph-receipt" style="font-size: 64px; color: var(--border); margin-bottom: 16px;"></i>
+        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">No orders yet</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Your order history will appear here</p>
+        <a href="{% url 'menu:menu' %}" class="btn btn-brand">Start Ordering</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
