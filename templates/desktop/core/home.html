@@ -262,32 +262,7 @@
         {% endif %}
 
         <!-- Menu Grid -->
-        <div class="menu-grid-desktop" style="margin-top:1.5rem;" id="menuGrid"
-             x-data="{ query: '', items: {{ items|length }} }"
-             x-init="$watch('query', v => {
-                 document.querySelectorAll('#menuGrid .menu-card').forEach(card => {
-                     const name = (card.querySelector('.menu-card-title')?.textContent || '').toLowerCase();
-                     const desc = (card.querySelector('.menu-card-desc')?.textContent || '').toLowerCase();
-                     const match = !v || name.includes(v) || desc.includes(v);
-                     card.classList.toggle('search-hidden', !match);
-                 });
-                 const clearBtn = document.getElementById('menuSearchClear');
-                 if (clearBtn) clearBtn.classList.toggle('visible', v.length > 0);
-                 const visible = document.querySelectorAll('#menuGrid .menu-card:not(.search-hidden)');
-                 let noResults = document.getElementById('menuNoResults');
-                 if (visible.length === 0 && v.length > 0) {
-                     if (!noResults) {
-                         noResults = document.createElement('div');
-                         noResults.id = 'menuNoResults';
-                         noResults.className = 'menu-search-no-results';
-                         noResults.innerHTML = '<i class=\"ph ph-magnifying-glass\"></i><h3>No results found</h3><p>Try a different search term.</p>';
-                         document.getElementById('menuGrid').appendChild(noResults);
-                     }
-                     noResults.style.display = 'block';
-                 } else if (noResults) {
-                     noResults.style.display = 'none';
-                 }
-             })">
+        <div class="menu-grid-desktop" style="margin-top:1.5rem;" id="menuGrid">
             {% for item in items %}
             <div class="menu-card" onclick="openItemModal({{ item.id }})"
                  data-search-name="{{ item.name|lower|escapejs }}"
@@ -365,27 +340,56 @@ document.querySelectorAll('[data-desktop-service]').forEach(btn => {
     });
 });
 
-// Menu Search — wire input to Alpine
+// Menu Search — vanilla JS filtering
 (function() {
     const searchInput = document.getElementById('menuSearchInput');
     const clearBtn = document.getElementById('menuSearchClear');
     if (!searchInput) return;
 
     let debounceTimer;
+    let noResultsEl = null;
+
+    function filterMenu(query) {
+        const cards = document.querySelectorAll('#menuGrid .menu-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const name = (card.getAttribute('data-search-name') || '').toLowerCase();
+            const desc = (card.getAttribute('data-search-desc') || '').toLowerCase();
+            const match = !query || name.includes(query) || desc.includes(query);
+            card.classList.toggle('search-hidden', !match);
+            if (match) visibleCount++;
+        });
+
+        // Show/hide clear button
+        if (clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
+
+        // Show/hide "no results" message
+        if (visibleCount === 0 && query.length > 0) {
+            if (!noResultsEl) {
+                noResultsEl = document.createElement('div');
+                noResultsEl.id = 'menuNoResults';
+                noResultsEl.className = 'menu-search-no-results';
+                noResultsEl.innerHTML = '<i class="ph ph-magnifying-glass"></i><h3>No results found</h3><p>Try a different search term.</p>';
+                document.getElementById('menuGrid').appendChild(noResultsEl);
+            }
+            noResultsEl.style.display = 'block';
+        } else if (noResultsEl) {
+            noResultsEl.style.display = 'none';
+        }
+    }
+
     searchInput.addEventListener('input', function() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            const alpineEl = document.getElementById('menuGrid');
-            if (alpineEl && alpineEl.__x) {
-                alpineEl.__x.$data.query = this.value.toLowerCase();
-            }
+            filterMenu(this.value.toLowerCase());
         }, 150);
     });
 
     if (clearBtn) {
         clearBtn.addEventListener('click', function() {
             searchInput.value = '';
-            searchInput.dispatchEvent(new Event('input'));
+            filterMenu('');
             searchInput.focus();
         });
     }
