@@ -240,6 +240,28 @@ def cart_view(request):
     return render(request, template, context)
 
 
+def cart_drawer(request):
+    """Return cart drawer content via HTMX."""
+    active_offer_id = selected_offer_id(request)
+    summary = get_cart_summary(
+        request.session.get("cart", {}),
+        user=request.user,
+        voucher_code=request.session.get("voucher_code", ""),
+        offer_id=active_offer_id,
+    )
+    context = {
+        "cart_items": summary["items"],
+        "subtotal": summary["subtotal"],
+        "discount": summary["discount"],
+        "cart_total": summary["total"],
+        "cart_count": sum(item["quantity"] for item in summary["items"]),
+        "active_offer": summary["selected_offer"],
+        "offer_error": summary["offer_error"],
+        "voucher_code": summary["voucher_code"],
+    }
+    return render(request, "orders/partials/cart_drawer.html", context)
+
+
 @require_POST
 def add_to_cart(request):
     """Add a menu item or meal deal to the cart."""

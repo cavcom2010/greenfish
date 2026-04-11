@@ -2,10 +2,10 @@
 Core views for Tinashe Takeaway.
 """
 from django.db import connection
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.menu.models import MenuCategory, MenuItem
 from apps.offers.models import Offer
@@ -125,3 +125,39 @@ def health(request):
         return JsonResponse(payload, status=503)
 
     return JsonResponse(payload)
+
+
+@require_POST
+def newsletter_signup(request):
+    """Handle newsletter sign-up via HTMX."""
+    email = request.POST.get("email", "").strip()
+    if not email:
+        return HttpResponse(
+            '<p style="color:var(--error);font-size:0.8rem;margin-top:0.5rem;">Please enter your email.</p>',
+            content_type="text/html",
+        )
+
+    # If Sender.net is configured, add the contact
+    from apps.core.services.sender_net import get_sender_service
+
+    service = get_sender_service()
+    if service:
+        result = service.add_contact(email, name="", fields={"source": "website_footer"})
+        if result.success:
+            return HttpResponse(
+                '<p style="color:var(--success);font-size:0.8rem;margin-top:0.5rem;">✓ Subscribed! Check your inbox.</p>',
+                content_type="text/html",
+            )
+        return HttpResponse(
+            f'<p style="color:var(--error);font-size:0.8rem;margin-top:0.5rem;">{result.error or "Could not subscribe. Please try again."}</p>',
+            content_type="text/html",
+        )
+
+    # Fallback: log it (Sender.net not configured)
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Newsletter signup (no Sender.net): %s", email)
+    return HttpResponse(
+        '<p style="color:var(--success);font-size:0.8rem;margin-top:0.5rem;">✓ Thanks! We\'ll keep you updated.</p>',
+        content_type="text/html",
+    )

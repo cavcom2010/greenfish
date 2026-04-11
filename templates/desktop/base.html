@@ -34,6 +34,9 @@
 </head>
 <body>
 
+    <!-- Skip to Content (A11y) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- ═══════════════════════════════════════════════════════════
          HEADER / NAVIGATION
          ═══════════════════════════════════════════════════════════ -->
@@ -67,7 +70,7 @@
 
             <div class="header-right">
                 <!-- Cart -->
-                <a href="{% url 'orders:cart' %}" class="header-icon-btn">
+                <a href="javascript:void(0)" class="header-icon-btn" onclick="openCartDrawer()" aria-label="View cart">
                     <i class="ph ph-shopping-cart"></i>
                     {% if cart_count > 0 %}
                     <span class="cart-badge-desktop">{{ cart_count }}</span>
@@ -111,7 +114,7 @@
     <!-- ═══════════════════════════════════════════════════════════
          MAIN CONTENT
          ═══════════════════════════════════════════════════════════ -->
-    <main>
+    <main id="main-content">
         {% block content %}{% endblock %}
     </main>
 
@@ -149,6 +152,35 @@
                     {{ site_settings.shop_name }}
                 </a>
                 <p>{{ site_settings.shop_description|default:"Fresh, authentic cuisine made with love. Order for pickup or delivery." }}</p>
+
+                <!-- Newsletter -->
+                <div class="footer-newsletter">
+                    <p>Get exclusive offers & updates</p>
+                    <form class="footer-newsletter-form" id="footerNewsletterForm"
+                          hx-post="{% url 'core:newsletter' %}"
+                          hx-target="#newsletterFeedback"
+                          hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <input type="email" name="email" placeholder="Your email" required aria-label="Email for newsletter">
+                        <button type="submit">Subscribe</button>
+                    </form>
+                    <div id="newsletterFeedback"></div>
+                </div>
+
+                <!-- Trust Badges -->
+                <div class="footer-trust">
+                    <div class="footer-trust-badges">
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-shield-check"></i> Secure payments
+                        </span>
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-star"></i> 4.8★ rated
+                        </span>
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-clock"></i> Fast delivery
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div class="footer-col">
@@ -215,6 +247,41 @@
 
     <!-- Desktop JS -->
     <script src="{% static 'js/desktop.js' %}"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         CART DRAWER (Slide-Out Panel)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="cart-drawer-overlay" id="cartDrawerOverlay" onclick="closeCartDrawerOnOverlay(event)">
+        <aside class="cart-drawer" role="dialog" aria-label="Shopping cart">
+            <div id="cartDrawerContent">
+                <div style="text-align:center;padding:3rem;">
+                    <div style="width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
+                    <p style="color:var(--text-muted);font-size:0.9rem;">Loading your basket...</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TOAST NOTIFICATION CONTAINER
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         STICKY CART BAR (Desktop)
+         ═══════════════════════════════════════════════════════════ -->
+    {% if cart_count > 0 and 'checkout' not in request.path and 'cart' not in request.path %}
+    <div class="sticky-cart-bar visible" id="stickyCartBar">
+        <div class="sticky-cart-bar-count">
+            <i class="ph-fill ph-shopping-cart"></i>
+            <span>{{ cart_count }} item{{ cart_count|pluralize }}</span>
+        </div>
+        <div class="sticky-cart-bar-total">£{{ cart_total|floatformat:2 }}</div>
+        <a href="{% url 'orders:checkout' %}" class="sticky-cart-bar-checkout">
+            Checkout <i class="ph-bold ph-arrow-right"></i>
+        </a>
+    </div>
+    {% endif %}
 
     {% block extra_js %}{% endblock %}
 
