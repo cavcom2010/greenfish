@@ -34,6 +34,9 @@
 </head>
 <body>
 
+    <!-- Skip to Content (A11y) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- ═══════════════════════════════════════════════════════════
          HEADER / NAVIGATION
          ═══════════════════════════════════════════════════════════ -->
@@ -111,7 +114,7 @@
     <!-- ═══════════════════════════════════════════════════════════
          MAIN CONTENT
          ═══════════════════════════════════════════════════════════ -->
-    <main>
+    <main id="main-content">
         {% block content %}{% endblock %}
     </main>
 
@@ -149,6 +152,35 @@
                     {{ site_settings.shop_name }}
                 </a>
                 <p>{{ site_settings.shop_description|default:"Fresh, authentic cuisine made with love. Order for pickup or delivery." }}</p>
+
+                <!-- Newsletter -->
+                <div class="footer-newsletter">
+                    <p>Get exclusive offers & updates</p>
+                    <form class="footer-newsletter-form" id="footerNewsletterForm"
+                          hx-post="{% url 'core:newsletter' %}"
+                          hx-target="#newsletterFeedback"
+                          hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <input type="email" name="email" placeholder="Your email" required aria-label="Email for newsletter">
+                        <button type="submit">Subscribe</button>
+                    </form>
+                    <div id="newsletterFeedback"></div>
+                </div>
+
+                <!-- Trust Badges -->
+                <div class="footer-trust">
+                    <div class="footer-trust-badges">
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-shield-check"></i> Secure payments
+                        </span>
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-star"></i> 4.8★ rated
+                        </span>
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-clock"></i> Fast delivery
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div class="footer-col">
