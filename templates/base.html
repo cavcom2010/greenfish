@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#FF6B35">
+    <meta name="theme-color" content="{{ site_settings.theme_color|default:'#FF6B35' }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup or delivery.">
@@ -713,6 +713,13 @@
             background: var(--error-bg);
             color: #991B1B;
         }
+
+        .message-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px 16px 0;
+        }
         
         /* Page Content Padding */
         .page-content {
@@ -765,6 +772,16 @@
             {% endblock %}
         </div>
         {% endblock %}
+
+        {% if messages %}
+        <div class="message-stack">
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         
         <main>
             {% block content %}{% endblock %}

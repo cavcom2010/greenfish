@@ -127,26 +127,26 @@ python manage.py collectstatic --noinput --settings=config.settings.local
 
 ## Payment Issues
 
-### Mollie payment fails
+### Stripe payment fails
 
 **Problem:** Payment creation fails
 
 **Solutions:**
-1. Verify MOLLIE_API_KEY is set:
+1. Verify `PAYMENT_PROVIDER=stripe` and `STRIPE_SECRET_KEY` are set:
    ```bash
-   # Should start with 'test_' or 'live_'
-   echo $MOLLIE_API_KEY
+   echo $PAYMENT_PROVIDER
+   echo $STRIPE_SECRET_KEY
    ```
 
-2. Check Mollie dashboard for API key status
+2. Check the Stripe dashboard API key and webhook endpoint status
 
-3. Verify webhook URL is accessible:
+3. Verify the webhook URL is accessible:
    ```bash
    curl -X POST https://yourdomain.com/payments/webhook/
-   # Should return 200 OK
+   # Should return 400 or 403 without a Stripe signature, but the route must be reachable
    ```
 
-4. Check webhook secret matches
+4. Check `STRIPE_WEBHOOK_SECRET` matches the signing secret from the Stripe dashboard
 
 ### Webhook not receiving updates
 
@@ -155,20 +155,20 @@ python manage.py collectstatic --noinput --settings=config.settings.local
 **Solutions:**
 1. Ensure webhook URL is publicly accessible
 2. Check SSL certificate is valid
-3. Verify webhook secret in .env matches Mollie dashboard
+3. Verify `STRIPE_WEBHOOK_SECRET` in `.env` matches the Stripe webhook endpoint signing secret
 4. Check logs for webhook errors:
    ```bash
    tail -f .home_nginx/logs/gunicorn-error.log | grep webhook
    ```
 
-### Test payments work, live payments don't
+### Stripe live payments don't work
 
 **Problem:** Live API key issues
 
 **Solutions:**
-1. Verify using live_ key (not test_)
-2. Check Mollie account is activated for live payments
-3. Verify website profile is complete in Mollie dashboard
+1. Verify using an `sk_live_...` key, not a test key
+2. Confirm the Stripe account is activated for live payments
+3. Confirm the live webhook endpoint is configured for `/payments/webhook/`
 
 ## Email Issues
 
@@ -454,5 +454,5 @@ print(settings.ALLOWED_HOSTS)
 **Restart Everything:**
 ```bash
 ./deploy/home/stop.sh
-./deploy/home/start.sh --foreground
+./deploy/home/start.sh
 ```

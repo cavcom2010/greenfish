@@ -1,0 +1,222 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup or delivery.">
+    <meta name="theme-color" content="{{ site_settings.theme_color|default:'#FF6B35' }}">
+
+    <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
+
+    <!-- Favicon -->
+    {% if site_settings.favicon %}
+    <link rel="icon" type="image/png" href="{{ site_settings.favicon.url }}">
+    {% else %}
+    <link rel="icon" type="image/png" href="{% static 'icons/icon-192.png' %}">
+    {% endif %}
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+
+    <!-- Desktop CSS -->
+    <link rel="stylesheet" href="{% static 'css/desktop.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         HEADER / NAVIGATION
+         ═══════════════════════════════════════════════════════════ -->
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <!-- Logo -->
+                <a href="{% url 'core:home' %}" class="logo">
+                    {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}">
+                    {% endif %}
+                    <div class="logo-text">
+                        {{ site_settings.shop_name }}
+                        {% if site_settings.tagline %}
+                        <small>{{ site_settings.tagline }}</small>
+                        {% endif %}
+                    </div>
+                </a>
+
+                <!-- Main Navigation -->
+                <nav class="main-nav">
+                    <a href="{% url 'core:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Order</a>
+                    <a href="{% url 'menu:menu' %}" class="{% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">Menu</a>
+                    <a href="{% url 'offers:list' %}" class="{% if 'offers' in request.path %}active{% endif %}">Offers</a>
+                    <a href="{% url 'loyalty:dashboard' %}" class="{% if 'rewards' in request.path %}active{% endif %}">Rewards</a>
+                    {% if site_settings.about_page_enabled %}
+                    <a href="{% url 'core:about' %}">About</a>
+                    {% endif %}
+                </nav>
+            </div>
+
+            <div class="header-right">
+                <!-- Cart -->
+                <a href="{% url 'orders:cart' %}" class="header-icon-btn">
+                    <i class="ph ph-shopping-cart"></i>
+                    {% if cart_count > 0 %}
+                    <span class="cart-badge-desktop">{{ cart_count }}</span>
+                    {% endif %}
+                </a>
+
+                <!-- Account -->
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}" class="btn-account">
+                    <i class="ph ph-user-circle" style="font-size:1.25rem;"></i>
+                    {{ request.user.first_name }}
+                </a>
+                {% else %}
+                <a href="{% url 'account_login' %}" class="btn-account">
+                    Sign In
+                </a>
+                <a href="{% url 'account_signup' %}" class="btn-order">
+                    Order Now <i class="ph-bold ph-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MESSAGES
+         ═══════════════════════════════════════════════════════════ -->
+    {% if messages %}
+    <div style="background:var(--surface);border-bottom:1px solid var(--border-light);">
+        <div class="container" style="padding-top:1rem;">
+            {% for message in messages %}
+            <div class="alert-desktop {% if message.tags == 'error' %}alert-error-desktop{% else %}alert-success-desktop{% endif %}">
+                <i class="ph-fill {% if message.tags == 'error' %}ph-warning-circle{% else %}ph-check-circle{% endif %}" style="font-size:1.25rem;"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN CONTENT
+         ═══════════════════════════════════════════════════════════ -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         ITEM MODAL (Desktop)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="itemModalDesktop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalDesktopTitle">Item Details</h3>
+                <button class="modal-close" onclick="closeItemModal()">
+                    <i class="ph ph-x" style="font-size:1.25rem;"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalDesktopContent">
+                <div style="text-align:center;padding:3rem;">
+                    <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
+                    <p style="color:var(--text-muted);">Loading...</p>
+                    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FOOTER
+         ═══════════════════════════════════════════════════════════ -->
+    <footer class="site-footer">
+        <div class="footer-main">
+            <div class="footer-brand">
+                <a href="{% url 'core:home' %}" class="logo">
+                    {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}" style="height:36px;">
+                    {% endif %}
+                    {{ site_settings.shop_name }}
+                </a>
+                <p>{{ site_settings.shop_description|default:"Fresh, authentic cuisine made with love. Order for pickup or delivery." }}</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Order</h4>
+                <a href="{% url 'core:home' %}">Order Food</a>
+                <a href="{% url 'menu:menu' %}">Full Menu</a>
+                <a href="{% url 'offers:list' %}">Offers & Deals</a>
+                <a href="{% url 'orders:cart' %}">Your Basket</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Account</h4>
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}">My Profile</a>
+                <a href="{% url 'accounts:order_history' %}">Order History</a>
+                <a href="{% url 'loyalty:dashboard' %}">Rewards</a>
+                <a href="{% url 'account_logout' %}">Sign Out</a>
+                {% else %}
+                <a href="{% url 'account_login' %}">Sign In</a>
+                <a href="{% url 'account_signup' %}">Create Account</a>
+                {% endif %}
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                {% if site_settings.address %}
+                <a href="#">{{ site_settings.address }}</a>
+                {% endif %}
+                {% if site_settings.phone %}
+                <a href="tel:{{ site_settings.phone }}">{{ site_settings.phone }}</a>
+                {% endif %}
+                {% if site_settings.email %}
+                <a href="mailto:{{ site_settings.email }}">{{ site_settings.email }}</a>
+                {% endif %}
+                {% if site_settings.opening_hours %}
+                <a href="#">Opening Hours</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-inner">
+                <span>&copy; {% now "Y" %} {{ site_settings.shop_name }}. All rights reserved.</span>
+                <div class="footer-social">
+                    {% if site_settings.facebook_url %}
+                    <a href="{{ site_settings.facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
+                        <i class="ph-fill ph-facebook-logo"></i>
+                    </a>
+                    {% endif %}
+                    {% if site_settings.instagram_url %}
+                    <a href="{{ site_settings.instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">
+                        <i class="ph-fill ph-instagram-logo"></i>
+                    </a>
+                    {% endif %}
+                    {% if site_settings.twitter_url %}
+                    <a href="{{ site_settings.twitter_url }}" target="_blank" rel="noopener" aria-label="Twitter">
+                        <i class="ph-fill ph-twitter-logo"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Desktop JS -->
+    <script src="{% static 'js/desktop.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

@@ -53,10 +53,36 @@
     
     <!-- Cart Summary -->
     <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-top: 20px; box-shadow: var(--shadow);">
+        {% if active_offer %}
+        <div style="margin-bottom: 16px; padding: 12px; border-radius: 12px; background: var(--bg);">
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <div style="font-weight: 700;">Active Offer</div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">{{ active_offer.name }}</div>
+                </div>
+                <form method="post" action="{% url 'offers:clear' %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-secondary" style="width: auto; padding: 10px 16px; margin: 0;">Remove</button>
+                </form>
+            </div>
+            {% if offer_error %}
+            <p style="color: var(--error); font-size: 13px; margin-top: 8px;">{{ offer_error }}</p>
+            {% elif discount > 0 and not voucher_code %}
+            <p style="color: var(--success); font-size: 13px; margin-top: 8px;">Offer applied automatically: -£{{ discount|floatformat:2 }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
         <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
             <span style="color: var(--text-secondary);">Subtotal</span>
-            <span style="font-weight: 600;">£{{ cart_total|floatformat:2 }}</span>
+            <span style="font-weight: 600;">£{{ subtotal|floatformat:2 }}</span>
         </div>
+        {% if discount > 0 %}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--success);">
+            <span>Discount</span>
+            <span style="font-weight: 600;">-£{{ discount|floatformat:2 }}</span>
+        </div>
+        {% endif %}
         <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; padding-top: 12px; border-top: 1px solid var(--border);">
             <span>Total</span>
             <span>£{{ cart_total|floatformat:2 }}</span>

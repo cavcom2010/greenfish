@@ -2,6 +2,7 @@
 PWA views - Manifest, service worker, and push notifications.
 """
 import json
+import logging
 
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -9,8 +10,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.core.models import SiteSettings
+from apps.core.rate_limits import rate_limit
 
 from .models import PushSubscription
+
+logger = logging.getLogger(__name__)
 
 
 @require_GET
@@ -89,6 +93,7 @@ def offline(request):
 
 @csrf_exempt
 @require_POST
+@rate_limit("push-subscribe", limit=10, window_seconds=600)
 def subscribe_push(request):
     """Save push notification subscription."""
     try:
@@ -129,12 +134,14 @@ def subscribe_push(request):
         
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("Failed to subscribe push endpoint")
+        return JsonResponse({"error": "Could not save subscription"}, status=500)
 
 
 @csrf_exempt
 @require_POST
+@rate_limit("push-unsubscribe", limit=10, window_seconds=600)
 def unsubscribe_push(request):
     """Unsubscribe from push notifications."""
     try:
@@ -148,6 +155,9 @@ def unsubscribe_push(request):
         
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception:
+        logger.exception("Failed to unsubscribe push endpoint")
+        return JsonResponse({"error": "Could not update subscription"}, status=500)
 
 
 @require_GET

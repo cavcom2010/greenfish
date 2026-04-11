@@ -13,12 +13,17 @@ from apps.menu.models import MenuItem
 
 class Order(models.Model):
     """Customer food order."""
+
+    class ServiceType(models.TextChoices):
+        PICKUP = "pickup", "Pickup"
+        DELIVERY = "delivery", "Delivery"
     
     class OrderStatus(models.TextChoices):
         PENDING = "pending", "Pending Payment"
         CONFIRMED = "confirmed", "Confirmed"
         PREPARING = "preparing", "Preparing"
         READY = "ready", "Ready for Collection"
+        OUT_FOR_DELIVERY = "out_for_delivery", "Out for Delivery"
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
     
@@ -42,6 +47,17 @@ class Order(models.Model):
         blank=True,
         related_name="orders"
     )
+
+    service_type = models.CharField(
+        max_length=20,
+        choices=ServiceType.choices,
+        default=ServiceType.PICKUP,
+        db_index=True,
+    )
+    delivery_address_line1 = models.CharField(max_length=255, blank=True)
+    delivery_address_line2 = models.CharField(max_length=255, blank=True)
+    delivery_city = models.CharField(max_length=100, blank=True)
+    delivery_postcode = models.CharField(max_length=20, blank=True)
     
     # Order status
     status = models.CharField(
@@ -86,8 +102,39 @@ class Order(models.Model):
     requested_pickup_time = models.DateTimeField(null=True, blank=True, help_text="Customer's requested pickup time")
     estimated_ready_time = models.DateTimeField(null=True, blank=True, help_text="Kitchen's estimated ready time")
     actual_ready_time = models.DateTimeField(null=True, blank=True, help_text="When order was actually marked ready")
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    preparing_started_at = models.DateTimeField(null=True, blank=True)
+    ready_at = models.DateTimeField(null=True, blank=True)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    collected_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    accepted_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accepted_orders",
+    )
+    completed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="completed_orders",
+    )
+    cancelled_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cancelled_orders",
+    )
     special_instructions = models.TextField(blank=True)
     staff_notes = models.TextField(blank=True, help_text="Internal kitchen notes")
+    handover_notes = models.TextField(blank=True, help_text="Collection/delivery handover notes")
+    cancel_reason = models.CharField(max_length=255, blank=True)
     
     # Payment (Mollie)
     mollie_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
@@ -108,6 +155,44 @@ class Order(models.Model):
     
     def __str__(self):
         return f"#{self.order_number} - {self.customer_name}"
+
+    @property
+    def is_delivery(self):
+        return self.service_type == self.ServiceType.DELIVERY
+
+    @property
+    def service_time_label(self):
+        return "Delivery Time" if self.is_delivery else "Pickup Time"
+
+    @property
+    def ready_status_label(self):
+        return "Ready to Dispatch" if self.is_delivery else "Ready for Collection"
+
+    @property
+    def dispatch_status_label(self):
+        return "Out for Delivery"
+
+    @property
+    def service_status_display(self):
+        if self.status == self.OrderStatus.READY:
+            return self.ready_status_label
+        if self.status == self.OrderStatus.OUT_FOR_DELIVERY:
+            return self.dispatch_status_label
+        return self.get_status_display()
+
+    @property
+    def requested_service_time(self):
+        return self.requested_pickup_time
+
+    @property
+    def delivery_address_display(self):
+        parts = [
+            self.delivery_address_line1,
+            self.delivery_address_line2,
+            self.delivery_city,
+            self.delivery_postcode,
+        ]
+        return ", ".join(part for part in parts if part)
     
     def save(self, *args, **kwargs):
         if not self.order_number:
@@ -133,15 +218,22 @@ class Order(models.Model):
         """Mark order as paid."""
         self.payment_status = self.PaymentStatus.PAID
         self.paid_at = timezone.now()
+        update_fields = ["payment_status", "paid_at", "updated_at"]
+        self.save(update_fields=update_fields)
+
         # Auto-confirm if pending
         if self.status == self.OrderStatus.PENDING:
-            self.status = self.OrderStatus.CONFIRMED
-        self.save(update_fields=["payment_status", "paid_at", "status", "updated_at"])
+            self.update_status(self.OrderStatus.CONFIRMED)
     
     def update_status(self, new_status, changed_by=None):
         """Update order status and log the change."""
         old_status = self.status
+        if old_status == new_status:
+            return
+
+        now = timezone.now()
         self.status = new_status
+        update_fields = ["status", "updated_at"]
         
         # Set estimated ready time when confirmed
         if new_status == self.OrderStatus.CONFIRMED and not self.estimated_ready_time:
@@ -149,13 +241,54 @@ class Order(models.Model):
                 (item.menu_item.preparation_time for item in self.items.all() if item.menu_item),
                 default=15
             )
-            self.estimated_ready_time = timezone.now() + timezone.timedelta(minutes=max_prep_time)
+            self.estimated_ready_time = now + timezone.timedelta(minutes=max_prep_time)
+            update_fields.append("estimated_ready_time")
+        if new_status == self.OrderStatus.CONFIRMED and not self.accepted_at:
+            self.accepted_at = now
+            update_fields.append("accepted_at")
+        if new_status == self.OrderStatus.CONFIRMED and changed_by and not self.accepted_by_id:
+            self.accepted_by = changed_by
+            update_fields.append("accepted_by")
+        if new_status == self.OrderStatus.PREPARING and not self.preparing_started_at:
+            self.preparing_started_at = now
+            update_fields.append("preparing_started_at")
         
         # Set actual ready time
         if new_status == self.OrderStatus.READY and not self.actual_ready_time:
-            self.actual_ready_time = timezone.now()
+            self.actual_ready_time = now
+            update_fields.append("actual_ready_time")
+        if new_status == self.OrderStatus.READY and not self.ready_at:
+            self.ready_at = now
+            update_fields.append("ready_at")
+        if new_status == self.OrderStatus.OUT_FOR_DELIVERY and not self.ready_at:
+            self.ready_at = now
+            update_fields.append("ready_at")
+        if new_status == self.OrderStatus.OUT_FOR_DELIVERY and not self.actual_ready_time:
+            self.actual_ready_time = now
+            update_fields.append("actual_ready_time")
+        if new_status == self.OrderStatus.OUT_FOR_DELIVERY and not self.dispatched_at:
+            self.dispatched_at = now
+            update_fields.append("dispatched_at")
+        if new_status == self.OrderStatus.COMPLETED and not self.completed_at:
+            self.completed_at = now
+            update_fields.append("completed_at")
+        if new_status == self.OrderStatus.COMPLETED and changed_by and not self.completed_by_id:
+            self.completed_by = changed_by
+            update_fields.append("completed_by")
+        if new_status == self.OrderStatus.COMPLETED and self.is_delivery and not self.delivered_at:
+            self.delivered_at = now
+            update_fields.append("delivered_at")
+        if new_status == self.OrderStatus.COMPLETED and not self.is_delivery and not self.collected_at:
+            self.collected_at = now
+            update_fields.append("collected_at")
+        if new_status == self.OrderStatus.CANCELLED and not self.cancelled_at:
+            self.cancelled_at = now
+            update_fields.append("cancelled_at")
+        if new_status == self.OrderStatus.CANCELLED and changed_by and not self.cancelled_by_id:
+            self.cancelled_by = changed_by
+            update_fields.append("cancelled_by")
         
-        self.save(update_fields=["status", "estimated_ready_time", "actual_ready_time", "updated_at"])
+        self.save(update_fields=list(dict.fromkeys(update_fields)))
         
         # Log status change
         OrderStatusHistory.objects.create(

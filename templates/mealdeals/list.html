@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% load media_tags %}
 
-{% block title %}Meal Deals - {{ site_name }}{% endblock %}
+{% block title %}Meal Deals - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
 <style>
@@ -119,7 +120,7 @@
 </style>
 
 <div class="deals-header">
-    <h1><i class="fas fa-star"></i> Meal Deals</h1>
+    <h1><i class="ph-fill ph-star"></i> Meal Deals</h1>
     <p>Save money with our combo meals!</p>
 </div>
 
@@ -128,9 +129,9 @@
     <div class="deal-card">
         <div class="deal-image">
             {% if deal.image %}
-                <img src="{{ deal.image.url }}" alt="{{ deal.name }}">
+                <img src="{{ deal.image|image_variant:'hero' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="1280" height="720">
             {% else %}
-                <i class="fas fa-utensils" style="color: #FF6B35;"></i>
+                <i class="ph ph-fork-knife" style="color: #FF6B35;"></i>
             {% endif %}
         </div>
         <div class="deal-content">
@@ -146,14 +147,14 @@
             </div>
             <div style="margin-top: 1rem;">
                 <a href="{% url 'mealdeals:detail' deal.id %}" class="btn-build">
-                    <i class="fas fa-plus"></i> Build Deal
+                    <i class="ph ph-plus"></i> Build Deal
                 </a>
             </div>
         </div>
     </div>
     {% empty %}
     <div class="empty-deals">
-        <i class="fas fa-tags"></i>
+        <i class="ph ph-ticket"></i>
         <p>No meal deals available right now.</p>
         <p style="font-size: 0.85rem;">Check back soon for great offers!</p>
     </div>

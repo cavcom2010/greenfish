@@ -1,0 +1,85 @@
+<div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); max-height: 85vh; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px;">
+        <div>
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Order #{{ order.order_number }}</h3>
+            <div style="font-size: 13px; color: var(--text-secondary);">
+                {{ order.get_service_type_display }} · {{ order.service_status_display }} · £{{ order.total_amount|floatformat:2 }}
+            </div>
+        </div>
+        <button class="btn btn-secondary" type="button" onclick="closeOrderDetail()" style="min-width: 0; padding-inline: 14px;">
+            Close
+        </button>
+    </div>
+
+    <div style="display: grid; gap: 10px; margin-bottom: 18px;">
+        <div><strong>Customer:</strong> {{ order.customer_name }}</div>
+        <div><strong>Phone:</strong> {{ order.customer_phone }}</div>
+        {% if order.customer_email %}<div><strong>Email:</strong> {{ order.customer_email }}</div>{% endif %}
+        {% if order.requested_service_time %}<div><strong>{{ order.service_time_label }}:</strong> {{ order.requested_service_time|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.is_delivery and order.delivery_address_display %}<div><strong>Address:</strong> {{ order.delivery_address_display }}</div>{% endif %}
+        <div><strong>Payment:</strong> {{ order.get_payment_status_display }}</div>
+    </div>
+
+    <div style="background: var(--bg); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+        {% for item in order.items.all %}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; gap: 12px;">
+            <div>
+                <div>{{ item.quantity }}x {{ item.item_name }}</div>
+                {% if item.modifiers %}
+                <div style="font-size: 12px; color: var(--text-secondary);">
+                    {% for mod in item.modifiers %}+ {{ mod.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <strong>£{{ item.line_total|floatformat:2 }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if order.special_instructions %}
+    <div class="alert alert-error" style="margin-bottom: 16px;">
+        {{ order.special_instructions }}
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px;">
+        {% if order.accepted_at %}<div><strong>Accepted:</strong> {{ order.accepted_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.preparing_started_at %}<div><strong>Preparing:</strong> {{ order.preparing_started_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.ready_at %}<div><strong>Ready:</strong> {{ order.ready_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.dispatched_at %}<div><strong>Dispatched:</strong> {{ order.dispatched_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.collected_at %}<div><strong>Collected:</strong> {{ order.collected_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.delivered_at %}<div><strong>Delivered:</strong> {{ order.delivered_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.cancelled_at %}<div><strong>Cancelled:</strong> {{ order.cancelled_at|date:"D j M H:i" }}</div>{% endif %}
+    </div>
+
+    <form id="orderDetailForm-{{ order.id }}" onsubmit="saveOrderNotes(event, {{ order.id }})" style="display: grid; gap: 14px;">
+        <div>
+            <label for="staffNotes{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Kitchen Notes</label>
+            <textarea id="staffNotes{{ order.id }}" name="staff_notes" rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: vertical;">{{ order.staff_notes }}</textarea>
+        </div>
+
+        <div>
+            <label for="handoverNotes{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Handover Notes</label>
+            <textarea id="handoverNotes{{ order.id }}" name="handover_notes" rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: vertical;">{{ order.handover_notes }}</textarea>
+        </div>
+
+        <div>
+            <label for="cancelReason{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Cancel Reason</label>
+            <input id="cancelReason{{ order.id }}" name="cancel_reason" value="{{ order.cancel_reason }}" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+        </div>
+
+        <button class="btn btn-secondary" type="submit" style="width: 100%;">
+            Save Notes
+        </button>
+    </form>
+
+    {% if order.available_actions %}
+    <div style="display: grid; gap: 10px; margin-top: 18px;">
+        {% for action in order.available_actions %}
+        <button class="btn {{ action.css_class }}" type="button" onclick="submitOrderDetailAction({{ order.id }}, '{{ action.name }}')">
+            {{ action.label }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

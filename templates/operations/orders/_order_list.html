@@ -1,0 +1,62 @@
+{% for order in orders %}
+<div class="order-card status-{{ order.status }}">
+    <div class="order-header">
+        <span class="order-number">#{{ order.order_number }}</span>
+        <span class="order-time">{{ order.created_at|time:"H:i" }}</span>
+    </div>
+    
+    <div class="order-customer">{{ order.customer_name }}</div>
+    <div class="order-phone">{{ order.customer_phone }}</div>
+    <div class="order-phone" style="margin-bottom: 6px;">{{ order.get_service_type_display }} · {{ order.service_status_display }}</div>
+    {% if order.is_delivery and order.delivery_postcode %}
+    <div class="order-phone" style="margin-bottom: 12px;">{{ order.delivery_postcode }}</div>
+    {% endif %}
+    
+    <div class="order-items">
+        {% for item in order.items.all %}
+        <div class="order-item">
+            <span>{{ item.quantity }}x {{ item.item_name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="order-total">£{{ order.total_amount }}</div>
+
+    {% if order.staff_notes or order.handover_notes %}
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+        {% if order.staff_notes %}
+        <span class="category-pill" style="cursor: default;">Kitchen Notes</span>
+        {% endif %}
+        {% if order.handover_notes %}
+        <span class="category-pill" style="cursor: default;">Handover Notes</span>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="order-actions">
+        <button class="action-btn btn-secondary" type="button" onclick="showOrderDetail({{ order.id }})">
+            Details
+        </button>
+        {% if order.available_actions %}
+        {% for action in order.available_actions %}
+        <button class="action-btn {{ action.css_class }}" onclick="runOrderAction({{ order.id }}, '{{ action.name }}')">
+            {{ action.label }}
+        </button>
+        {% endfor %}
+        {% endif %}
+    </div>
+    
+    {% if order.special_instructions %}
+    <div style="margin-top: 12px; padding: 8px 12px; background: var(--error-bg); border-radius: 8px; font-size: 13px; color: var(--error);">
+        <i class="ph-fill ph-warning-circle"></i>
+        {{ order.special_instructions }}
+    </div>
+    {% endif %}
+</div>
+{% empty %}
+<div class="empty-state">
+    <i class="ph ph-check-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
+    <h3>No active orders</h3>
+    <p>New orders will appear here automatically</p>
+</div>
+{% endfor %}

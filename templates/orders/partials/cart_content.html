@@ -1,0 +1,17 @@
+{% if cart_items %}
+<div id="cartItems">
+    {% for item in cart_items %}
+    <div class="list-item" style="margin-bottom: 12px;">
+        <div class="list-content">
+            <div class="list-title">{{ item.name }}</div>
+            <div class="list-desc">x{{ item.quantity }}</div>
+        </div>
+        <div style="font-weight: 700;">£{{ item.line_total|floatformat:2 }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="text-align: center; padding: 24px; color: var(--text-secondary);">
+    Your basket is empty.
+</div>
+{% endif %}

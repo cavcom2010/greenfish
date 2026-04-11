@@ -2,6 +2,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from apps.core.models import SiteSettings
 from apps.orders.models import Order
 
 from .services import award_points_for_order
@@ -12,7 +13,7 @@ from .utils import generate_referral_code
 @receiver(post_save, sender=Order)
 def award_points_on_completion(sender, instance, created, **kwargs):
     """Award points when an order is marked as completed."""
-    if instance.status == Order.Status.COMPLETED:
+    if instance.status == Order.OrderStatus.COMPLETED:
         # Check if points already awarded for this order
         from .models import LoyaltyTransaction
         existing = LoyaltyTransaction.objects.filter(

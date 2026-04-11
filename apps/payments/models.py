@@ -6,6 +6,11 @@ from django.db import models
 
 class Payment(models.Model):
     """Payment record for an order."""
+
+    class Provider(models.TextChoices):
+        STRIPE = "stripe", "Stripe"
+        MOLLIE = "mollie", "Mollie"
+        DEMO = "demo", "Demo"
     
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -21,9 +26,19 @@ class Payment(models.Model):
         on_delete=models.CASCADE,
         related_name="payment"
     )
+
+    provider = models.CharField(
+        max_length=20,
+        choices=Provider.choices,
+        default=Provider.STRIPE,
+        db_index=True,
+    )
+
+    external_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
+    external_payment_method = models.CharField(max_length=50, blank=True)
     
-    # Mollie payment details
-    mollie_payment_id = models.CharField(max_length=100, db_index=True)
+    # Legacy Mollie fields kept for backwards compatibility and future re-enablement.
+    mollie_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
     mollie_payment_method = models.CharField(max_length=50, blank=True)
     
     # Amount
@@ -54,7 +69,33 @@ class Payment(models.Model):
         ordering = ["-created_at"]
     
     def __str__(self):
-        return f"Payment {self.mollie_payment_id} - {self.status}"
+        return f"Payment {self.payment_reference} - {self.status}"
+
+    @property
+    def payment_reference(self):
+        return self.external_payment_id or self.mollie_payment_id or f"payment-{self.pk}"
+
+    @property
+    def payment_method_label(self):
+        return self.external_payment_method or self.mollie_payment_method
+
+    @property
+    def is_demo(self):
+        return self.provider == self.Provider.DEMO or self.payment_reference.startswith("demo_")
+
+    def save(self, *args, **kwargs):
+        if not self.external_payment_id and self.mollie_payment_id:
+            self.external_payment_id = self.mollie_payment_id
+        if not self.external_payment_method and self.mollie_payment_method:
+            self.external_payment_method = self.mollie_payment_method
+
+        if self.provider == self.Provider.MOLLIE:
+            if self.external_payment_id and not self.mollie_payment_id:
+                self.mollie_payment_id = self.external_payment_id
+            if self.external_payment_method and not self.mollie_payment_method:
+                self.mollie_payment_method = self.external_payment_method
+
+        super().save(*args, **kwargs)
 
 
 class PaymentLog(models.Model):
@@ -75,4 +116,4 @@ class PaymentLog(models.Model):
         ordering = ["-created_at"]
     
     def __str__(self):
-        return f"{self.payment.mollie_payment_id} - {self.event_type}"
+        return f"{self.payment.payment_reference} - {self.event_type}"

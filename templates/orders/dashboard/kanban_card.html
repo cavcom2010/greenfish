@@ -1,9 +1,9 @@
 {% load duration_filters %}
 <div class="kanban-card status-{{ order.status }}" data-order-id="{{ order.id }}" data-created-at="{{ order.created_at|date:'c' }}">
-    {% if order.requested_pickup_time %}
-    <div class="pickup-indicator {% if order.minutes_elapsed > 15 %}urgent{% endif %}" title="Pickup time: {{ order.requested_pickup_time|time:'H:i' }}">
+    {% if order.requested_service_time %}
+    <div class="pickup-indicator {% if order.minutes_elapsed > 15 %}urgent{% endif %}" title="{{ order.service_time_label }}: {{ order.requested_service_time|time:'H:i' }}">
         <i class="ph-fill ph-clock"></i>
-        <span class="pickup-time">{{ order.requested_pickup_time|time:"H:i" }}</span>
+        <span class="pickup-time">{{ order.requested_service_time|time:"H:i" }}</span>
     </div>
     {% endif %}
     
@@ -18,6 +18,10 @@
     
     <div class="card-customer">{{ order.customer_name|default:"Guest" }}</div>
     <div class="card-phone">{{ order.customer_phone|default:"" }}</div>
+    <div class="card-phone" style="margin-bottom: 8px;">{{ order.get_service_type_display }}</div>
+    {% if order.is_delivery and order.delivery_postcode %}
+    <div class="card-phone" style="margin-bottom: 10px;">{{ order.delivery_postcode }}</div>
+    {% endif %}
     
     {% if order.special_instructions %}
     <div class="card-notes">
@@ -50,7 +54,7 @@
         {% elif order.status == 'preparing' %}
         <button class="action-btn btn-ready" onclick="moveOrder({{ order.id }}, 'ready')">
             <i class="ph-fill ph-check-circle"></i>
-            Mark Ready
+            {% if order.is_delivery %}Dispatch{% else %}Mark Ready{% endif %}
         </button>
         {% elif order.status == 'ready' %}
         <button class="action-btn btn-complete" onclick="moveOrder({{ order.id }}, 'completed')">

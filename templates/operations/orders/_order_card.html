@@ -1,0 +1,33 @@
+<div class="order-card status-{{ order.status }}">
+    <div class="order-header">
+        <span class="order-number">#{{ order.order_number }}</span>
+        <span class="order-time">{{ order.created_at|time:"H:i" }}</span>
+    </div>
+
+    <div class="order-customer">{{ order.customer_name }}</div>
+    <div class="order-phone">{{ order.customer_phone }}</div>
+    <div class="order-phone" style="margin-bottom: 8px;">{{ order.get_service_type_display }} · {{ order.service_status_display }}</div>
+
+    <div class="order-items">
+        {% for item in order.items.all %}
+        <div class="order-item">
+            <span>{{ item.quantity }}x {{ item.item_name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="order-total">£{{ order.total_amount }}</div>
+
+    <div class="order-actions">
+        <button class="action-btn btn-secondary" type="button" onclick="showOrderDetail({{ order.id }})">
+            Details
+        </button>
+        {% if order.available_actions %}
+        {% for action in order.available_actions %}
+        <button class="action-btn {{ action.css_class }}" onclick="runOrderAction({{ order.id }}, '{{ action.name }}')">
+            {{ action.label }}
+        </button>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>

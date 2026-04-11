@@ -9,6 +9,8 @@ Welcome to Tinashe Takeaway - A Premium Mobile-First Food Ordering PWA.
 - [Configuration](configuration.md) - Environment variables and settings
 - [User Guide](user-guide.md) - How to use the app
 - [Admin Guide](admin-guide.md) - Manage your takeaway
+- [Operations Order Board](operations-order-board.md) - Staff workflow architecture, roles, statuses, and action model
+- [Operations Runbook](operations-runbook.md) - Daily staff usage, setup, and troubleshooting for kitchen and collection boards
 - [API Reference](api-reference.md) - API endpoints
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
@@ -18,7 +20,7 @@ Tinashe Takeaway is a production-ready Django web application designed for takea
 
 - **Mobile-First Design** - Native app experience on smartphones
 - **PWA Capabilities** - Installable on home screens, works offline
-- **Real-Time Order Board** - Live order management for kitchen staff
+- **Operations Boards** - Separate kitchen and collection boards for live staff order handling
 - **Mollie Payments** - Secure European payment processing
 - **Promotions System** - Voucher codes and automatic discounts
 
@@ -31,6 +33,7 @@ two_fish/
 │   ├── accounts/      # User authentication (django-allauth)
 │   ├── menu/          # Menu categories and items
 │   ├── orders/        # Order management, cart, checkout
+│   ├── operations/    # Staff boards, workflows, permissions
 │   ├── offers/        # Promotions and voucher codes
 │   ├── payments/      # Mollie payment integration
 │   └── pwa/           # Service worker, manifest

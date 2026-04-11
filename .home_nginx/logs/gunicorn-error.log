@@ -2809,3 +2809,263 @@ AttributeError: 'SiteSettings' object has no attribute 'theme_color'
 [2026-04-07 15:20:02 +0100] [871312] [INFO] Booting worker with pid: 871312
 [2026-04-07 15:20:02 +0100] [871314] [INFO] Booting worker with pid: 871314
 [2026-04-07 15:20:02 +0100] [871301] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 16:33:06 +0100] [871301] [INFO] Handling signal: term
+[2026-04-07 16:33:06 +0100] [871314] [INFO] Worker exiting (pid: 871314)
+[2026-04-07 16:33:06 +0100] [871311] [INFO] Worker exiting (pid: 871311)
+[2026-04-07 16:33:06 +0100] [871312] [INFO] Worker exiting (pid: 871312)
+[2026-04-07 16:33:07 +0100] [871301] [INFO] Worker (pid:871314) was sent SIGTERM!
+[2026-04-07 16:33:07 +0100] [871301] [INFO] Shutting down: Master
+[2026-04-07 16:33:07 +0100] [896327] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 16:33:07 +0100] [896327] [INFO] Listening at: http://127.0.0.1:8026 (896327)
+[2026-04-07 16:33:07 +0100] [896327] [INFO] Using worker: sync
+[2026-04-07 16:33:07 +0100] [896338] [INFO] Booting worker with pid: 896338
+[2026-04-07 16:33:07 +0100] [896339] [INFO] Booting worker with pid: 896339
+[2026-04-07 16:33:07 +0100] [896340] [INFO] Booting worker with pid: 896340
+[2026-04-07 16:33:07 +0100] [896327] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 17:59:48 +0100] [896327] [INFO] Handling signal: term
+[2026-04-07 17:59:48 +0100] [896338] [INFO] Worker exiting (pid: 896338)
+[2026-04-07 17:59:48 +0100] [896340] [INFO] Worker exiting (pid: 896340)
+[2026-04-07 17:59:48 +0100] [896339] [INFO] Worker exiting (pid: 896339)
+[2026-04-07 17:59:48 +0100] [896327] [INFO] Worker (pid:896338) was sent SIGTERM!
+[2026-04-07 17:59:48 +0100] [896327] [INFO] Worker (pid:896339) was sent SIGTERM!
+[2026-04-07 17:59:48 +0100] [896327] [INFO] Worker (pid:896340) was sent SIGTERM!
+[2026-04-07 17:59:48 +0100] [896327] [INFO] Shutting down: Master
+[2026-04-07 17:59:48 +0100] [915196] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 17:59:48 +0100] [915196] [INFO] Listening at: http://127.0.0.1:8026 (915196)
+[2026-04-07 17:59:48 +0100] [915196] [INFO] Using worker: sync
+[2026-04-07 17:59:48 +0100] [915206] [INFO] Booting worker with pid: 915206
+[2026-04-07 17:59:48 +0100] [915207] [INFO] Booting worker with pid: 915207
+[2026-04-07 17:59:48 +0100] [915208] [INFO] Booting worker with pid: 915208
+[2026-04-07 17:59:48 +0100] [915196] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 18:00:59 +0100] [915196] [INFO] Handling signal: term
+[2026-04-07 18:00:59 +0100] [915207] [INFO] Worker exiting (pid: 915207)
+[2026-04-07 18:00:59 +0100] [915208] [INFO] Worker exiting (pid: 915208)
+[2026-04-07 18:00:59 +0100] [915206] [INFO] Worker exiting (pid: 915206)
+[2026-04-07 18:00:59 +0100] [915196] [INFO] Worker (pid:915206) was sent SIGTERM!
+[2026-04-07 18:00:59 +0100] [915196] [INFO] Worker (pid:915207) was sent SIGTERM!
+[2026-04-07 18:00:59 +0100] [915196] [INFO] Worker (pid:915208) was sent SIGTERM!
+[2026-04-07 18:00:59 +0100] [915196] [INFO] Shutting down: Master
+[2026-04-07 18:00:59 +0100] [915919] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 18:00:59 +0100] [915919] [INFO] Listening at: http://127.0.0.1:8026 (915919)
+[2026-04-07 18:00:59 +0100] [915919] [INFO] Using worker: sync
+[2026-04-07 18:00:59 +0100] [915929] [INFO] Booting worker with pid: 915929
+[2026-04-07 18:00:59 +0100] [915930] [INFO] Booting worker with pid: 915930
+[2026-04-07 18:00:59 +0100] [915932] [INFO] Booting worker with pid: 915932
+[2026-04-07 18:00:59 +0100] [915919] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 18:28:01 +0100] [915919] [INFO] Handling signal: term
+[2026-04-07 18:28:01 +0100] [915930] [INFO] Worker exiting (pid: 915930)
+[2026-04-07 18:28:01 +0100] [915932] [INFO] Worker exiting (pid: 915932)
+[2026-04-07 18:28:01 +0100] [915929] [INFO] Worker exiting (pid: 915929)
+[2026-04-07 18:28:01 +0100] [915919] [INFO] Worker (pid:915929) was sent SIGTERM!
+[2026-04-07 18:28:01 +0100] [915919] [INFO] Worker (pid:915930) was sent SIGTERM!
+[2026-04-07 18:28:01 +0100] [915919] [INFO] Worker (pid:915932) was sent SIGTERM!
+[2026-04-07 18:28:01 +0100] [915919] [INFO] Shutting down: Master
+[2026-04-07 18:28:01 +0100] [926733] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 18:28:01 +0100] [926733] [INFO] Listening at: http://127.0.0.1:8026 (926733)
+[2026-04-07 18:28:01 +0100] [926733] [INFO] Using worker: sync
+[2026-04-07 18:28:01 +0100] [926743] [INFO] Booting worker with pid: 926743
+[2026-04-07 18:28:01 +0100] [926744] [INFO] Booting worker with pid: 926744
+[2026-04-07 18:28:02 +0100] [926745] [INFO] Booting worker with pid: 926745
+[2026-04-07 18:28:02 +0100] [926733] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-07 19:18:56 +0100] [926733] [INFO] Handling signal: term
+[2026-04-07 19:18:56 +0100] [926743] [INFO] Worker exiting (pid: 926743)
+[2026-04-07 19:18:56 +0100] [926744] [INFO] Worker exiting (pid: 926744)
+[2026-04-07 19:18:56 +0100] [926745] [INFO] Worker exiting (pid: 926745)
+[2026-04-07 19:18:56 +0100] [926733] [INFO] Worker (pid:926743) was sent SIGTERM!
+[2026-04-07 19:18:56 +0100] [926733] [INFO] Worker (pid:926744) was sent SIGTERM!
+[2026-04-07 19:18:56 +0100] [926733] [INFO] Worker (pid:926745) was sent SIGTERM!
+[2026-04-07 19:18:56 +0100] [926733] [INFO] Shutting down: Master
+[2026-04-07 19:18:57 +0100] [947129] [INFO] Starting gunicorn 25.3.0
+[2026-04-07 19:18:57 +0100] [947129] [INFO] Listening at: http://127.0.0.1:8026 (947129)
+[2026-04-07 19:18:57 +0100] [947129] [INFO] Using worker: sync
+[2026-04-07 19:18:57 +0100] [947139] [INFO] Booting worker with pid: 947139
+[2026-04-07 19:18:57 +0100] [947141] [INFO] Booting worker with pid: 947141
+[2026-04-07 19:18:57 +0100] [947142] [INFO] Booting worker with pid: 947142
+[2026-04-07 19:18:57 +0100] [947129] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+[2026-04-08 18:32:07 +0100] [947129] [INFO] Handling signal: term
+[2026-04-08 18:32:07 +0100] [947141] [INFO] Worker exiting (pid: 947141)
+[2026-04-08 18:32:07 +0100] [947142] [INFO] Worker exiting (pid: 947142)
+[2026-04-08 18:32:07 +0100] [947139] [INFO] Worker exiting (pid: 947139)
+[2026-04-08 18:32:08 +0100] [947129] [INFO] Shutting down: Master
+[2026-04-08 18:32:09 +0100] [1115302] [INFO] Starting gunicorn 25.3.0
+[2026-04-08 18:32:09 +0100] [1115302] [INFO] Listening at: http://127.0.0.1:8026 (1115302)
+[2026-04-08 18:32:09 +0100] [1115302] [INFO] Using worker: sync
+[2026-04-08 18:32:09 +0100] [1115313] [INFO] Booting worker with pid: 1115313
+[2026-04-08 18:32:09 +0100] [1115314] [INFO] Booting worker with pid: 1115314
+[2026-04-08 18:32:09 +0100] [1115315] [INFO] Booting worker with pid: 1115315
+[2026-04-08 18:32:09 +0100] [1115302] [INFO] Control socket listening at /run/user/1000/gunicorn.ctl
+INFO 2026-04-08 18:33:01,406 services SMS not configured, message saved as pending
+ERROR 2026-04-08 18:33:28,176 log Internal Server Error: /
+Traceback (most recent call last):
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/apps/core/views.py", line 57, in home
+    return render(request, "core/home.html", context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/backends/django.py", line 107, in render
+    return self.template.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 174, in render
+    return self._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 166, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1052, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/loader_tags.py", line 160, in render
+    return compiled_parent._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 166, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1052, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/loader_tags.py", line 66, in render
+    result = block.nodelist.render(context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1052, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/defaulttags.py", line 202, in render
+    len_values = len(values)
+                 ^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1611, in execute_sql
+    sql, params = self.as_sql()
+                  ^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 795, in as_sql
+    self.compile(self.where) if self.where is not None else ("", [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 578, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/where.py", line 151, in as_sql
+    sql, params = compiler.compile(child)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 578, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/fields/json.py", line 157, in as_sql
+    raise NotSupportedError(
+django.db.utils.NotSupportedError: contains lookup is not supported on this database backend.
+WARNING 2026-04-08 18:33:28,796 log Not Found: /favicon.ico
+ERROR 2026-04-08 18:33:31,846 log Internal Server Error: /
+Traceback (most recent call last):
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/apps/core/views.py", line 57, in home
+    return render(request, "core/home.html", context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/backends/django.py", line 107, in render
+    return self.template.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 174, in render
+    return self._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 166, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1052, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/loader_tags.py", line 160, in render
+    return compiled_parent._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 166, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1052, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/loader_tags.py", line 66, in render
+    result = block.nodelist.render(context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/base.py", line 1052, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/template/defaulttags.py", line 202, in render
+    len_values = len(values)
+                 ^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/query.py", line 372, in __len__
+    self._fetch_all()
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/query.py", line 2000, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/query.py", line 95, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1611, in execute_sql
+    sql, params = self.as_sql()
+                  ^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 795, in as_sql
+    self.compile(self.where) if self.where is not None else ("", [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 578, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/where.py", line 151, in as_sql
+    sql, params = compiler.compile(child)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 578, in compile
+    sql, params = node.as_sql(self, self.connection)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cmazh/django/two_fish/venv/lib/python3.12/site-packages/django/db/models/fields/json.py", line 157, in as_sql
+    raise NotSupportedError(
+django.db.utils.NotSupportedError: contains lookup is not supported on this database backend.
+INFO 2026-04-08 18:41:56,911 services SMS not configured, message saved as pending
+[2026-04-08 18:56:37 +0100] [1115302] [INFO] Handling signal: term
+[2026-04-08 18:56:37 +0100] [1115314] [INFO] Worker exiting (pid: 1115314)
+[2026-04-08 18:56:37 +0100] [1115315] [INFO] Worker exiting (pid: 1115315)
+[2026-04-08 18:56:37 +0100] [1115313] [INFO] Worker exiting (pid: 1115313)
+[2026-04-08 18:56:37 +0100] [1115302] [INFO] Worker (pid:1115313) was sent SIGTERM!
+[2026-04-08 18:56:37 +0100] [1115302] [INFO] Worker (pid:1115314) was sent SIGTERM!
+[2026-04-08 18:56:37 +0100] [1115302] [INFO] Worker (pid:1115315) was sent SIGTERM!
+[2026-04-08 18:56:37 +0100] [1115302] [INFO] Shutting down: Master

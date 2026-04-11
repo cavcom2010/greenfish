@@ -2,10 +2,10 @@
 .env/*
 
 staticfiles/
+logs/
 
 *.pyc
 
 venv/
 
 *.db
-

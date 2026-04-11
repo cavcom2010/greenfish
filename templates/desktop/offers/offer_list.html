@@ -1,0 +1,50 @@
+{% extends "desktop/base.html" %}
+
+{% block title %}Offers - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<section class="section">
+    <div class="container">
+        <h1 style="margin-bottom:0.5rem;">Offers & Deals</h1>
+        <p style="margin-bottom:2.5rem;">Grab our latest promotions before they're gone.</p>
+
+        {% if offers %}
+        <div class="offers-grid">
+            {% for offer in offers %}
+            <a href="{% url 'offers:detail' offer.id %}" class="offer-card-desktop">
+                <div class="offer-bg"></div>
+                <div class="offer-card-content">
+                    <h3>{{ offer.name }}</h3>
+                    <p>{{ offer.description }}</p>
+                    {% if offer.offer_type == 'percentage' %}
+                    <span style="display:inline-block;background:rgba(255,255,255,0.2);padding:0.35rem 1rem;border-radius:50px;font-size:0.8rem;font-weight:700;margin-bottom:1rem;">
+                        Save {{ offer.value|floatformat:0 }}%
+                    </span>
+                    {% elif offer.offer_type == 'fixed' %}
+                    <span style="display:inline-block;background:rgba(255,255,255,0.2);padding:0.35rem 1rem;border-radius:50px;font-size:0.8rem;font-weight:700;margin-bottom:1rem;">
+                        Save £{{ offer.value }}
+                    </span>
+                    {% endif %}
+                    <span class="offer-btn-desktop">
+                        View Offer <i class="ph-bold ph-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:4rem 2rem;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border-light);">
+            <i class="ph ph-tag" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem;display:block;"></i>
+            <h3 style="margin-bottom:0.5rem;">No active offers</h3>
+            <p style="color:var(--text-muted);">Check back soon for great deals!</p>
+            <a href="{% url 'core:home' %}" class="hero-btn-primary" style="display:inline-flex;margin-top:1.5rem;text-decoration:none;">
+                <i class="ph-bold ph-fork-knife"></i>
+                Browse Menu
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

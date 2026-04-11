@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Points History - {{ site_name }}{% endblock %}
+{% block title %}Points History - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
 <style>
@@ -130,7 +130,7 @@
 </style>
 
 <div class="tx-header">
-    <a href="{% url 'loyalty:dashboard' %}"><i class="fas fa-arrow-left"></i></a>
+    <a href="{% url 'loyalty:dashboard' %}"><i class="ph ph-arrow-left"></i></a>
     <h1>Points History</h1>
 </div>
 
@@ -157,17 +157,17 @@
     <div class="tx-item">
         <div class="tx-icon {{ tx.transaction_type }}">
             {% if tx.transaction_type == 'earned' %}
-                <i class="fas fa-shopping-bag"></i>
+                <i class="ph ph-shopping-bag"></i>
             {% elif tx.transaction_type == 'redeemed' %}
-                <i class="fas fa-ticket-alt"></i>
+                <i class="ph ph-ticket"></i>
             {% elif tx.transaction_type == 'bonus' %}
-                <i class="fas fa-gift"></i>
+                <i class="ph ph-gift"></i>
             {% elif tx.transaction_type == 'referral' %}
-                <i class="fas fa-user-plus"></i>
+                <i class="ph ph-user-plus"></i>
             {% elif tx.transaction_type == 'birthday' %}
-                <i class="fas fa-birthday-cake"></i>
+                <i class="ph ph-cake"></i>
             {% else %}
-                <i class="fas fa-star"></i>
+                <i class="ph ph-star"></i>
             {% endif %}
         </div>
         <div class="tx-details">
@@ -180,7 +180,7 @@
     </div>
     {% empty %}
     <div class="empty-state">
-        <i class="fas fa-receipt"></i>
+        <i class="ph ph-receipt"></i>
         <p>No transactions yet</p>
         <p style="font-size: 0.85rem; margin-top: 0.5rem;">Start ordering Sadza & Nyama to earn points!</p>
     </div>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load media_tags %}
 
 {% block title %}Menu - {{ site_settings.shop_name }}{% endblock %}
 {% block page_title %}Menu{% endblock %}
@@ -19,7 +20,7 @@
     <div class="food-card" onclick="openItemModal({{ item.id }})">
         <div class="food-image">
             {% if item.image %}
-            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+            <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
             {% else %}
             <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
             {% endif %}
@@ -66,6 +67,8 @@
 
 {% block extra_js %}
 <script>
+const menuServiceType = localStorage.getItem('service_type') || '{{ service_type|default:"pickup" }}';
+
 function quickAddToCart(itemId) {
     fetch('{% url "orders:add_to_cart" %}', {
         method: 'POST',
@@ -73,7 +76,7 @@ function quickAddToCart(itemId) {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}'
         },
-        body: `menu_item_id=${itemId}&quantity=1&modifiers=[]`
+        body: `menu_item_id=${itemId}&quantity=1&service_type=${encodeURIComponent(menuServiceType)}&modifiers=[]`
     })
     .then(response => response.json())
     .then(data => {

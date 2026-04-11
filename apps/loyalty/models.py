@@ -6,6 +6,18 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 
+from apps.core.media import (
+    MENU_IMAGE_VALIDATORS,
+    get_changed_image_names,
+    sync_instance_image_variants,
+    validate_changed_image_fields,
+)
+
+
+LOYALTY_REWARD_IMAGE_VARIANTS = {
+    "image": ("card",),
+}
+
 
 class LoyaltySettings(models.Model):
     """Global loyalty program settings."""
@@ -204,7 +216,7 @@ class LoyaltyReward(models.Model):
     )
     
     is_active = models.BooleanField(default=True)
-    image = models.ImageField(upload_to="loyalty/rewards/", blank=True)
+    image = models.ImageField(upload_to="loyalty/rewards/", blank=True, validators=MENU_IMAGE_VALIDATORS)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -215,3 +227,9 @@ class LoyaltyReward(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.points_required} points)"
+
+    def save(self, *args, **kwargs):
+        changed_images = get_changed_image_names(self, LOYALTY_REWARD_IMAGE_VARIANTS.keys())
+        validate_changed_image_fields(self, changed_images)
+        super().save(*args, **kwargs)
+        sync_instance_image_variants(self, LOYALTY_REWARD_IMAGE_VARIANTS, changed_images)

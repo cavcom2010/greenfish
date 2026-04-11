@@ -1,11 +1,35 @@
 """
 Offers and promotions models for Tinashe Takeaway.
 """
+import re
 from decimal import Decimal
 
+from django.apps import apps
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+from apps.core.media import (
+    MENU_IMAGE_VALIDATORS,
+    get_changed_image_names,
+    sync_instance_image_variants,
+    validate_changed_image_fields,
+)
+
+
+OFFER_IMAGE_VARIANTS = {
+    "hero_image": ("hero",),
+}
+
+
+def _normalize_guest_phone(phone):
+    """Return a comparable guest phone number."""
+    return re.sub(r"\s+", "", (phone or "").strip())
+
+
+def _normalize_guest_email(email):
+    """Return a comparable guest email address."""
+    return (email or "").strip().lower()
 
 
 class Offer(models.Model):
@@ -60,7 +84,7 @@ class Offer(models.Model):
     # Display
     hero_title = models.CharField(max_length=100, blank=True)
     hero_subtitle = models.CharField(max_length=200, blank=True)
-    hero_image = models.ImageField(upload_to="offers/hero/", blank=True)
+    hero_image = models.ImageField(upload_to="offers/hero/", blank=True, validators=MENU_IMAGE_VALIDATORS)
     display_on_hero = models.BooleanField(
         default=False,
         help_text="Show this offer on the homepage hero banner"
@@ -95,21 +119,33 @@ class Offer(models.Model):
         if self.max_usage_count > 0 and self.usage_count >= self.max_usage_count:
             return False
         return True
+
+    def supports_checkout_discount(self):
+        """Return whether this offer can be applied directly in checkout."""
+        return self.offer_type in {
+            self.OfferType.PERCENTAGE,
+            self.OfferType.FIXED,
+        }
     
-    def calculate_discount(self, order_subtotal):
+    def calculate_discount(self, order_subtotal, *, discount_base=None):
         """Calculate discount amount for given subtotal."""
         if not self.is_valid():
             return Decimal("0.00")
         
         if order_subtotal < self.minimum_order_amount:
             return Decimal("0.00")
+
+        base_amount = Decimal(
+            str(order_subtotal if discount_base is None else discount_base)
+        ).quantize(Decimal("0.01"))
+        base_amount = max(Decimal("0.00"), base_amount)
         
         if self.offer_type == self.OfferType.PERCENTAGE:
-            discount = (order_subtotal * self.value) / 100
+            discount = (base_amount * self.value) / 100
             return discount.quantize(Decimal("0.01"))
         
         elif self.offer_type == self.OfferType.FIXED:
-            return min(self.value, order_subtotal).quantize(Decimal("0.01"))
+            return min(self.value, base_amount).quantize(Decimal("0.01"))
         
         return Decimal("0.00")
     
@@ -117,6 +153,12 @@ class Offer(models.Model):
         """Increment usage count."""
         self.usage_count += 1
         self.save(update_fields=["usage_count"])
+
+    def save(self, *args, **kwargs):
+        changed_images = get_changed_image_names(self, OFFER_IMAGE_VARIANTS.keys())
+        validate_changed_image_fields(self, changed_images)
+        super().save(*args, **kwargs)
+        sync_instance_image_variants(self, OFFER_IMAGE_VARIANTS, changed_images)
 
 
 class VoucherCode(models.Model):
@@ -156,11 +198,29 @@ class VoucherCode(models.Model):
     def __str__(self):
         return f"{self.code} ({self.offer.name})"
     
-    def is_valid(self, user=None):
+    def _guest_usage_count(self, *, guest_phone="", guest_email=""):
+        """Return how many matching guest orders already used this voucher."""
+        phone = _normalize_guest_phone(guest_phone)
+        email = _normalize_guest_email(guest_email)
+        if not phone and not email:
+            return 0
+
+        Order = apps.get_model("orders", "Order")
+        lookup = {"voucher_code__iexact": self.code}
+        if phone:
+            lookup["customer_phone"] = phone
+        else:
+            lookup["customer_email__iexact"] = email
+        return Order.objects.filter(**lookup).count()
+
+    def is_valid(self, user=None, *, guest_phone="", guest_email=""):
         """Check if voucher is currently valid."""
         now = timezone.now()
         
-        if not self.is_active or not self.offer.is_active:
+        if not self.is_active:
+            return False
+
+        if not self.offer.is_valid() or not self.offer.supports_checkout_discount():
             return False
         
         if now < self.valid_from or now > self.valid_until:
@@ -170,12 +230,21 @@ class VoucherCode(models.Model):
             return False
         
         # Check per-customer limit
-        if user and user.is_authenticated and self.max_uses_per_customer > 0:
-            user_usage = VoucherUsage.objects.filter(
-                voucher=self,
-                user=user
-            ).count()
-            if user_usage >= self.max_uses_per_customer:
+        if self.max_uses_per_customer > 0:
+            if user and user.is_authenticated:
+                user_usage = VoucherUsage.objects.filter(
+                    voucher=self,
+                    user=user
+                ).count()
+                if user_usage >= self.max_uses_per_customer:
+                    return False
+            elif (
+                self._guest_usage_count(
+                    guest_phone=guest_phone,
+                    guest_email=guest_email,
+                )
+                >= self.max_uses_per_customer
+            ):
                 return False
         
         return True

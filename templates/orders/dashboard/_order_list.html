@@ -7,6 +7,10 @@
     
     <div class="order-customer">{{ order.customer_name }}</div>
     <div class="order-phone">{{ order.customer_phone }}</div>
+    <div class="order-phone" style="margin-bottom: 8px;">{{ order.get_service_type_display }}</div>
+    {% if order.is_delivery and order.delivery_postcode %}
+    <div class="order-phone" style="margin-bottom: 12px;">{{ order.delivery_postcode }}</div>
+    {% endif %}
     
     <div class="order-items">
         {% for item in order.items.all %}
@@ -19,13 +23,13 @@
     <div class="order-total">£{{ order.total_amount }}</div>
     
     <div class="order-actions">
-        {% if order.status == 'confirmed' %}
+        {% if order.status == 'confirmed' or order.status == 'pending' %}
         <button class="action-btn btn-preparing" onclick="updateOrderStatus({{ order.id }}, 'preparing')">
             Start Preparing
         </button>
         {% elif order.status == 'preparing' %}
         <button class="action-btn btn-ready" onclick="updateOrderStatus({{ order.id }}, 'ready')">
-            Ready
+            {% if order.is_delivery %}Dispatch{% else %}Ready{% endif %}
         </button>
         {% elif order.status == 'ready' %}
         <button class="action-btn btn-complete" onclick="updateOrderStatus({{ order.id }}, 'completed')">

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Contact {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Contact{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Get in Touch</h3>
+
+        <div style="display: grid; gap: 14px;">
+            <div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Address</div>
+                <div style="font-weight: 600;">{{ site_settings.address }}</div>
+            </div>
+            <div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Phone</div>
+                <div style="font-weight: 600;">{{ site_settings.phone|default:"Please check in store" }}</div>
+            </div>
+            <div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Email</div>
+                <div style="font-weight: 600;">{{ site_settings.email|default:"orders@tinashe.com" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: var(--brand-light); border-radius: 16px; padding: 18px;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--brand-dark);">Need to change an order?</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 14px;">
+            Keep your order number handy so we can help quickly.
+        </p>
+        <a href="{% url 'accounts:order_history' %}" class="btn btn-secondary" style="margin-top: 0;">
+            View My Orders
+        </a>
+    </div>
+</div>
+{% endblock %}

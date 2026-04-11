@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Collection Board - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Collection Board{% endblock %}
+
+{% block header %}
+<div class="status-bar" style="background: var(--text); color: white;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div>
+            <h1 style="color: white; margin-bottom: 6px;">Collection Board</h1>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                {% if can_access_collection_board %}
+                <a href="{% url 'operations:collection_board' %}" style="color: white; font-size: 13px; font-weight: 700; text-decoration: underline;">Collection</a>
+                {% endif %}
+                {% if can_access_kitchen_board %}
+                <a href="{% url 'operations:kitchen_board' %}" style="color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700;">Kitchen</a>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px; font-size: 14px; flex-wrap: wrap;">
+            <span style="background: var(--success); padding: 4px 12px; border-radius: 12px;">
+                Ready: {{ ready_count }}
+            </span>
+            <span style="background: #2563EB; padding: 4px 12px; border-radius: 12px;">
+                Out for Delivery: {{ out_for_delivery_count }}
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<style>
+    .order-board {
+        padding: 16px;
+        padding-bottom: 100px;
+    }
+
+    .status-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        overflow-x: auto;
+    }
+
+    .status-tab {
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: white;
+        white-space: nowrap;
+    }
+
+    .status-tab.active {
+        background: var(--brand);
+        color: white;
+        border-color: var(--brand);
+    }
+
+    .order-card {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow);
+        border-left: 4px solid var(--brand);
+    }
+
+    .order-card.status-ready { border-left-color: var(--success); }
+    .order-card.status-out_for_delivery { border-left-color: #2563EB; }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .order-number {
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .order-time {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+
+    .order-customer {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .order-phone {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .order-items {
+        background: var(--bg);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+
+    .order-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    .order-total {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--brand);
+        margin-bottom: 12px;
+    }
+
+    .order-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        flex: 1;
+        min-width: 120px;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+    .action-btn:hover {
+        opacity: 0.9;
+    }
+
+    .btn-confirm { background: #F59E0B; color: white; }
+    .btn-preparing { background: #3B82F6; color: white; }
+    .btn-ready { background: var(--success); color: white; }
+    .btn-dispatch { background: #2563EB; color: white; }
+    .btn-complete { background: var(--text); color: white; }
+    .btn-cancel { background: #B91C1C; color: white; }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .detail-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        z-index: 1000;
+    }
+
+    .detail-modal.open {
+        display: flex;
+    }
+
+    .detail-modal-panel {
+        width: min(100%, 760px);
+    }
+</style>
+
+<div class="order-board">
+    <div class="status-tabs">
+        <button class="status-tab active" onclick="filterOrders(event, 'all')">All Handover</button>
+        <button class="status-tab" onclick="filterOrders(event, 'ready')">Ready</button>
+        <button class="status-tab" onclick="filterOrders(event, 'out_for_delivery')">Out for Delivery</button>
+    </div>
+
+    <div id="ordersContainer" hx-get="{% url 'operations:collection_list_fragment' %}" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <div style="text-align: center; padding: 40px;">
+            <i class="ph ph-spinner animate-spin" style="font-size: 32px; color: var(--brand);"></i>
+            <p style="margin-top: 16px; color: var(--text-secondary);">Loading handover orders...</p>
+        </div>
+    </div>
+</div>
+
+<div id="orderDetailModal" class="detail-modal" onclick="closeOrderDetail(event)">
+    <div class="detail-modal-panel" id="orderDetailContent"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const collectionFragmentUrl = '{% url "operations:collection_list_fragment" %}';
+const boardActionUrlTemplate = '{% url "operations:order_action" 0 %}';
+const orderDetailUrlTemplate = '{% url "operations:order_detail_modal" 0 %}';
+
+function actionUrl(orderId) {
+    return boardActionUrlTemplate.replace('/0/action/', `/${orderId}/action/`);
+}
+
+function detailUrl(orderId) {
+    return orderDetailUrlTemplate.replace('/0/detail/', `/${orderId}/detail/`);
+}
+
+function refreshCollectionBoard() {
+    const container = document.getElementById('ordersContainer');
+    htmx.trigger(container, 'load');
+}
+
+function filterOrders(event, status) {
+    document.querySelectorAll('.status-tab').forEach(tab => tab.classList.remove('active'));
+    event.target.classList.add('active');
+
+    const container = document.getElementById('ordersContainer');
+    const url = status === 'all' ? collectionFragmentUrl : `${collectionFragmentUrl}?status=${status}`;
+    container.setAttribute('hx-get', url);
+    htmx.trigger(container, 'load');
+}
+
+function orderFormData(orderId, actionName) {
+    const form = document.getElementById(`orderDetailForm-${orderId}`);
+    const formData = form ? new FormData(form) : new FormData();
+    formData.set('action', actionName);
+    formData.set('csrfmiddlewaretoken', '{{ csrf_token }}');
+    return formData;
+}
+
+function postOrderAction(orderId, actionName) {
+    return fetch(actionUrl(orderId), {
+        method: 'POST',
+        body: orderFormData(orderId, actionName)
+    }).then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to update order.');
+        }
+        return data;
+    });
+}
+
+function runOrderAction(orderId, actionName) {
+    postOrderAction(orderId, actionName)
+        .then(() => {
+            closeOrderDetail();
+            refreshCollectionBoard();
+        })
+        .catch(error => window.alert(error.message));
+}
+
+function showOrderDetail(orderId) {
+    fetch(detailUrl(orderId), {
+        headers: {
+            'HX-Request': 'true'
+        }
+    })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('orderDetailContent').innerHTML = html;
+            document.getElementById('orderDetailModal').classList.add('open');
+        });
+}
+
+function closeOrderDetail(event) {
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+    document.getElementById('orderDetailModal').classList.remove('open');
+    document.getElementById('orderDetailContent').innerHTML = '';
+}
+
+function saveOrderNotes(event, orderId) {
+    event.preventDefault();
+    postOrderAction(orderId, 'save_notes')
+        .then(() => {
+            refreshCollectionBoard();
+            window.alert('Notes saved.');
+        })
+        .catch(error => window.alert(error.message));
+}
+
+function submitOrderDetailAction(orderId, actionName) {
+    runOrderAction(orderId, actionName);
+}
+</script>
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}

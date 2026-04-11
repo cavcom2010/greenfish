@@ -74,7 +74,12 @@ DJANGO_SECRET_KEY=<generate-random-key>
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 DATABASE_URL=postgres://dbuser:secure_password@localhost:5432/restaurant_db
-MOLLIE_API_KEY=live_xxxxxxxxxxxxxxxx
+PAYMENT_PROVIDER=stripe
+STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
+# Optional alternate provider:
+# MOLLIE_API_KEY=
+# MOLLIE_WEBHOOK_SECRET=
 # ... other settings
 ```
 

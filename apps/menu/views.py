@@ -4,6 +4,9 @@ Views for the menu app.
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
+from apps.core.media import get_image_variant_url
+from apps.orders.services import selected_service_type
+
 from .models import MenuCategory, MenuItem
 from .services import get_recommendations
 
@@ -15,7 +18,7 @@ def menu_list(request):
     ).prefetch_related(
         "items"
     ).order_by("sort_order")
-    
+
     # Get category filter from query params
     category_id = request.GET.get("category")
     if category_id:
@@ -29,13 +32,16 @@ def menu_list(request):
         items = MenuItem.objects.filter(
             is_available=True
         ).select_related("category").order_by("category__sort_order", "sort_order")
-    
+
     context = {
         "categories": categories,
         "items": items,
         "active_category": active_category,
+        "service_type": selected_service_type(request),
     }
-    return render(request, "menu/menu_list.html", context)
+
+    template = "desktop/menu/menu_list.html" if getattr(request, "is_desktop", True) else "menu/menu_list.html"
+    return render(request, template, context)
 
 
 def menu_item_detail(request, pk):
@@ -50,7 +56,12 @@ def menu_item_detail(request, pk):
     is_json_request = "application/json" in accept_header and "text/html" not in accept_header
     
     if request.headers.get("HX-Request") or not is_json_request:
-        return render(request, "menu/partials/item_detail.html", {
+        detail_template = (
+            "desktop/menu/partials/item_detail.html"
+            if getattr(request, "is_desktop", True)
+            else "menu/partials/item_detail.html"
+        )
+        return render(request, detail_template, {
             "item": item,
             "recommendations": recommendations,
         })
@@ -60,7 +71,7 @@ def menu_item_detail(request, pk):
         "name": item.name,
         "description": item.description,
         "price": str(item.price),
-        "image": item.image.url if item.image else None,
+        "image": get_image_variant_url(item.image, "card") if item.image else None,
         "preparation_time": item.preparation_time,
         "dietary_tags": item.dietary_tags,
         "modifiers": [

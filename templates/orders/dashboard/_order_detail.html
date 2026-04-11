@@ -1,0 +1,35 @@
+<div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700;">Order #{{ order.order_number }}</h3>
+        <span class="category-pill active" style="cursor: default;">{{ order.service_status_display }}</span>
+    </div>
+
+    <div style="display: grid; gap: 10px; margin-bottom: 18px;">
+        <div><strong>Service:</strong> {{ order.get_service_type_display }}</div>
+        <div><strong>Customer:</strong> {{ order.customer_name }}</div>
+        <div><strong>Phone:</strong> {{ order.customer_phone }}</div>
+        {% if order.customer_email %}<div><strong>Email:</strong> {{ order.customer_email }}</div>{% endif %}
+        {% if order.requested_service_time %}<div><strong>{{ order.service_time_label }}:</strong> {{ order.requested_service_time|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.is_delivery and order.delivery_address_display %}<div><strong>Address:</strong> {{ order.delivery_address_display }}</div>{% endif %}
+    </div>
+
+    <div style="background: var(--bg); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+        {% for item in order.items.all %}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>{{ item.quantity }}x {{ item.item_name }}</span>
+            <strong>£{{ item.line_total|floatformat:2 }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if order.special_instructions %}
+    <div class="alert alert-error" style="margin-bottom: 16px;">
+        {{ order.special_instructions }}
+    </div>
+    {% endif %}
+
+    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800;">
+        <span>Total</span>
+        <span>£{{ order.total_amount|floatformat:2 }}</span>
+    </div>
+</div>

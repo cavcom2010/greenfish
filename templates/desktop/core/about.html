@@ -1,0 +1,65 @@
+{% extends "desktop/base.html" %}
+
+{% block title %}About - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<section class="section">
+    <div class="container" style="max-width: 800px;">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <h1 style="margin-bottom: 0.5rem;">About {{ site_settings.shop_name }}</h1>
+            {% if site_settings.tagline %}
+            <p style="font-size: 1.15rem; color: var(--brand); font-weight: 600;">{{ site_settings.tagline }}</p>
+            {% endif %}
+        </div>
+
+        <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2.5rem; margin-bottom: 2rem;">
+            <p style="font-size: 1.05rem; line-height: 1.8; color: var(--text-secondary);">
+                {{ site_settings.shop_description|default:"We are passionate about bringing authentic Zimbabwean cuisine to your table. Every dish is prepared with fresh ingredients and traditional recipes passed down through generations. From our kitchen to your plate, we promise quality, flavour, and a true taste of home." }}
+            </p>
+        </div>
+
+        <!-- Info Cards -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+            {% if site_settings.address %}
+            <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 1.5rem; text-align: center;">
+                <i class="ph-fill ph-map-pin" style="font-size: 2rem; color: var(--brand); margin-bottom: 0.75rem; display: block;"></i>
+                <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;">Location</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">{{ site_settings.address }}</p>
+            </div>
+            {% endif %}
+            {% if site_settings.phone %}
+            <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 1.5rem; text-align: center;">
+                <i class="ph-fill ph-phone" style="font-size: 2rem; color: var(--brand); margin-bottom: 0.75rem; display: block;"></i>
+                <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;">Phone</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">{{ site_settings.phone }}</p>
+            </div>
+            {% endif %}
+            {% if site_settings.email %}
+            <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 1.5rem; text-align: center;">
+                <i class="ph-fill ph-envelope" style="font-size: 2rem; color: var(--brand); margin-bottom: 0.75rem; display: block;"></i>
+                <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;">Email</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">{{ site_settings.email }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if site_settings.opening_hours %}
+        <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem; margin-bottom: 2rem;">
+            <h3 style="font-size: 1.15rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="ph ph-clock" style="color: var(--brand);"></i> Opening Hours
+            </h3>
+            <p style="font-size: 0.95rem; color: var(--text-secondary); white-space: pre-line;">{{ site_settings.opening_hours }}</p>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="{% url 'core:home' %}" class="hero-btn-primary" style="text-decoration: none;">
+                <i class="ph-bold ph-fork-knife"></i>
+                Order Now
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

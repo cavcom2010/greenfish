@@ -3,6 +3,20 @@ Core models for Tinashe Takeaway.
 """
 from django.db import models
 
+from .media import (
+    FAVICON_IMAGE_VALIDATORS,
+    LOGO_IMAGE_VALIDATORS,
+    get_changed_image_names,
+    sync_instance_image_variants,
+    validate_changed_image_fields,
+)
+
+
+SITE_SETTINGS_IMAGE_VARIANTS = {
+    "logo": ("logo",),
+    "favicon": ("favicon",),
+}
+
 
 class SiteSettings(models.Model):
     """Global site settings for the takeaway shop."""
@@ -17,8 +31,8 @@ class SiteSettings(models.Model):
     opening_hours = models.JSONField(default=dict, blank=True)
     
     currency = models.CharField(max_length=3, default="GBP")
-    logo = models.ImageField(upload_to="site/", blank=True)
-    favicon = models.ImageField(upload_to="site/", blank=True)
+    logo = models.ImageField(upload_to="site/", blank=True, validators=LOGO_IMAGE_VALIDATORS)
+    favicon = models.ImageField(upload_to="site/", blank=True, validators=FAVICON_IMAGE_VALIDATORS)
     theme_color = models.CharField(max_length=7, default="#FF6B35", help_text="Hex color code for PWA theme")
     
     # Social links
@@ -40,7 +54,10 @@ class SiteSettings(models.Model):
         # Ensure only one instance exists
         if not self.pk and SiteSettings.objects.exists():
             raise ValueError("Only one SiteSettings instance allowed")
+        changed_images = get_changed_image_names(self, SITE_SETTINGS_IMAGE_VARIANTS.keys())
+        validate_changed_image_fields(self, changed_images)
         super().save(*args, **kwargs)
+        sync_instance_image_variants(self, SITE_SETTINGS_IMAGE_VARIANTS, changed_images)
     
     @classmethod
     def get(cls):

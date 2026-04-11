@@ -8,11 +8,13 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Desktop-aware auth pages (must come before allauth to override)
+    path("accounts/", include("apps.accounts.urls", namespace="accounts")),
     path("accounts/", include("allauth.urls")),
-    path("", include("apps.accounts.urls", namespace="accounts")),
     path("", include("apps.core.urls", namespace="core")),
     path("menu/", include("apps.menu.urls", namespace="menu")),
     path("orders/", include("apps.orders.urls", namespace="orders")),
+    path("ops/", include("apps.operations.urls", namespace="operations")),
     path("offers/", include("apps.offers.urls", namespace="offers")),
     path("payments/", include("apps.payments.urls", namespace="payments")),
     path("pwa/", include("apps.pwa.urls", namespace="pwa")),

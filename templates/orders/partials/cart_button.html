@@ -1,0 +1,6 @@
+<a href="{% url 'orders:cart' %}" style="font-size: 24px; position: relative; color: var(--text); text-decoration: none;">
+    <i class="ph ph-basket"></i>
+    {% if cart_count > 0 %}
+    <span class="cart-badge" id="cartBadge">{{ cart_count }}</span>
+    {% endif %}
+</a>

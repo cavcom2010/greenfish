@@ -6,6 +6,22 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from apps.core.media import (
+    MENU_IMAGE_VALIDATORS,
+    get_changed_image_names,
+    sync_instance_image_variants,
+    validate_changed_image_fields,
+)
+
+
+CATEGORY_IMAGE_VARIANTS = {
+    "image": ("card",),
+}
+
+MENU_ITEM_IMAGE_VARIANTS = {
+    "image": ("card", "detail", "thumb"),
+}
+
 
 class MenuCategory(models.Model):
     """Menu category (e.g., Mains, Sides, Drinks)."""
@@ -15,7 +31,7 @@ class MenuCategory(models.Model):
     sort_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     icon = models.CharField(max_length=50, blank=True, help_text="Emoji or icon class")
-    image = models.ImageField(upload_to="menu/categories/", blank=True)
+    image = models.ImageField(upload_to="menu/categories/", blank=True, validators=MENU_IMAGE_VALIDATORS)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -27,6 +43,12 @@ class MenuCategory(models.Model):
     
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        changed_images = get_changed_image_names(self, CATEGORY_IMAGE_VARIANTS.keys())
+        validate_changed_image_fields(self, changed_images)
+        super().save(*args, **kwargs)
+        sync_instance_image_variants(self, CATEGORY_IMAGE_VARIANTS, changed_images)
 
 
 class MenuModifier(models.Model):
@@ -70,7 +92,7 @@ class MenuItem(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
-    image = models.ImageField(upload_to="menu/items/", blank=True)
+    image = models.ImageField(upload_to="menu/items/", blank=True, validators=MENU_IMAGE_VALIDATORS)
     
     # Availability & Inventory
     is_available = models.BooleanField(default=True)
@@ -137,8 +159,14 @@ class MenuItem(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.category.name})"
-    
+
     @property
     def dietary_tags_display(self):
         """Return dietary tags as a comma-separated string."""
         return ", ".join(self.dietary_tags) if self.dietary_tags else ""
+
+    def save(self, *args, **kwargs):
+        changed_images = get_changed_image_names(self, MENU_ITEM_IMAGE_VARIANTS.keys())
+        validate_changed_image_fields(self, changed_images)
+        super().save(*args, **kwargs)
+        sync_instance_image_variants(self, MENU_ITEM_IMAGE_VARIANTS, changed_images)

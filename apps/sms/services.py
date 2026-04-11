@@ -99,11 +99,7 @@ def send_sms(user, message, message_type, order=None):
 def send_sms_to_phone(phone, message, message_type, order=None):
     """Send SMS directly to a phone number (for guest orders)."""
     sms_settings = SMSSettings.get()
-    
-    if not sms_settings.is_configured:
-        logger.info(f"SMS not configured, message not sent")
-        return None
-    
+
     # Create message record (no user attached for guest orders)
     sms = SMSMessage.objects.create(
         order=order,
@@ -111,6 +107,10 @@ def send_sms_to_phone(phone, message, message_type, order=None):
         phone_number=phone,
         message=message
     )
+
+    if not sms_settings.is_configured:
+        logger.info(f"SMS not configured, message saved as pending")
+        return sms
     
     # Send via Twilio
     client = get_twilio_client()
@@ -142,7 +142,7 @@ def send_sms_to_phone(phone, message, message_type, order=None):
 
 
 def send_order_confirmation(order):
-    """Send order confirmation SMS with pickup time."""
+    """Send order confirmation SMS with fulfilment timing."""
     from django.conf import settings
     
     sms_settings = SMSSettings.get()
@@ -162,17 +162,19 @@ def send_order_confirmation(order):
     if not phone:
         return None
     
-    # Build message with pickup time
-    pickup_info = ""
-    if order.requested_pickup_time:
-        pickup_time = order.requested_pickup_time.strftime("%H:%M")
-        pickup_info = f" Pickup: {pickup_time}."
+    service_info = ""
+    if order.requested_service_time:
+        service_time = order.requested_service_time.strftime("%H:%M")
+        if order.is_delivery:
+            service_info = f" Delivery target: {service_time}."
+        else:
+            service_info = f" Pickup: {service_time}."
     
     shop = SiteSettings.get()
     shop_url = getattr(settings, 'SHOP_URL', '')
     message = (
         f"Hi {name}! Your order #{order.order_number} "
-        f"for £{order.total_amount} confirmed.{pickup_info} "
+        f"for £{order.total_amount} confirmed.{service_info} "
         f"Track: {shop_url}/orders/track/{order.order_number}/"
     )
     
@@ -185,7 +187,7 @@ def send_order_confirmation(order):
 
 
 def send_order_ready(order):
-    """Send order ready for pickup SMS."""
+    """Send order ready/dispatch SMS."""
     sms_settings = SMSSettings.get()
     if not sms_settings.send_order_ready:
         return None
@@ -215,6 +217,71 @@ def send_order_ready(order):
         message=message,
         message_type=SMSMessage.MessageType.ORDER_READY,
         order=order
+    )
+
+
+def send_order_out_for_delivery(order):
+    """Send order dispatch SMS."""
+    sms_settings = SMSSettings.get()
+    if not sms_settings.send_order_ready:
+        return None
+
+    phone = None
+    name = ""
+    if order.user:
+        phone = order.user.phone_number
+        name = order.user.first_name or ""
+    if not phone:
+        phone = order.customer_phone
+        name = order.customer_name.split()[0] if order.customer_name else ""
+
+    if not phone:
+        return None
+
+    shop = SiteSettings.get()
+    message = (
+        f"Great news {name}! Your order #{order.order_number} "
+        f"is on the way from {shop.shop_name}. "
+        f"Track it here: {getattr(settings, 'SHOP_URL', '')}/orders/track/{order.order_number}/"
+    )
+
+    return send_sms_to_phone(
+        phone=phone,
+        message=message,
+        message_type=SMSMessage.MessageType.ORDER_OUT_FOR_DELIVERY,
+        order=order,
+    )
+
+
+def send_order_delivered(order):
+    """Send optional delivery-complete SMS."""
+    sms_settings = SMSSettings.get()
+    if not sms_settings.send_order_delivered:
+        return None
+
+    phone = None
+    name = ""
+    if order.user:
+        phone = order.user.phone_number
+        name = order.user.first_name or ""
+    if not phone:
+        phone = order.customer_phone
+        name = order.customer_name.split()[0] if order.customer_name else ""
+
+    if not phone:
+        return None
+
+    shop = SiteSettings.get()
+    message = (
+        f"Thanks {name}! Your order #{order.order_number} "
+        f"from {shop.shop_name} has been delivered. Enjoy your meal."
+    )
+
+    return send_sms_to_phone(
+        phone=phone,
+        message=message,
+        message_type=SMSMessage.MessageType.ORDER_DELIVERED,
+        order=order,
     )
 
 

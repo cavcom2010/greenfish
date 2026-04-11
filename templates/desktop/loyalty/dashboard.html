@@ -1,0 +1,93 @@
+{% extends "desktop/base.html" %}
+
+{% block title %}Rewards - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<section class="rewards-page">
+    <div class="container">
+        <!-- Rewards Hero -->
+        <div class="rewards-hero">
+            <div class="rewards-hero-text">
+                <h1>🎁 Rewards</h1>
+                <p>Earn points with every order, redeem for free food. <em>Tinotenda!</em> (Thank you!)</p>
+            </div>
+            <div class="rewards-points-display">
+                <div class="rewards-points-value">{{ current_points }}</div>
+                <div class="rewards-points-label">Points Available</div>
+                <div class="tier-badge-desktop" style="background:rgba(255,255,255,0.2);color:white;">
+                    <span>{{ tier.emoji }}</span>
+                    {{ tier.name }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Benefits -->
+        <div style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border-light);padding:1.5rem;margin-bottom:2rem;">
+            <h3 style="font-size:1.15rem;margin-bottom:1rem;">Your {{ tier.name }} Benefits</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;">
+                {% for benefit in tier.benefits %}
+                <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg);border-radius:var(--radius);">
+                    <i class="ph-fill ph-check-circle" style="color:var(--success);font-size:1.25rem;"></i>
+                    <span style="font-weight:500;">{{ benefit }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.5rem;margin-bottom:2rem;">
+            <a href="{% url 'loyalty:refer' %}" style="background:linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%);border-radius:var(--radius-lg);padding:2rem;color:white;text-decoration:none;transition:transform 0.2s;">
+                <i class="ph ph-share-network" style="font-size:2rem;margin-bottom:0.75rem;display:block;"></i>
+                <h4 style="color:white;font-size:1.1rem;margin-bottom:0.35rem;">Refer a Friend</h4>
+                <p style="color:rgba(255,255,255,0.8);font-size:0.85rem;margin:0;">Earn {{ settings.referral_points }} points per referral</p>
+                <div style="margin-top:1rem;background:rgba(255,255,255,0.2);border-radius:var(--radius-sm);padding:0.75rem;text-align:center;font-family:monospace;font-size:1.1rem;font-weight:700;letter-spacing:2px;">
+                    {{ referral_code }}
+                </div>
+            </a>
+
+            <a href="{% url 'menu:menu' %}" style="background:var(--surface);border-radius:var(--radius-lg);padding:2rem;text-decoration:none;border:1px solid var(--border-light);transition:transform 0.2s;">
+                <i class="ph ph-fork-knife" style="font-size:2rem;color:var(--brand);margin-bottom:0.75rem;display:block;"></i>
+                <h4 style="font-size:1.1rem;margin-bottom:0.35rem;">Order & Earn</h4>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin:0;">Earn {{ settings.points_per_pound }} points per £1 spent</p>
+                <span style="display:inline-flex;align-items:center;gap:0.5rem;color:var(--brand);font-weight:700;font-size:0.9rem;margin-top:1rem;">
+                    Order Now <i class="ph-bold ph-arrow-right"></i>
+                </span>
+            </a>
+
+            <a href="{% url 'loyalty:transactions' %}" style="background:var(--surface);border-radius:var(--radius-lg);padding:2rem;text-decoration:none;border:1px solid var(--border-light);transition:transform 0.2s;">
+                <i class="ph ph-receipt" style="font-size:2rem;color:var(--text-secondary);margin-bottom:0.75rem;display:block;"></i>
+                <h4 style="font-size:1.1rem;margin-bottom:0.35rem;">Points History</h4>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin:0;">View all your points activity</p>
+                <span style="display:inline-flex;align-items:center;gap:0.5rem;color:var(--brand);font-weight:700;font-size:0.9rem;margin-top:1rem;">
+                    View History <i class="ph-bold ph-arrow-right"></i>
+                </span>
+            </a>
+        </div>
+
+        <!-- Recent Activity -->
+        <div style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border-light);overflow:hidden;">
+            <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border-light);">
+                <h3 style="font-size:1.1rem;">Recent Activity</h3>
+            </div>
+            {% for tx in recent_transactions|slice:":8" %}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border-light);">
+                <div>
+                    <div style="font-weight:600;font-size:0.95rem;">{{ tx.get_transaction_type_display }}</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);">{{ tx.created_at|date:"d M Y, H:i" }}</div>
+                </div>
+                <div style="font-weight:800;font-size:1.1rem;{% if tx.points > 0 %}color:var(--success);{% else %}color:var(--error);{% endif %}">
+                    {% if tx.points > 0 %}+{% endif %}{{ tx.points }} pts
+                </div>
+            </div>
+            {% empty %}
+            <div style="padding:3rem 1.5rem;text-align:center;color:var(--text-muted);">
+                <i class="ph ph-clock-counter-clockwise" style="font-size:2rem;margin-bottom:0.5rem;display:block;"></i>
+                No activity yet. Start ordering to earn points!
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}

@@ -21,7 +21,7 @@
         </span>
         {% endif %}
         <div style="margin-top: 12px;">
-            <a href="{% url 'orders:checkout' %}" class="offer-btn" onclick="applyOfferAndGo('{{ offer.id }}')">Order Now</a>
+            <a href="{% url 'offers:detail' offer.id %}" class="offer-btn">View Offer</a>
         </div>
     </div>
 </div>
@@ -34,13 +34,4 @@
 {% endfor %}
 
 <div style="height: 100px;"></div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function applyOfferAndGo(offerId) {
-    // Store offer in session for automatic application at checkout
-    sessionStorage.setItem('applied_offer_id', offerId);
-}
-</script>
 {% endblock %}

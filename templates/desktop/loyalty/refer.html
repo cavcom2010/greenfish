@@ -1,0 +1,138 @@
+{% extends "desktop/base.html" %}
+
+{% block title %}Refer a Friend - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<section class="account-page-desktop">
+    <div class="container">
+        <div class="account-layout">
+            <!-- Sidebar -->
+            <div class="account-sidebar">
+                <div class="account-avatar-desktop">
+                    <i class="ph-fill ph-user"></i>
+                </div>
+                <div class="account-name">{{ request.user.get_full_name|default:request.user.email }}</div>
+                <div class="account-email">{{ request.user.email }}</div>
+
+                <nav class="account-nav">
+                    <a href="{% url 'accounts:profile' %}">
+                        <i class="ph ph-user-gear"></i> Profile
+                    </a>
+                    <a href="{% url 'accounts:order_history' %}">
+                        <i class="ph ph-receipt"></i> Order History
+                    </a>
+                    <a href="{% url 'loyalty:dashboard' %}" class="active">
+                        <i class="ph ph-gift"></i> Rewards
+                    </a>
+                    <a href="{% url 'loyalty:transactions' %}">
+                        <i class="ph ph-list-dashes"></i> Points History
+                    </a>
+                    <a href="{% url 'loyalty:refer' %}">
+                        <i class="ph ph-share-network"></i> Refer a Friend
+                    </a>
+                    <a href="{% url 'menu:menu' %}">
+                        <i class="ph ph-fork-knife"></i> Browse Menu
+                    </a>
+                    <a href="{% url 'account_logout' %}" style="color:var(--error);">
+                        <i class="ph ph-sign-out"></i> Sign Out
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Content -->
+            <div class="account-content">
+                <h2>Refer a Friend</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">Share the taste! They get {{ settings.welcome_bonus }} points, you get {{ settings.referral_points }}.</p>
+
+                <!-- Referral Code -->
+                <div style="background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); border-radius: var(--radius-lg); padding: 2.5rem; color: white; text-align: center; margin-bottom: 2rem;">
+                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: rgba(255,255,255,0.9);">Your Referral Code</h3>
+                    <div style="background: rgba(255,255,255,0.15); border-radius: var(--radius); padding: 1.25rem 2rem; margin: 1.25rem 0; font-family: monospace; font-size: 2rem; font-weight: 800; letter-spacing: 4px;">
+                        {{ referral_code }}
+                    </div>
+                    <button onclick="copyCode()" style="background: white; color: #6366F1; border: none; padding: 0.85rem 2rem; border-radius: var(--radius); font-weight: 700; font-size: 0.95rem; cursor: pointer;">
+                        <i class="ph-bold ph-copy" style="margin-right: 4px;"></i> Copy Code
+                    </button>
+                </div>
+
+                <!-- How It Works -->
+                <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem; margin-bottom: 2rem;">
+                    <h3 style="font-size: 1.15rem; margin-bottom: 1.5rem;">How It Works</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                        <div style="text-align: center; padding: 1.25rem; background: var(--bg); border-radius: var(--radius);">
+                            <div style="width: 48px; height: 48px; background: #6366F1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; margin: 0 auto 0.75rem;">1</div>
+                            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem;">Share Your Code</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Send your unique code to friends</p>
+                        </div>
+                        <div style="text-align: center; padding: 1.25rem; background: var(--bg); border-radius: var(--radius);">
+                            <div style="width: 48px; height: 48px; background: #6366F1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; margin: 0 auto 0.75rem;">2</div>
+                            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem;">They Sign Up</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Your friend creates an account</p>
+                        </div>
+                        <div style="text-align: center; padding: 1.25rem; background: var(--bg); border-radius: var(--radius);">
+                            <div style="width: 48px; height: 48px; background: #6366F1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; margin: 0 auto 0.75rem;">3</div>
+                            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem;">You Both Earn!</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">They get {{ settings.welcome_bonus }} pts, you get {{ settings.referral_points }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Share Options -->
+                <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem; margin-bottom: 2rem;">
+                    <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem;">Share Via</h3>
+                    <div style="display: flex; gap: 1rem;">
+                        <a href="https://wa.me/?text=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}"
+                           target="_blank" style="flex: 1; text-align: center; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); transition: all 0.2s;">
+                            <i class="ph-fill ph-whatsapp-logo" style="font-size: 1.5rem; color: #25D366; display: block; margin-bottom: 0.35rem;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">WhatsApp</span>
+                        </a>
+                        <a href="mailto:?subject=Free%20{{ settings.welcome_bonus }}%20Points%20at%20{{ site_settings.shop_name|urlencode }}&body=Hi!%20Use%20my%20code:%20{{ referral_code }}"
+                           style="flex: 1; text-align: center; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); transition: all 0.2s;">
+                            <i class="ph-fill ph-envelope-simple" style="font-size: 1.5rem; color: #EA4335; display: block; margin-bottom: 0.35rem;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Email</span>
+                        </a>
+                        <button onclick="copyLink()" style="flex: 1; text-align: center; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: none; color: var(--text); cursor: pointer; transition: all 0.2s;">
+                            <i class="ph-fill ph-link" style="font-size: 1.5rem; color: #6B7280; display: block; margin-bottom: 0.35rem;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Copy Link</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Referral Stats -->
+                <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem;">
+                    <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem;">Your Referral Stats</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                        <div style="background: var(--bg); border-radius: var(--radius); padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 800; color: #6366F1;">{{ referral_count }}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Friends Referred</div>
+                        </div>
+                        <div style="background: var(--bg); border-radius: var(--radius); padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--success);">{{ referral_total_points|default:"0" }}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Points Earned</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyCode() {
+    navigator.clipboard.writeText('{{ referral_code }}').then(() => {
+        alert('Referral code copied!');
+    });
+}
+
+function copyLink() {
+    const text = `Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}`;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Message copied!');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load media_tags %}
+
+{% block title %}{{ offer.name }} - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Offer{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <div class="offer-card" style="height: 220px; margin: 0 0 20px;">
+        {% if offer.hero_image %}
+        <img src="{{ offer.hero_image|image_variant:'hero' }}" alt="{{ offer.name }}" loading="eager" decoding="async" fetchpriority="high" width="1280" height="720" style="width: 100%; height: 100%; object-fit: cover;">
+        {% endif %}
+        <div class="offer-content">
+            <h3>{{ offer.hero_title|default:offer.name }}</h3>
+            <p>{{ offer.hero_subtitle|default:offer.description }}</p>
+        </div>
+    </div>
+
+    <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Offer Details</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 16px;">{{ offer.description }}</p>
+        <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <span class="category-pill active" style="cursor: default;">
+                {% if offer.offer_type == "percentage" %}
+                Save {{ offer.value|floatformat:0 }}%
+                {% elif offer.offer_type == "fixed" %}
+                Save £{{ offer.value|floatformat:2 }}
+                {% else %}
+                {{ offer.get_offer_type_display }}
+                {% endif %}
+            </span>
+            {% if offer.minimum_order_amount > 0 %}
+            <span class="category-pill" style="cursor: default;">Min order £{{ offer.minimum_order_amount|floatformat:2 }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display: grid; gap: 12px;">
+        {% if offer_can_activate %}
+        <form method="post" action="{% url 'offers:activate' offer.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'menu:menu' %}">
+            <button type="submit" class="btn btn-brand" style="width: 100%;">
+                {% if offer_selected %}Offer Active{% else %}Activate Offer & Order{% endif %}
+            </button>
+        </form>
+        {% else %}
+        <div style="background: var(--surface); border-radius: 16px; padding: 16px; text-align: center; color: var(--text-secondary); box-shadow: var(--shadow);">
+            Available in store only
+        </div>
+        {% endif %}
+        <a href="{% url 'offers:list' %}" class="btn btn-secondary">Back to Offers</a>
+    </div>
+</div>
+{% endblock %}

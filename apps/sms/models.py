@@ -25,7 +25,9 @@ class SMSMessage(models.Model):
     user = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
-        related_name="sms_messages"
+        related_name="sms_messages",
+        null=True,
+        blank=True,
     )
     order = models.ForeignKey(
         "orders.Order",

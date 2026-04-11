@@ -6,7 +6,7 @@ Complete guide for deploying Tinashe Takeaway to DigitalOcean.
 
 - DigitalOcean account
 - Domain name (optional but recommended)
-- Mollie account with Live API key
+- Stripe account with live API keys
 
 ## Server Requirements
 
@@ -103,9 +103,17 @@ DJANGO_CSRF_TRUSTED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 # Database
 DATABASE_URL=postgres://tinashe_user:your_secure_password@localhost:5432/tinashe_takeaway
 
-# Mollie Payments (LIVE KEY for production)
-MOLLIE_API_KEY=live_your_live_key_here
-MOLLIE_WEBHOOK_SECRET=generate-random-secret-string
+# Payments
+PAYMENT_PROVIDER=stripe
+
+# Stripe Payments (LIVE KEY for production)
+STRIPE_SECRET_KEY=sk_live_your_live_key_here
+STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_signing_secret
+
+# Mollie Payments (optional alternate provider)
+MOLLIE_API_KEY=
+MOLLIE_WEBHOOK_SECRET=
 
 # Email (use real SMTP)
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend

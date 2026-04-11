@@ -1,0 +1,80 @@
+{% extends "desktop/base.html" %}
+
+{% block title %}Order {{ order.order_number }} Confirmed - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<section class="section">
+    <div class="confirmation-page">
+        <div class="confirmation-icon">
+            <i class="ph-fill ph-check-circle"></i>
+        </div>
+
+        <h1>Order Confirmed!</h1>
+        <p>Your order has been received and will be prepared shortly.</p>
+
+        <div class="confirmation-details">
+            <div class="confirmation-row">
+                <span>Order Number</span>
+                <span style="font-weight: 700; font-size: 1.15rem;">{{ order.order_number }}</span>
+            </div>
+            <div class="confirmation-row">
+                <span>Status</span>
+                <span style="background: var(--warning-bg); color: var(--warning); padding: 0.35rem 1rem; border-radius: 50px; font-size: 0.85rem; font-weight: 600;">
+                    {{ order.service_status_display }}
+                </span>
+            </div>
+            <div class="confirmation-row">
+                <span>Service</span>
+                <span style="font-weight: 600;">{{ order.get_service_type_display }}</span>
+            </div>
+            <div class="confirmation-row">
+                <span>{{ order.service_time_label }}</span>
+                <span style="font-weight: 600;">{% if order.requested_service_time %}{{ order.requested_service_time|date:"H:i" }}{% else %}TBD{% endif %}</span>
+            </div>
+            {% if order.is_delivery and order.delivery_address_display %}
+            <div class="confirmation-row" style="flex-direction: column; gap: 0.35rem;">
+                <span>Delivery Address</span>
+                <span style="font-weight: 600; text-align: right;">{{ order.delivery_address_display }}</span>
+            </div>
+            {% endif %}
+            <div class="confirmation-row">
+                <span>Total</span>
+                <span style="color: var(--brand);">£{{ order.total_amount }}</span>
+            </div>
+        </div>
+
+        <div style="background: var(--brand-light); border-radius: var(--radius-lg); padding: 1.5rem 2rem; margin-bottom: 2rem; text-align: left;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--brand-dark);">What happens next?</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <i class="ph-fill ph-check-circle" style="color: var(--success); flex-shrink: 0; margin-top: 2px;"></i>
+                    <span>The kitchen has received your order</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <i class="ph ph-hourglass" style="color: var(--warning); flex-shrink: 0; margin-top: 2px;"></i>
+                    <span>We'll prepare your food fresh</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                    <i class="ph ph-bell" style="color: var(--brand); flex-shrink: 0; margin-top: 2px;"></i>
+                    <span>{% if order.is_delivery %}We'll notify you when your order is on the way{% else %}We'll let you know when it's ready for pickup{% endif %}</span>
+                </li>
+            </ul>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{% url 'core:home' %}" class="hero-btn-primary" style="text-decoration: none;">
+                <i class="ph-bold ph-house"></i>
+                Back to Home
+            </a>
+            {% if request.user.is_authenticated %}
+            <a href="{% url 'accounts:order_history' %}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border);">
+                <i class="ph-bold ph-receipt"></i>
+                Order History
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}

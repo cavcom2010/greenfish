@@ -30,7 +30,7 @@
         </div>
         <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow);">
             <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Daily Average</div>
-            <div style="font-size: 28px; font-weight: 800; color: var(--brand); margin-top: 8px;">£{{ avg_order_value|floatformat:2 }}</div>
+            <div style="font-size: 28px; font-weight: 800; color: var(--brand); margin-top: 8px;">£{{ daily_average|floatformat:2 }}</div>
         </div>
     </div>
 
@@ -40,8 +40,7 @@
         <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 150px; gap: 8px;">
             {% for day in daily_sales %}
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                <div style="width: 100%; background: var(--brand); border-radius: 8px 8px 0 0; min-height: 4px;" 
-                     style="height: {% if day.revenue > 0 %}{{ day.revenue|div:total_revenue|mul:100|floatformat:0 }}%{% else %}4px{% endif %};"></div>
+                <div style="width: 100%; background: var(--brand); border-radius: 8px 8px 0 0; min-height: 4px; height: {{ day.bar_percent }}%;"></div>
                 <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">{{ day.date }}</div>
                 <div style="font-size: 10px; color: var(--text-muted);">{{ day.orders }}</div>
             </div>

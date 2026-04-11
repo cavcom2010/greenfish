@@ -1,0 +1,120 @@
+{% extends "desktop/base.html" %}
+
+{% block title %}{{ deal.name }} - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<section class="section">
+    <div class="container" style="max-width: 900px;">
+        <!-- Breadcrumb -->
+        <div style="margin-bottom: 2rem;">
+            <a href="{% url 'mealdeals:list' %}" style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="ph ph-arrow-left"></i>
+                Back to Meal Deals
+            </a>
+        </div>
+
+        <!-- Deal Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1 style="margin-bottom: 0.35rem;">{{ deal.name }}</h1>
+                <p style="color: var(--text-secondary);">{{ deal.description }}</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 2.5rem; font-weight: 800; color: var(--brand);">£{{ deal.deal_price }}</div>
+                <div style="color: var(--success); font-weight: 600; font-size: 0.9rem;">Save £{{ deal.savings }} ({{ deal.savings_percent }}% off)</div>
+            </div>
+        </div>
+
+        <form method="post" action="{% url 'orders:add_to_cart' %}">
+            {% csrf_token %}
+            <input type="hidden" name="deal_id" value="{{ deal.id }}">
+            <input type="hidden" name="service_type" id="desktopServiceType" value="{{ service_type|default:'pickup' }}">
+
+            <!-- Deal Items -->
+            <div style="display: grid; gap: 1.5rem; margin-bottom: 2rem;">
+                {% for item in deal.items.all %}
+                <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-light);">
+                        <h3 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="ph-fill ph-check-circle" style="color: var(--brand);"></i>
+                            {{ item.name }}
+                        </h3>
+                        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Choose {{ item.min_quantity }}{% if item.max_quantity > item.min_quantity %}-{{ item.max_quantity }}{% endif %}</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem;">
+                        {% for option in item.options.all %}
+                        {% if option.is_available %}
+                        <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; border: 2px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.2s; {% if forloop.first %}border-color: var(--brand); background: var(--brand-light);{% endif %}">
+                            <input type="radio" name="item_{{ item.id }}" value="{{ option.menu_item.id }}" {% if forloop.first %}checked{% endif %} style="accent-color: var(--brand); width: 18px; height: 18px; flex-shrink: 0;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 0.9rem;">{{ option.menu_item.name }}</div>
+                                {% if option.menu_item.description %}
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">{{ option.menu_item.description|truncatewords:8 }}</div>
+                                {% endif %}
+                            </div>
+                            <div style="font-weight: 700; font-size: 0.85rem; {% if option.upgrade_price == 0 %}color: var(--success);{% else %}color: var(--brand);{% endif %}">
+                                {% if option.upgrade_price > 0 %}+£{{ option.upgrade_price }}{% else %}Included{% endif %}
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% empty %}
+                        <p style="padding: 1rem; color: var(--text-muted); text-align: center; grid-column: 1 / -1;">No options available</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Footer -->
+            <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1.25rem;">
+                    <span style="font-weight: 700; font-size: 1rem;">Quantity:</span>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; background: var(--bg); border-radius: var(--radius); padding: 0.35rem;">
+                        <button type="button" onclick="updateDealQuantity(-1)" class="cart-qty-btn">−</button>
+                        <span id="dealQuantityLabel" style="font-weight: 700; min-width: 24px; text-align: center;">1</span>
+                        <input type="hidden" name="quantity" id="dealQuantityInput" value="1">
+                        <button type="button" onclick="updateDealQuantity(1)" class="cart-qty-btn">+</button>
+                    </div>
+                </div>
+                <button type="submit" class="hero-btn-primary" style="border: none; cursor: pointer;">
+                    <i class="ph-bold ph-shopping-cart"></i>
+                    Add to Cart — £{{ deal.deal_price }}
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateDealQuantity(change) {
+    const input = document.getElementById('dealQuantityInput');
+    const label = document.getElementById('dealQuantityLabel');
+    const nextValue = Math.min({{ deal.max_per_order }}, Math.max(1, parseInt(input.value || '1', 10) + change));
+    input.value = nextValue;
+    label.textContent = nextValue;
+}
+
+// Style radio labels on selection
+document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const name = this.name;
+        document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+            r.closest('label').style.borderColor = 'var(--border)';
+            r.closest('label').style.background = 'transparent';
+        });
+        this.closest('label').style.borderColor = 'var(--brand)';
+        this.closest('label').style.background = 'var(--brand-light)';
+    });
+    // Initialize first items
+    if (this.checked) {
+        this.closest('label').style.borderColor = 'var(--brand)';
+        this.closest('label').style.background = 'var(--brand-light)';
+    }
+});
+</script>
+{% endblock %}

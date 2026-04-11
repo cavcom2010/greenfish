@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Refer a Friend - {{ site_name }}{% endblock %}
+{% block title %}Refer a Friend - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
 <style>
@@ -174,13 +174,13 @@
 </style>
 
 <div class="refer-header" style="position: relative;">
-    <a href="{% url 'loyalty:dashboard' %}"><i class="fas fa-arrow-left"></i></a>
-    <h1><i class="fas fa-gift"></i> Refer a Friend</h1>
+    <a href="{% url 'loyalty:dashboard' %}"><i class="ph ph-arrow-left"></i></a>
+    <h1><i class="ph ph-gift"></i> Refer a Friend</h1>
     <p>Share the taste of Zimbabwe! <em>Tinotenda!</em> - They get {{ settings.welcome_bonus }} points, you get {{ settings.referral_points }}.</p>
 </div>
 
 <div class="refer-illustration">
-    <i class="fas fa-users"></i>
+    <i class="ph ph-users"></i>
 </div>
 
 <div class="how-it-works">
@@ -215,7 +215,7 @@
         <div class="code" id="referralCode">{{ referral_code }}</div>
     </div>
     <button class="btn-copy" onclick="copyCode()">
-        <i class="fas fa-copy"></i> Copy Code
+        <i class="ph ph-copy"></i> Copy Code
     </button>
 </div>
 
@@ -227,16 +227,16 @@
     </a>
     <a href="sms:?body=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}" 
        class="share-btn sms">
-        <i class="fas fa-comment"></i>
+        <i class="ph ph-chat-text"></i>
         <span>SMS</span>
     </a>
     <a href="mailto:?subject=Free%20{{ settings.welcome_bonus }}%20Points%20at%20{{ site_settings.shop_name|urlencode }}&body=Hi!%20I%20thought%20you'd%20love%20this.%20Get%20{{ settings.welcome_bonus }}%20free%20points%20when%20you%20sign%20up%20at%20{{ site_settings.shop_name|urlencode }}%20using%20my%20code:%20{{ referral_code }}" 
        class="share-btn email">
-        <i class="fas fa-envelope"></i>
+        <i class="ph ph-envelope-simple"></i>
         <span>Email</span>
     </a>
     <button class="share-btn copy" onclick="copyLink()">
-        <i class="fas fa-link"></i>
+        <i class="ph ph-link"></i>
         <span>Copy Link</span>
     </button>
 </div>
@@ -249,7 +249,7 @@
             <span>Friends Referred</span>
         </div>
         <div class="stat-item">
-            <h4>{{ total_points_earned|default:"0" }}</h4>
+            <h4>{{ referral_total_points|default:"0" }}</h4>
             <span>Points Earned</span>
         </div>
     </div>

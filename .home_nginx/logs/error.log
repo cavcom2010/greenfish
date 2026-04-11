@@ -508,3 +508,100 @@
 2026/04/07 15:20:02 [info] 871309#871309: *1 client 127.0.0.1 closed keepalive connection
 2026/04/07 15:21:16 [info] 871309#871309: *5 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
 2026/04/07 15:21:27 [info] 871309#871309: *8 client 127.0.0.1 closed keepalive connection
+2026/04/07 16:33:08 [info] 896336#896336: *1 client 127.0.0.1 closed keepalive connection
+2026/04/07 17:00:58 [info] 896336#896336: *9 recv() failed (104: Connection reset by peer) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/07 17:00:58 [info] 896336#896336: *7 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 17:03:52 [info] 896336#896336: *10 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 17:59:49 [info] 915204#915204: *1 client 127.0.0.1 closed keepalive connection
+2026/04/07 18:01:00 [info] 915927#915927: *1 client 127.0.0.1 closed keepalive connection
+2026/04/07 18:09:53 [info] 915927#915927: *11 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/07 18:09:54 [info] 915927#915927: *9 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 18:09:54 [info] 915927#915927: *10 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 18:09:54 [info] 915927#915927: *5 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 18:09:54 [info] 915927#915927: *6 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 18:09:54 [info] 915927#915927: *8 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 18:11:47 [info] 915927#915927: *13 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 18:12:03 [info] 915927#915927: *17 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/07 18:28:02 [info] 926741#926741: *1 client 127.0.0.1 closed keepalive connection
+2026/04/07 18:33:25 [info] 926741#926741: *16 client 192.168.1.119 closed keepalive connection
+2026/04/07 19:18:57 [info] 947137#947137: *1 client 127.0.0.1 closed keepalive connection
+2026/04/07 19:26:53 [info] 947137#947137: *3 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/07 19:54:18 [info] 947137#947137: *15 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/07 21:14:51 [info] 947137#947137: *19 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/08 15:05:44 [info] 947137#947137: *33 client 192.168.1.104 closed keepalive connection (104: Connection reset by peer)
+2026/04/08 15:06:22 [info] 947137#947137: *42 recv() failed (104: Connection reset by peer) while waiting for request, client: 192.168.1.104, server: 0.0.0.0:8006
+2026/04/08 15:06:22 [info] 947137#947137: *41 client 192.168.1.104 closed keepalive connection (104: Connection reset by peer)
+2026/04/08 18:25:14 [info] 947137#947137: *52 client closed connection while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/08 18:25:14 [info] 947137#947137: *53 client closed connection while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/08 18:25:24 [info] 947137#947137: *54 client closed connection while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/08 18:32:09 [info] 1115311#1115311: *1 client 127.0.0.1 closed keepalive connection
+2026/04/08 18:33:32 [info] 1115311#1115311: *7 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.104, server: 0.0.0.0:8006
+2026/04/08 18:33:32 [info] 1115311#1115311: *8 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.104, server: 0.0.0.0:8006
+2026/04/08 18:56:38 [info] 1125060#1125060: *1 client 127.0.0.1 closed keepalive connection
+2026/04/08 18:57:45 [info] 1125060#1125060: *4 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/08 18:57:45 [info] 1125060#1125060: *3 epoll_wait() reported that client prematurely closed connection, so upstream connection is closed too while sending request to upstream, client: 192.168.1.119, server: _, request: "GET /?dietary=vegetarian&category=1 HTTP/1.1", upstream: "http://127.0.0.1:8026/?dietary=vegetarian&category=1", host: "192.168.1.77:8006", referrer: "http://192.168.1.77:8006/?category=1"
+2026/04/08 19:02:49 [info] 1127840#1127840: *1 client 127.0.0.1 closed keepalive connection
+2026/04/08 19:40:58 [info] 1145938#1145938: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 10:19:13 [info] 1243501#1243501: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 15:57:35 [info] 1257091#1257091: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 16:39:26 [info] 1273397#1273397: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 16:40:12 [info] 1273779#1273779: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 19:18:03 [info] 1339842#1339842: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 20:36:08 [info] 1361210#1361210: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 20:59:51 [info] 1362897#1362897: *1 client 127.0.0.1 closed keepalive connection
+2026/04/09 21:00:44 [info] 1362897#1362897: *6 client 192.168.1.77 closed keepalive connection
+2026/04/09 21:00:44 [info] 1362897#1362897: *5 client closed connection while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/09 21:00:44 [info] 1362897#1362897: *3 client 192.168.1.77 closed keepalive connection
+2026/04/09 21:10:36 [info] 1363581#1363581: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 06:57:21 [info] 1363581#1363581: *39 client closed connection while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 06:57:21 [info] 1363581#1363581: *37 client 192.168.1.77 closed keepalive connection
+2026/04/10 06:57:21 [info] 1363581#1363581: *40 client 192.168.1.77 closed keepalive connection
+2026/04/10 15:15:06 [info] 1388075#1388075: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 15:16:34 [info] 1388075#1388075: *5 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.104, server: 0.0.0.0:8006
+2026/04/10 15:20:36 [info] 1388075#1388075: *17 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/10 15:20:36 [info] 1388075#1388075: *18 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/10 15:28:44 [info] 1388075#1388075: *22 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/10 20:52:14 [info] 1398234#1398234: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 20:53:22 [info] 1398234#1398234: *5 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/10 20:54:49 [info] 1398234#1398234: *17 recv() failed (104: Connection reset by peer) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/10 20:54:49 [info] 1398234#1398234: *3 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/10 21:04:37 [info] 1398234#1398234: *32 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 21:44:32 [info] 1403340#1403340: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 21:45:42 [info] 1403340#1403340: *8 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 21:49:16 [info] 1403340#1403340: *22 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 21:50:17 [info] 1403340#1403340: *27 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 21:52:19 [info] 1404301#1404301: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 21:54:49 [info] 1404301#1404301: *26 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 21:55:53 [info] 1404301#1404301: *48 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 21:58:14 [info] 1404301#1404301: *54 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 22:00:20 [info] 1404301#1404301: *59 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 22:01:20 [info] 1405823#1405823: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 22:30:36 [info] 1408719#1408719: *1 client 127.0.0.1 closed keepalive connection
+2026/04/10 22:32:55 [info] 1408719#1408719: *14 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/10 22:34:04 [info] 1408719#1408719: *25 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 09:34:00 [info] 1411617#1411617: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 09:41:50 [info] 1411617#1411617: *3 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 09:43:16 [info] 1411617#1411617: *34 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 09:43:40 [info] 1412399#1412399: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 09:43:52 [info] 1412399#1412399: *7 client 192.168.1.77 closed keepalive connection (104: Connection reset by peer)
+2026/04/11 10:17:33 [info] 1415323#1415323: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 10:18:45 [info] 1415323#1415323: *12 client closed connection while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 10:18:45 [info] 1415323#1415323: *13 client closed connection while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 10:18:45 [info] 1415323#1415323: *11 client 192.168.1.119 closed keepalive connection
+2026/04/11 10:19:47 [info] 1415323#1415323: *17 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 10:27:22 [info] 1416289#1416289: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 10:31:27 [info] 1416785#1416785: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 10:33:54 [info] 1416785#1416785: *26 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 10:35:25 [info] 1416785#1416785: *32 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 10:35:41 [info] 1416785#1416785: *30 client 192.168.1.119 closed keepalive connection (104: Connection reset by peer)
+2026/04/11 10:36:41 [info] 1416785#1416785: *47 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 11:38:07 [info] 1426577#1426577: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 11:46:43 [info] 1426577#1426577: *19 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 11:48:05 [info] 1426577#1426577: *23 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 12:11:41 [info] 1431338#1431338: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 12:14:42 [info] 1431338#1431338: *42 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 12:15:44 [info] 1431338#1431338: *53 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 12:38:26 [info] 1441292#1441292: *1 client 127.0.0.1 closed keepalive connection
+2026/04/11 13:05:24 [info] 1441292#1441292: *33 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.77, server: 0.0.0.0:8006
+2026/04/11 15:05:20 [info] 1441292#1441292: *61 client timed out (110: Connection timed out) while waiting for request, client: 192.168.1.119, server: 0.0.0.0:8006
+2026/04/11 22:17:10 [info] 1589616#1589616: *1 client 127.0.0.1 closed keepalive connection

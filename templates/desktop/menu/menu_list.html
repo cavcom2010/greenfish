@@ -1,0 +1,83 @@
+{% extends "desktop/base.html" %}
+{% load media_tags %}
+
+{% block title %}Menu - {{ site_settings.shop_name }}{% endblock %}
+
+{% block content %}
+
+<!-- Category Navigation -->
+<div class="category-nav">
+    <div class="category-nav-inner">
+        <a href="{% url 'menu:menu' %}" class="{% if not active_category %}active{% endif %}">All Items</a>
+        {% for category in categories %}
+        <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="{% if active_category == category %}active{% endif %}">{{ category.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Menu Section -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>{{ active_category.name|default:"Full Menu" }}</h2>
+                <p>
+                    {% if active_category and active_category.description %}
+                    {{ active_category.description }}
+                    {% else %}
+                    {{ items|length }} item{{ items|length|pluralize }} available
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="menu-grid-desktop">
+            {% for item in items %}
+            <div class="menu-card" onclick="openItemModal({{ item.id }})">
+                <div class="menu-card-image">
+                    {% if item.image %}
+                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" width="640" height="640">
+                    {% else %}
+                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
+                    {% endif %}
+                    {% if item.dietary_tags %}
+                    <div class="menu-card-badges">
+                        {% for tag in item.dietary_tags|slice:":2" %}
+                        <span class="dietary-badge">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if item.is_popular %}
+                    <div class="menu-card-badges" style="left:auto;right:0.75rem;">
+                        <span class="popular-badge">Popular</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="menu-card-body">
+                    <div class="menu-card-title">{{ item.name }}</div>
+                    {% if item.description %}
+                    <div class="menu-card-desc">{{ item.description }}</div>
+                    {% endif %}
+                    <div class="menu-card-footer">
+                        <span class="menu-card-price">£{{ item.price }}</span>
+                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;">
+                <i class="ph ph-fork-knife" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem;display:block;"></i>
+                <h3 style="margin-bottom:0.5rem;">No items in this category</h3>
+                <p style="color:var(--text-muted);">Check back soon or explore other categories.</p>
+                <a href="{% url 'menu:menu' %}" class="hero-btn-primary" style="display:inline-flex;margin-top:1.5rem;text-decoration:none;">
+                    View All Items
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}

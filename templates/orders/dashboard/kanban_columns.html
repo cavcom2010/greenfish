@@ -1,0 +1,12 @@
+{% for status, orders in columns.items %}
+<div class="column-content" data-column="{{ status }}">
+    {% for order in orders %}
+    {% include "orders/dashboard/kanban_card.html" %}
+    {% empty %}
+    <div class="column-empty">
+        <i class="ph ph-tray"></i>
+        <p>No orders</p>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}

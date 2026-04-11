@@ -4,8 +4,13 @@ from django.dispatch import receiver
 
 from apps.orders.models import Order
 
-from .services import send_order_confirmation, send_order_ready
-from .models import SMSSettings
+from .models import SMSMessage, SMSSettings
+from .services import (
+    send_order_confirmation,
+    send_order_delivered,
+    send_order_out_for_delivery,
+    send_order_ready,
+)
 
 
 @receiver(post_save, sender=Order)
@@ -20,10 +25,8 @@ def send_order_sms_notifications(sender, instance, created, **kwargs):
         send_order_confirmation(instance)
         return
     
-    # Send ready notification when status changes to ready
-    if instance.status == Order.Status.READY:
-        # Check if we already sent this notification
-        from .models import SMSMessage
+    # Send ready notification when status changes to ready.
+    if instance.status == Order.OrderStatus.READY and not instance.is_delivery:
         already_sent = SMSMessage.objects.filter(
             order=instance,
             message_type=SMSMessage.MessageType.ORDER_READY
@@ -31,3 +34,23 @@ def send_order_sms_notifications(sender, instance, created, **kwargs):
         
         if not already_sent:
             send_order_ready(instance)
+        return
+
+    if instance.status == Order.OrderStatus.OUT_FOR_DELIVERY:
+        already_sent = SMSMessage.objects.filter(
+            order=instance,
+            message_type=SMSMessage.MessageType.ORDER_OUT_FOR_DELIVERY,
+        ).exists()
+
+        if not already_sent:
+            send_order_out_for_delivery(instance)
+        return
+
+    if instance.status == Order.OrderStatus.COMPLETED and instance.is_delivery:
+        already_sent = SMSMessage.objects.filter(
+            order=instance,
+            message_type=SMSMessage.MessageType.ORDER_DELIVERED,
+        ).exists()
+
+        if not already_sent:
+            send_order_delivered(instance)

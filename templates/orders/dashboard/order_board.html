@@ -195,10 +195,10 @@
 <div class="order-board">
     <!-- Status Tabs -->
     <div class="status-tabs">
-        <button class="status-tab active" onclick="filterOrders('all')">All Active</button>
-        <button class="status-tab" onclick="filterOrders('confirmed')">Confirmed</button>
-        <button class="status-tab" onclick="filterOrders('preparing')">Preparing</button>
-        <button class="status-tab" onclick="filterOrders('ready')">Ready</button>
+        <button class="status-tab active" onclick="filterOrders(event, 'all')">All Active</button>
+        <button class="status-tab" onclick="filterOrders(event, 'confirmed')">Confirmed</button>
+        <button class="status-tab" onclick="filterOrders(event, 'preparing')">Preparing</button>
+        <button class="status-tab" onclick="filterOrders(event, 'ready')">Ready</button>
     </div>
     
     <!-- Orders Container -->
@@ -243,7 +243,7 @@ function toggleSound() {
     }
 }
 
-function filterOrders(status) {
+function filterOrders(event, status) {
     // Update active tab
     document.querySelectorAll('.status-tab').forEach(tab => {
         tab.classList.remove('active');
@@ -271,7 +271,8 @@ function updateOrderStatus(orderId, newStatus) {
     })
     .then(() => {
         // Refresh orders
-        htmx.trigger('#ordersContainer', 'load');
+        const container = document.getElementById('ordersContainer');
+        htmx.trigger(container, 'load');
     });
 }
 

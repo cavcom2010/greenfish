@@ -48,9 +48,16 @@ DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 # Database (SQLite for local development)
 DATABASE_URL=
 
-# Mollie Payments (test key for development)
-MOLLIE_API_KEY=test_your_mollie_key_here
-MOLLIE_WEBHOOK_SECRET=local-webhook-secret
+# Payments
+PAYMENT_PROVIDER=stripe
+
+# Stripe Payments (test key for development)
+STRIPE_SECRET_KEY=sk_test_your_stripe_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_local_webhook_secret
+
+# Mollie Payments (optional alternate provider)
+MOLLIE_API_KEY=
+MOLLIE_WEBHOOK_SECRET=
 
 # Shop Settings
 SHOP_NAME=Tinashe Takeaway
@@ -101,7 +108,7 @@ python manage.py collectstatic --noinput --settings=config.settings.local
 ### 9. Start the Development Server
 
 ```bash
-./deploy/home/start.sh --foreground
+./deploy/home/start.sh
 ```
 
 The app will be available at:
@@ -125,7 +132,7 @@ The app will be available at:
 4. Restart the server:
    ```bash
    ./deploy/home/stop.sh
-   ./deploy/home/start.sh --foreground
+   ./deploy/home/start.sh
    ```
 
 ### Running Tests
@@ -142,7 +149,7 @@ python manage.py dbshell --settings=config.settings.local
 
 ## Next Steps
 
-- [Configure Mollie Payments](configuration.md#mollie-payments)
+- [Configure Payments](configuration.md#payments)
 - [Customize the menu](admin-guide.md#managing-menu)
 - [Set up promotions](admin-guide.md#creating-offers)
 - [Deploy to production](deployment.md)

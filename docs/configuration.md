@@ -22,18 +22,26 @@ Complete reference for all configuration options in Tinashe Takeaway.
 | `DB_CONN_MAX_AGE` | 60 | Database connection persistence in seconds. |
 | `DB_SSL_REQUIRE` | False | Require SSL for database connections (recommended for production). |
 
-### Mollie Payments
+### Payments
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MOLLIE_API_KEY` | None | **Required for payments.** Your Mollie API key. Use test key for development (starts with `test_`). |
-| `MOLLIE_WEBHOOK_SECRET` | None | Secret for verifying webhooks. Generate a random string. |
+| `PAYMENT_PROVIDER` | `stripe` | Active payment provider. Supported values: `stripe`, `mollie`. |
+| `STRIPE_SECRET_KEY` | None | **Required when `PAYMENT_PROVIDER=stripe`.** Your Stripe secret key. |
+| `STRIPE_PUBLISHABLE_KEY` | Empty | Optional publishable key for future frontend Stripe work. |
+| `STRIPE_WEBHOOK_SECRET` | None | **Required when `PAYMENT_PROVIDER=stripe`.** Stripe webhook signing secret. |
+| `MOLLIE_API_KEY` | Empty | Optional alternate provider key when `PAYMENT_PROVIDER=mollie`. |
+| `MOLLIE_WEBHOOK_SECRET` | Empty | Optional alternate provider webhook secret when `PAYMENT_PROVIDER=mollie`. |
 
-**Getting Mollie API Keys:**
-1. Sign up at https://www.mollie.com/dashboard
-2. Go to Developers → API keys
-3. Copy the Test key for development
-4. Copy the Live key for production
+**Stripe setup:**
+1. Create a Stripe account and get your API keys from Developers → API keys.
+2. Set `PAYMENT_PROVIDER=stripe`.
+3. Add `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+4. Point your Stripe webhook endpoint to `/payments/webhook/`.
+
+**Optional Mollie fallback:**
+1. Keep your Mollie keys in `.env`, but leave `PAYMENT_PROVIDER=stripe` while Stripe is active.
+2. Switch `PAYMENT_PROVIDER=mollie` only when you want to route checkout through Mollie again.
 
 ### Email Settings
 

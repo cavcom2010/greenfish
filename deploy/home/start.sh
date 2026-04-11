@@ -12,12 +12,14 @@ print_usage() {
 Usage: ./deploy/home/start.sh [--foreground|--daemon] [--help]
 
 Options:
-  --foreground  Keep Gunicorn attached to this terminal and stream logs live.
-  --daemon      Run Gunicorn detached in the background (default).
+  --foreground  Keep Gunicorn attached to this terminal and stream logs live (default).
+  --daemon      Run Gunicorn detached in the background and write logs to disk.
   --help        Show this help text.
 
 Environment:
-  HOME_FOREGROUND=1  Same as --foreground.
+  HOME_FOREGROUND=1  Same as --foreground (default).
+  HOME_FOREGROUND=0  Same as --daemon.
+  HOME_CLIENT_MAX_BODY_SIZE=8m  Nginx request body limit for uploads.
 
 Home server for Tinashe Takeaway - runs on port :8026
 EOF
@@ -28,11 +30,11 @@ if [[ ! -x "$PYTHON_BIN" ]] || [[ ! -x "$GUNICORN_BIN" ]]; then
   exit 1
 fi
 
-case "${HOME_FOREGROUND:-0}" in
+case "${HOME_FOREGROUND:-1}" in
   1|true|TRUE|yes|YES|on|ON)
     HOME_FOREGROUND_MODE=1
     ;;
-  0|false|FALSE|no|NO|off|OFF|"")
+  0|false|FALSE|no|NO|off|OFF)
     HOME_FOREGROUND_MODE=0
     ;;
   *)
@@ -62,7 +64,9 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-export DJANGO_SETTINGS_MODULE="${HOME_DJANGO_SETTINGS_MODULE:-${DJANGO_SETTINGS_MODULE:-config.settings.local}}"
+export DJANGO_SETTINGS_MODULE="${HOME_DJANGO_SETTINGS_MODULE:-${DJANGO_SETTINGS_MODULE:-config.settings.production}}"
+export ALLOW_SQLITE_PRODUCTION="${ALLOW_SQLITE_PRODUCTION:-1}"
+export DJANGO_ENFORCE_STRONG_SECRET_KEY="${DJANGO_ENFORCE_STRONG_SECRET_KEY:-0}"
 
 # Intentionally do not source .env here.
 # python-decouple reads .env directly and shell-sourcing can break on non-bash-safe values.
@@ -71,6 +75,7 @@ HOME_DIR="$ROOT/.home_nginx"
 LOG_DIR="$HOME_DIR/logs"
 RUN_DIR="$HOME_DIR/run"
 TMP_DIR="$HOME_DIR/tmp"
+HOME_CLIENT_MAX_BODY_SIZE="${HOME_CLIENT_MAX_BODY_SIZE:-8m}"
 
 mkdir -p "$LOG_DIR" "$RUN_DIR"
 mkdir -p "$TMP_DIR/client_body" "$TMP_DIR/proxy" "$TMP_DIR/fastcgi" "$TMP_DIR/uwsgi" "$TMP_DIR/scgi"
@@ -216,6 +221,7 @@ NGINX_PID="$RUN_DIR/nginx.pid"
 HOME_HOST_FILE="$RUN_DIR/home_host"
 HOME_SCHEME_FILE="$RUN_DIR/home_scheme"
 FOREGROUND_GUNICORN_PID=""
+FOREGROUND_NGINX_TAIL_PID=""
 FOREGROUND_CLEANED_UP=0
 
 stop_foreground_services() {
@@ -240,6 +246,11 @@ stop_foreground_services() {
     nginx -p "$HOME_DIR" -c "$HOME_DIR/nginx.conf" -s stop 2>/dev/null || true
     rm -f "$NGINX_PID"
     kill_listeners_on_port "$NGINX_PORT"
+  fi
+
+  if [[ -n "$FOREGROUND_NGINX_TAIL_PID" ]] && kill -0 "$FOREGROUND_NGINX_TAIL_PID" 2>/dev/null; then
+    kill "$FOREGROUND_NGINX_TAIL_PID" 2>/dev/null || true
+    wait "$FOREGROUND_NGINX_TAIL_PID" 2>/dev/null || true
   fi
 
   rm -f "$HOME_HOST_FILE" "$HOME_SCHEME_FILE"
@@ -385,6 +396,12 @@ if [[ -f "$GUNICORN_PID" ]] && pid_is_running "$(cat "$GUNICORN_PID")"; then
   fi
 fi
 
+if [[ "$HOME_FOREGROUND_MODE" == "1" ]] && [[ -f "$GUNICORN_PID" ]] && pid_is_running "$(cat "$GUNICORN_PID")"; then
+  echo "Foreground mode requires a fresh Gunicorn process to attach live logs; restarting existing Gunicorn..."
+  kill_pid_tree "$(cat "$GUNICORN_PID")"
+  rm -f "$GUNICORN_PID"
+fi
+
 if [[ ! -f "$GUNICORN_PID" ]] || ! pid_is_running "$(cat "$GUNICORN_PID")"; then
   rm -f "$GUNICORN_PID"
 
@@ -440,6 +457,12 @@ fi
 MEDIA_ROOT="$ROOT/media"
 NGINX_CONF="$HOME_DIR/nginx.conf"
 
+if [[ "$HOME_FOREGROUND_MODE" == "1" ]]; then
+  touch "$LOG_DIR/access.log" "$LOG_DIR/error.log"
+  tail -n 0 -v -F "$LOG_DIR/access.log" "$LOG_DIR/error.log" &
+  FOREGROUND_NGINX_TAIL_PID="$!"
+fi
+
 cat >"$NGINX_CONF" <<EOF_NGINX
 worker_processes  1;
 pid run/nginx.pid;
@@ -472,7 +495,7 @@ http {
     listen ${HOME_BIND}:${NGINX_PORT};
     server_name _;
 
-    client_max_body_size 25m;
+    client_max_body_size ${HOME_CLIENT_MAX_BODY_SIZE};
 
     location /static/ {
       alias ${STATIC_ROOT}/;
@@ -521,7 +544,7 @@ if command -v curl >/dev/null 2>&1; then
     HEALTHCHECK_HOST="$HOME_BIND"
   fi
 
-  if ! curl -fsS --max-time 5 "http://${HEALTHCHECK_HOST}:${NGINX_PORT}/" >/dev/null; then
+  if ! curl -fsS --max-time 5 "http://${HEALTHCHECK_HOST}:${NGINX_PORT}/health/" >/dev/null; then
     echo "HTTP health check failed on ${HEALTHCHECK_HOST}:${NGINX_PORT}." >&2
     echo "Check .home_nginx/logs/error.log and .home_nginx/logs/gunicorn-error.log" >&2
     exit 1
@@ -534,7 +557,7 @@ echo "Open: http://${LAN_IP}:${NGINX_PORT}/"
 echo "If your browser auto-upgrades LAN IPs to HTTPS, disable 'Always use secure connections' for local testing."
 
 if [[ "$HOME_FOREGROUND_MODE" == "1" ]]; then
-  echo "Foreground mode active. Gunicorn logs will stream in this terminal. Press Ctrl+C to stop Gunicorn and Nginx."
+  echo "Foreground mode active. Gunicorn and Nginx logs will stream in this terminal. Press Ctrl+C to stop Gunicorn and Nginx."
   set +e
   wait "$FOREGROUND_GUNICORN_PID"
   GUNICORN_EXIT_CODE="$?"

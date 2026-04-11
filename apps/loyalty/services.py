@@ -3,6 +3,8 @@ from decimal import Decimal, ROUND_DOWN
 
 from django.db.models import Sum
 
+from apps.core.models import SiteSettings
+
 from .models import LoyaltySettings, LoyaltyTransaction, ReferralCode, PointsRedemption
 from .utils import generate_referral_code, get_loyalty_tier
 
@@ -47,6 +49,7 @@ def get_user_loyalty_summary(user):
         "recent_transactions": recent_transactions,
         "referral_code": referral_code.code,
         "referral_count": referral_code.successful_referrals,
+        "referral_total_points": referral_code.total_points_earned,
         "settings": settings,
     }
 

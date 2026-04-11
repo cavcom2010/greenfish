@@ -206,7 +206,7 @@
     <h3>Your Benefits</h3>
     {% for benefit in tier.benefits %}
     <div class="benefit-item">
-        <i class="fas fa-check-circle"></i>
+        <i class="ph ph-check-circle"></i>
         <span>{{ benefit }}</span>
     </div>
     {% endfor %}
@@ -214,19 +214,19 @@
 
 <div class="quick-actions">
     <a href="{% url 'loyalty:refer' %}" class="action-card">
-        <i class="fas fa-gift"></i>
+        <i class="ph ph-gift"></i>
         <h4>Refer a Friend</h4>
         <p>Earn {{ settings.referral_points }} points</p>
     </a>
     <a href="{% url 'menu:menu' %}" class="action-card">
-        <i class="fas fa-utensils"></i>
+        <i class="ph ph-fork-knife"></i>
         <h4>Order Now</h4>
         <p>Earn {{ settings.points_per_pound }} pts per £1</p>
     </a>
 </div>
 
 <div class="referral-preview">
-    <h3><i class="fas fa-share-alt"></i> Share & Earn</h3>
+    <h3><i class="ph ph-share-network"></i> Share & Earn</h3>
     <p>Give friends {{ settings.welcome_bonus }} points, earn {{ settings.referral_points }} when they order!</p>
     <div class="referral-code-box">{{ referral_code }}</div>
 </div>

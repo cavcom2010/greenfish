@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load media_tags %}
 
 {% block title %}{{ site_settings.shop_name }}{% endblock %}
 {% block page_title %}Order{% endblock %}
@@ -6,8 +7,8 @@
 {% block content %}
 <!-- Service Toggle -->
 <div class="service-toggle">
-    <button class="toggle-option active" onclick="switchService(this, 'pickup')">Pickup</button>
-    <button class="toggle-option" onclick="switchService(this, 'delivery')">Delivery</button>
+    <button type="button" class="toggle-option {% if service_type == 'pickup' %}active{% endif %}" data-service="pickup" onclick="switchService('pickup')">Pickup</button>
+    <button type="button" class="toggle-option {% if service_type == 'delivery' %}active{% endif %}" data-service="delivery" onclick="switchService('delivery')">Delivery</button>
 </div>
 
 <!-- Hero Banner -->
@@ -42,7 +43,7 @@
     <div class="food-card" onclick="openItemModal({{ item.id }})">
         <div class="food-image">
             {% if item.image %}
-            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+            <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
             {% else %}
             <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
             {% endif %}
@@ -112,7 +113,7 @@
         <div class="food-card" onclick="openItemModal({{ item.id }})">
             <div class="food-image">
                 {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
                 {% else %}
                 <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
                 {% endif %}
@@ -152,15 +153,30 @@
 
 {% block extra_js %}
 <script>
-let currentService = 'pickup';
+let currentService = '{{ service_type|default:"pickup" }}';
 
-function switchService(element, service) {
-    document.querySelectorAll('.toggle-option').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
+function applyServiceSelection(service) {
     currentService = service;
-    
-    // Store preference
+    document.querySelectorAll('.toggle-option').forEach(el => {
+        el.classList.toggle('active', el.dataset.service === service);
+    });
     localStorage.setItem('service_type', service);
+}
+
+function persistServiceSelection(service) {
+    return fetch('{% url "orders:set_service_type" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `service_type=${encodeURIComponent(service)}`
+    }).catch(() => null);
+}
+
+function switchService(service) {
+    applyServiceSelection(service);
+    persistServiceSelection(service);
 }
 
 function addToCart(itemId) {
@@ -171,7 +187,7 @@ function addToCart(itemId) {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}'
         },
-        body: `menu_item_id=${itemId}&quantity=1&modifiers=[]`
+        body: `menu_item_id=${itemId}&quantity=1&service_type=${encodeURIComponent(currentService)}&modifiers=[]`
     })
     .then(response => response.json())
     .then(data => {
@@ -236,14 +252,14 @@ function closeItemModal(event) {
     }
 }
 
-// Restore service preference
 const savedService = localStorage.getItem('service_type');
-if (savedService) {
-    document.querySelectorAll('.toggle-option').forEach(el => {
-        if (el.textContent.toLowerCase() === savedService) {
-            el.click();
-        }
-    });
+if (savedService === 'pickup' || savedService === 'delivery') {
+    applyServiceSelection(savedService);
+    if (savedService !== '{{ service_type|default:"pickup" }}') {
+        persistServiceSelection(savedService);
+    }
+} else {
+    applyServiceSelection(currentService);
 }
 
 // Scroll to menu section if category is selected
@@ -339,7 +355,7 @@ function addToCartFromModal(itemId) {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}'
         },
-        body: `menu_item_id=${itemId}&quantity=${modalQuantity}&modifiers=${encodeURIComponent(JSON.stringify(modifiers))}`
+        body: `menu_item_id=${itemId}&quantity=${modalQuantity}&service_type=${encodeURIComponent(currentService)}&modifiers=${encodeURIComponent(JSON.stringify(modifiers))}`
     })
     .then(response => response.json())
     .then(data => {

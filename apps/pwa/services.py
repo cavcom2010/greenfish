@@ -117,6 +117,16 @@ def notify_order_ready(order):
     notify_order_status(order, 'Your order is ready for pickup!')
 
 
+def notify_order_out_for_delivery(order):
+    """Send order dispatch notification."""
+    notify_order_status(order, 'Your order is on the way.')
+
+
+def notify_order_delivered(order):
+    """Send order delivered notification."""
+    notify_order_status(order, 'Your order has been delivered.')
+
+
 def broadcast_notification(title, body, data=None):
     """
     Send notification to all subscribed users.

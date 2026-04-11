@@ -67,6 +67,7 @@ LOCAL_APPS = [
     "apps.menu",           # Product catalog
     "apps.cart",           # Shopping cart (session-based)
     "apps.orders",         # Order management
+    "apps.operations",     # Staff operations boards
     "apps.payments",       # Payment processing
     
     # Marketing
@@ -92,6 +93,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "apps.core.middleware.DesktopDetectionMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -165,6 +167,21 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+DATA_UPLOAD_MAX_MEMORY_SIZE = env("DATA_UPLOAD_MAX_MEMORY_SIZE", default=8 * 1024 * 1024, cast=int)
+FILE_UPLOAD_MAX_MEMORY_SIZE = env("FILE_UPLOAD_MAX_MEMORY_SIZE", default=512 * 1024, cast=int)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = env("DATA_UPLOAD_MAX_NUMBER_FIELDS", default=500, cast=int)
+DATA_UPLOAD_MAX_NUMBER_FILES = env("DATA_UPLOAD_MAX_NUMBER_FILES", default=10, cast=int)
+
+# Caching
+CACHES = {
+    "default": {
+        "BACKEND": env(
+            "DJANGO_CACHE_BACKEND",
+            default="django.core.cache.backends.locmem.LocMemCache",
+        ),
+        "LOCATION": env("DJANGO_CACHE_LOCATION", default="two_fish-default"),
+    }
+}
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -173,6 +190,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 # Django AllAuth Configuration
+ACCOUNT_ADAPTER = "apps.accounts.adapter.DesktopAwareAccountAdapter"
 SITE_ID = 1
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
@@ -202,11 +220,17 @@ CURRENCY = env("CURRENCY", default="GBP")
 ORDER_PREFIX = env("ORDER_PREFIX", default="TN")
 DEFAULT_PREP_TIME = env("DEFAULT_PREP_TIME", default=15, cast=int)
 
+# Payment Provider Settings
+PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", default="stripe").strip().lower()
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
+
 # Mollie Settings
 MOLLIE_API_KEY = env("MOLLIE_API_KEY", default="")
 MOLLIE_WEBHOOK_SECRET = env("MOLLIE_WEBHOOK_SECRET", default="")
 
-# Email Settings
+# Email Settings (Google Workspace SMTP — transactional emails)
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST", default="")
 EMAIL_PORT = env("EMAIL_PORT", default=587, cast=int)
@@ -214,6 +238,11 @@ EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="orders@tinashe.com")
+
+# Sender.net API — marketing emails (campaigns, offers, newsletters)
+SENDER_NET_API_KEY = env("SENDER_NET_API_KEY", default="")
+SENDER_NET_FROM_EMAIL = env("SENDER_NET_FROM_EMAIL", default="")
+SENDER_NET_FROM_NAME = env("SENDER_NET_FROM_NAME", default="")
 
 # Logging
 LOGGING = {

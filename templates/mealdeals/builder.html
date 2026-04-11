@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ deal.name }} - {{ site_name }}{% endblock %}
+{% block title %}{{ deal.name }} - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
 <style>
@@ -145,7 +145,7 @@
 </style>
 
 <div class="builder-header">
-    <a href="{% url 'mealdeals:list' %}"><i class="fas fa-arrow-left"></i></a>
+    <a href="{% url 'mealdeals:list' %}"><i class="ph ph-arrow-left"></i></a>
     <h1>{{ deal.name }}</h1>
     <p>{{ deal.description }}</p>
 </div>
@@ -158,11 +158,12 @@
 <form method="post" action="{% url 'orders:add_to_cart' %}">
     {% csrf_token %}
     <input type="hidden" name="deal_id" value="{{ deal.id }}">
+    <input type="hidden" name="service_type" id="dealServiceTypeInput" value="{{ service_type|default:'pickup' }}">
     
     {% for item in deal.items.all %}
     <div class="deal-section">
         <div class="section-header">
-            <h3><i class="fas fa-check-circle" style="color: #FF6B35;"></i> {{ item.name }}</h3>
+            <h3><i class="ph ph-check-circle" style="color: #FF6B35;"></i> {{ item.name }}</h3>
             <span>Choose {{ item.min_quantity }}{% if item.max_quantity > item.min_quantity %}-{{ item.max_quantity }}{% endif %}</span>
         </div>
         <div class="option-list">
@@ -195,15 +196,30 @@
     
     <div class="builder-footer">
         <div class="quantity-selector">
-            <button type="button" onclick="this.nextElementSibling.value--;">-</button>
-            <span>1</span>
-            <input type="hidden" name="quantity" value="1">
-            <button type="button" onclick="this.previousElementSibling.previousElementSibling.value++;">+</button>
+            <button type="button" onclick="updateDealQuantity(-1)">-</button>
+            <span id="dealQuantityLabel">1</span>
+            <input type="hidden" name="quantity" id="dealQuantityInput" value="1">
+            <button type="button" onclick="updateDealQuantity(1)">+</button>
         </div>
         <button type="submit" class="btn-add">
             Add to Cart - £{{ deal.deal_price }}
         </button>
     </div>
 </form>
+
+<script>
+const savedDealServiceType = localStorage.getItem('service_type');
+if (savedDealServiceType === 'pickup' || savedDealServiceType === 'delivery') {
+    document.getElementById('dealServiceTypeInput').value = savedDealServiceType;
+}
+
+function updateDealQuantity(change) {
+    const input = document.getElementById('dealQuantityInput');
+    const label = document.getElementById('dealQuantityLabel');
+    const nextValue = Math.min({{ deal.max_per_order }}, Math.max(1, parseInt(input.value || '1', 10) + change));
+    input.value = nextValue;
+    label.textContent = nextValue;
+}
+</script>
 
 {% endblock %}

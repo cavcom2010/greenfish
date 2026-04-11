@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Status - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Payment Status{% endblock %}
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<div class="page-content" style="text-align: center; padding-top: 40px;">
+    <div style="width: 88px; height: 88px; margin: 0 auto 24px; border-radius: 50%; background: {% if status == 'paid' %}var(--success-bg){% else %}var(--error-bg){% endif %}; display: flex; align-items: center; justify-content: center;">
+        <i class="ph {% if status == 'paid' %}ph-check-circle{% else %}ph-warning-circle{% endif %}" style="font-size: 48px; color: {% if status == 'paid' %}var(--success){% else %}var(--error){% endif %};"></i>
+    </div>
+
+    <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">
+        {% if status == 'paid' %}Payment received{% elif status == 'pending' %}Payment pending{% else %}Payment not completed{% endif %}
+    </h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">
+        Order {{ order.order_number }} for £{{ order.total_amount|floatformat:2 }}
+    </p>
+
+    <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: var(--text-secondary);">Order status</span>
+            <strong>{{ order.service_status_display }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Payment status</span>
+            <strong style="text-transform: capitalize;">{{ status }}</strong>
+        </div>
+    </div>
+
+    <div style="display: grid; gap: 12px;">
+        {% if status == 'paid' %}
+        <a href="{% url 'orders:confirmation' order.order_number %}" class="btn btn-brand">View confirmation</a>
+        {% else %}
+        {% if order.payment.checkout_url and status == 'pending' %}
+        <a href="{{ order.payment.checkout_url }}" class="btn btn-brand">Continue payment</a>
+        {% endif %}
+        <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-brand">Track order</a>
+        <a href="{% url 'menu:menu' %}" class="btn btn-secondary">Back to menu</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

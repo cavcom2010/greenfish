@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}About {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}About{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <div class="hero" style="margin: 0 0 20px;">
+        <div class="hero-content">
+            <h3>{{ site_settings.shop_name }}</h3>
+            <p>Fresh Zimbabwean food, cooked to order and ready for pickup when you need it.</p>
+        </div>
+    </div>
+
+    <div class="list-item" style="cursor: default;">
+        <div class="list-content">
+            <div class="list-title">What We Serve</div>
+            <div class="list-desc">Classic mains, comforting sides, family deals, and quick pickup favourites.</div>
+        </div>
+    </div>
+
+    <div class="list-item" style="cursor: default;">
+        <div class="list-content">
+            <div class="list-title">Pickup First</div>
+            <div class="list-desc">Order ahead, choose your collection time, and track progress from confirmation to ready.</div>
+        </div>
+    </div>
+
+    <div class="list-item" style="cursor: default;">
+        <div class="list-content">
+            <div class="list-title">Find Us</div>
+            <div class="list-desc">{{ site_settings.address }}</div>
+        </div>
+    </div>
+
+    <a href="{% url 'menu:menu' %}" class="btn btn-brand" style="margin-top: 20px;">Browse Menu</a>
+</div>
+{% endblock %}

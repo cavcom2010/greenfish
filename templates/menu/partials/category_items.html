@@ -1,0 +1,18 @@
+{% load media_tags %}
+{% for item in items %}
+<div class="food-card" onclick="openItemModal({{ item.id }})">
+    <div class="food-image">
+        {% if item.image %}
+        <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
+        {% else %}
+        <span style="font-size: 48px;">{{ category.icon|default:"🍽️" }}</span>
+        {% endif %}
+    </div>
+    <div class="food-name">{{ item.name }}</div>
+    <div class="food-price">£{{ item.price }}</div>
+</div>
+{% empty %}
+<p style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">
+    No items available in {{ category.name }}.
+</p>
+{% endfor %}

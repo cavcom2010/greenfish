@@ -1,17 +1,24 @@
 // Service Worker for PWA
 
-const CACHE_NAME = 'restaurant-v1';
+const STATIC_CACHE_NAME = 'restaurant-static-v3';
+const RUNTIME_CACHE_NAME = 'restaurant-runtime-v3';
+const OFFLINE_URL = '/pwa/offline/';
 const STATIC_ASSETS = [
     '/',
-    '/static/css/base.css',
+    '/menu/',
+    OFFLINE_URL,
+    '/pwa/manifest.json',
     '/static/icons/icon-192.png',
     '/static/icons/icon-512.png',
 ];
+const CACHEABLE_NAVIGATION_PATHS = new Set(['/', '/menu/']);
+const STATIC_PREFIXES = ['/static/'];
+const UNCACHEABLE_PREFIXES = ['/admin/', '/media/', '/orders/', '/payments/', '/pwa/push/'];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
+        caches.open(STATIC_CACHE_NAME)
             .then((cache) => cache.addAll(STATIC_ASSETS))
             .then(() => self.skipWaiting())
     );
@@ -23,46 +30,86 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames
-                    .filter((name) => name !== CACHE_NAME)
+                    .filter((name) => ![STATIC_CACHE_NAME, RUNTIME_CACHE_NAME].includes(name))
                     .map((name) => caches.delete(name))
             );
         }).then(() => self.clients.claim())
     );
 });
 
-// Fetch event - serve from cache or network
+function isSameOrigin(requestUrl) {
+    return requestUrl.origin === self.location.origin;
+}
+
+function isStaticAssetRequest(pathname) {
+    return STATIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isUncacheableRequest(pathname) {
+    return UNCACHEABLE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isCacheableNavigation(pathname) {
+    return CACHEABLE_NAVIGATION_PATHS.has(pathname);
+}
+
+async function cacheResponse(cacheName, request, response) {
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response.clone());
+}
+
+async function handleNavigationRequest(event, pathname) {
+    try {
+        const response = await fetch(event.request);
+        if (response.ok && isCacheableNavigation(pathname)) {
+            await cacheResponse(RUNTIME_CACHE_NAME, event.request, response);
+        }
+        return response;
+    } catch (error) {
+        const cached = await caches.match(event.request);
+        if (cached) {
+            return cached;
+        }
+        return caches.match(OFFLINE_URL);
+    }
+}
+
+async function handleStaticRequest(event) {
+    const cached = await caches.match(event.request);
+    if (cached) {
+        return cached;
+    }
+
+    const response = await fetch(event.request);
+    if (response.ok) {
+        await cacheResponse(STATIC_CACHE_NAME, event.request, response);
+    }
+    return response;
+}
+
+// Fetch event - serve only selected assets from cache
 self.addEventListener('fetch', (event) => {
-    // Skip non-GET requests
     if (event.request.method !== 'GET') {
         return;
     }
-    
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Return cached response or fetch from network
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request)
-                    .then((networkResponse) => {
-                        // Cache successful GET requests
-                        if (networkResponse.ok && event.request.url.startsWith(self.location.origin)) {
-                            const clonedResponse = networkResponse.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(event.request, clonedResponse);
-                            });
-                        }
-                        return networkResponse;
-                    })
-                    .catch(() => {
-                        // Return offline page for navigation requests
-                        if (event.request.mode === 'navigate') {
-                            return caches.match('/pwa/offline/');
-                        }
-                    });
-            })
-    );
+
+    const requestUrl = new URL(event.request.url);
+    if (!isSameOrigin(requestUrl)) {
+        return;
+    }
+
+    if (isUncacheableRequest(requestUrl.pathname)) {
+        return;
+    }
+
+    if (event.request.mode === 'navigate') {
+        event.respondWith(handleNavigationRequest(event, requestUrl.pathname));
+        return;
+    }
+
+    if (isStaticAssetRequest(requestUrl.pathname) || STATIC_ASSETS.includes(requestUrl.pathname)) {
+        event.respondWith(handleStaticRequest(event));
+    }
 });
 
 // Push event - handle incoming push notifications
@@ -79,7 +126,7 @@ self.addEventListener('push', (event) => {
             tag: 'general'
         };
     }
-    
+
     const options = {
         body: data.body || 'You have a new notification',
         icon: data.icon || '/static/icons/icon-192.png',
@@ -89,7 +136,7 @@ self.addEventListener('push', (event) => {
         data: data.data || {},
         actions: data.actions || []
     };
-    
+
     event.waitUntil(
         self.registration.showNotification(data.title || 'Order Update', options)
     );
@@ -98,17 +145,17 @@ self.addEventListener('push', (event) => {
 // Notification click event - handle user clicking notification
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    
+
     const notificationData = event.notification.data;
     let url = '/';
-    
+
     // Determine URL based on notification type
     if (notificationData.orderNumber) {
         url = `/orders/track/${notificationData.orderNumber}/`;
     } else if (notificationData.url) {
         url = notificationData.url;
     }
-    
+
     event.waitUntil(
         clients.matchAll({ type: 'window' })
             .then((clientList) => {
