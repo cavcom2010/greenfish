@@ -9,3 +9,9 @@ logs/
 venv/
 
 *.db
+db.sqlite3
+
+# Runtime / deploy artifacts
+.home_nginx/logs/
+.home_nginx/run/
+
