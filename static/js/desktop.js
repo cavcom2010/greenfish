@@ -459,3 +459,54 @@
     }
 
 })();
+
+// ── Cookie Consent (GDPR / UK ICO) ─────────────────────────────────────
+(function() {
+    'use strict';
+
+    var CONSENT_KEY = 'cookie_consent';
+    var banner = document.getElementById('cookieConsentBanner');
+
+    // Check if user already made a choice
+    if (!localStorage.getItem(CONSENT_KEY)) {
+        setTimeout(function() {
+            if (banner) banner.classList.add('visible');
+        }, 1000);
+    }
+
+    window.acceptCookies = function(preference) {
+        localStorage.setItem(CONSENT_KEY, preference);
+
+        // Hide banner
+        if (banner) banner.classList.remove('visible');
+
+        // If user rejected analytics/marketing, remove non-essential scripts
+        if (preference === 'essential') {
+            // Disable any analytics/tracking scripts that were dynamically loaded
+            document.querySelectorAll('script[data-cookie-category="analytics"], script[data-cookie-category="marketing"]').forEach(function(script) {
+                if (script.src && script.src !== window.location.href) {
+                    // Can't unload external scripts reliably, but flag for compliance
+                    window._cookiesEssentialOnly = true;
+                }
+            });
+        }
+
+        // Notify server of consent (for audit / compliance logging)
+        var csrftoken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrftoken) {
+            fetch('/cookie-consent/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken.value
+                },
+                body: 'preference=' + encodeURIComponent(preference)
+            }).catch(function() {});
+        }
+    };
+
+    // Expose consent status for analytics scripts to check
+    window.getCookieConsent = function() {
+        return localStorage.getItem(CONSENT_KEY) || null;
+    };
+})();

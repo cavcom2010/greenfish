@@ -13,4 +13,5 @@ urlpatterns = [
     path("about/", views.about, name="about"),
     path("contact/", views.contact, name="contact"),
     path("newsletter/", views.newsletter_signup, name="newsletter"),
+    path("cookie-consent/", views.record_cookie_consent, name="cookie_consent"),
 ]

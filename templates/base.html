@@ -740,6 +740,64 @@
         .htmx-request .htmx-indicator {
             opacity: 1;
         }
+
+        /* Cookie Consent Banner (Mobile) */
+        .cookie-consent-banner {
+            position: fixed;
+            bottom: calc(80px + var(--safe-bottom));
+            left: 0;
+            right: 0;
+            z-index: 5000;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+            padding: 1rem 1.25rem;
+        }
+        .cookie-consent-banner.visible {
+            display: block !important;
+        }
+        .cookie-consent-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .cookie-consent-text h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .cookie-consent-text p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+        .cookie-consent-text a {
+            color: var(--brand);
+            text-decoration: underline;
+        }
+        .cookie-consent-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .cookie-btn {
+            padding: 0.55rem 1rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: none;
+            flex: 1;
+        }
+        .cookie-btn-accept {
+            background: var(--brand);
+            color: white;
+        }
+        .cookie-btn-essential {
+            background: var(--bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -1007,5 +1065,26 @@
     </script>
     
     {% block extra_js %}{% endblock %}
+
+    <script>
+    // Cookie Consent (Mobile)
+    (function() {
+        var CONSENT_KEY = 'cookie_consent';
+        var banner = document.getElementById('cookieConsentBanner');
+        if (!localStorage.getItem(CONSENT_KEY)) {
+            setTimeout(function() {
+                if (banner) banner.classList.add('visible');
+            }, 1000);
+        }
+        window.acceptCookies = function(preference) {
+            localStorage.setItem(CONSENT_KEY, preference);
+            if (banner) banner.classList.remove('visible');
+        };
+        window.getCookieConsent = function() {
+            return localStorage.getItem(CONSENT_KEY) || null;
+        };
+    })();
+    </script>
 </body>
 </html>
+

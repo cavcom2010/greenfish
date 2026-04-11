@@ -161,3 +161,15 @@ def newsletter_signup(request):
         '<p style="color:var(--success);font-size:0.8rem;margin-top:0.5rem;">✓ Thanks! We\'ll keep you updated.</p>',
         content_type="text/html",
     )
+
+
+@require_POST
+def record_cookie_consent(request):
+    """Record the user's cookie consent preference."""
+    preference = request.POST.get("preference", "")
+    if preference in ("all", "essential"):
+        response = JsonResponse({"status": "ok", "preference": preference})
+        response.set_cookie("cookie_consent", preference, max_age=365 * 24 * 60 * 60, httponly=False)
+        logging.getLogger(__name__).info("Cookie consent recorded: %s", preference)
+        return response
+    return JsonResponse({"status": "error"}, status=400)

@@ -285,5 +285,21 @@
 
     {% block extra_js %}{% endblock %}
 
+    <!-- ═══════════════════════════════════════════════════════════
+         COOKIE CONSENT BANNER (GDPR / UK ICO compliance)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="cookie-consent-banner" id="cookieConsentBanner">
+        <div class="cookie-consent-content">
+            <div class="cookie-consent-text">
+                <h4>🍪 We use cookies</h4>
+                <p>We use essential cookies to make our site work, and analytics cookies to understand how you use it. We'd also like to set optional marketing cookies to help us improve. See our <a href="#privacy">Privacy Policy</a>.</p>
+            </div>
+            <div class="cookie-consent-actions">
+                <button type="button" class="cookie-btn cookie-btn-accept" onclick="acceptCookies('all')">Accept All</button>
+                <button type="button" class="cookie-btn cookie-btn-essential" onclick="acceptCookies('essential')">Essential Only</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
