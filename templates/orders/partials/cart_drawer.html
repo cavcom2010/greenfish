@@ -1,0 +1,104 @@
+{# Cart Drawer Content — served via HTMX #}
+{% load media_tags %}
+
+<div class="cart-drawer-header">
+    <h3>Your Basket</h3>
+    <button type="button" class="cart-drawer-close" onclick="closeCartDrawer()" aria-label="Close cart drawer">
+        <i class="ph ph-x"></i>
+    </button>
+</div>
+
+{% if cart_items %}
+<div class="cart-drawer-items">
+    {% for item in cart_items %}
+    <div class="cart-drawer-item" id="drawerItem{{ forloop.counter }}">
+        <div class="cart-drawer-item-info">
+            <div class="cart-drawer-item-name">{{ item.name }}</div>
+            {% if item.modifiers %}
+            <div class="cart-drawer-item-modifiers">
+                {% for mod in item.modifiers %}
+                + {{ mod.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="cart-drawer-item-bottom">
+                <div class="cart-drawer-item-qty">
+                    <button type="button" class="drawer-qty-btn" onclick="drawerUpdateQty('{{ item.id }}', {{ item.quantity|add:-1 }})" aria-label="Decrease quantity">
+                        <i class="ph ph-minus"></i>
+                    </button>
+                    <span class="drawer-qty-value">{{ item.quantity }}</span>
+                    <button type="button" class="drawer-qty-btn" onclick="drawerUpdateQty('{{ item.id }}', {{ item.quantity|add:1 }})" aria-label="Increase quantity">
+                        <i class="ph ph-plus"></i>
+                    </button>
+                </div>
+                <div class="cart-drawer-item-price">£{{ item.line_total|floatformat:2 }}</div>
+            </div>
+        </div>
+        <form method="post" action="{% url 'orders:remove_from_cart' item.id %}"
+              hx-post="{% url 'orders:remove_from_cart' item.id %}"
+              hx-target="#cartDrawerContent"
+              hx-swap="innerHTML"
+              class="cart-drawer-item-remove">
+            {% csrf_token %}
+            <button type="submit" aria-label="Remove {{ item.name }}">
+                <i class="ph ph-trash"></i>
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="cart-drawer-summary">
+    {% if active_offer %}
+    <div class="cart-drawer-offer">
+        <div>
+            <strong>{{ active_offer.name }}</strong>
+            {% if discount > 0 and not voucher_code %}
+            <span style="color:var(--success);font-size:0.8rem;">-£{{ discount|floatformat:2 }}</span>
+            {% endif %}
+        </div>
+        <form method="post" action="{% url 'offers:clear' %}"
+              hx-post="{% url 'offers:clear' %}"
+              hx-target="#cartDrawerContent"
+              hx-swap="innerHTML"
+              style="margin:0;">
+            {% csrf_token %}
+            <button type="submit">Remove</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="cart-drawer-row">
+        <span>Subtotal</span>
+        <span>£{{ subtotal|floatformat:2 }}</span>
+    </div>
+    {% if discount > 0 %}
+    <div class="cart-drawer-row cart-drawer-discount">
+        <span>Discount</span>
+        <span>-£{{ discount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    <div class="cart-drawer-total">
+        <span>Total</span>
+        <span>£{{ cart_total|floatformat:2 }}</span>
+    </div>
+
+    <a href="{% url 'orders:checkout' %}" class="cart-drawer-checkout-btn">
+        Checkout <i class="ph-bold ph-arrow-right"></i>
+    </a>
+
+    <a href="{% url 'orders:cart' %}" class="cart-drawer-view-cart">
+        View Full Basket
+    </a>
+</div>
+
+{% else %}
+<div class="cart-drawer-empty">
+    <i class="ph ph-shopping-cart"></i>
+    <h4>Your basket is empty</h4>
+    <p>Add some delicious items from our menu.</p>
+    <a href="{% url 'menu:menu' %}" class="cart-drawer-browse-btn" onclick="closeCartDrawer()">
+        Browse Menu <i class="ph-bold ph-arrow-right"></i>
+    </a>
+</div>
+{% endif %}

@@ -7,7 +7,128 @@
 
     const ORDER_ROUTES = {
         addToCart: '/orders/cart/add/',
-        serviceType: '/orders/service-type/'
+        serviceType: '/orders/service-type/',
+        cartDrawer: '/orders/cart/drawer/'
+    };
+
+    // ── Toast Notification System ──────────────────────────────────────
+    window.showToast = function(message, type = 'success', duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const icons = {
+            success: 'ph-fill ph-check-circle',
+            error: 'ph-fill ph-warning-circle',
+            info: 'ph-fill ph-info'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <i class="${icons[type] || icons.info}"></i>
+            <span>${message}</span>
+            <span class="toast-close" onclick="this.parentElement.classList.add('toast-exit'); setTimeout(() => this.parentElement.remove(), 300);" aria-label="Dismiss">&times;</span>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    };
+
+    // ── Cart Drawer ────────────────────────────────────────────────────
+    let cartDrawerOpen = false;
+
+    window.openCartDrawer = function() {
+        const overlay = document.getElementById('cartDrawerOverlay');
+        if (!overlay || cartDrawerOpen) return;
+
+        cartDrawerOpen = true;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Fetch cart content via HTMX
+        const content = document.getElementById('cartDrawerContent');
+        if (content) {
+            fetch(ORDER_ROUTES.cartDrawer, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.text())
+            .then(html => { content.innerHTML = html; })
+            .catch(() => {
+                content.innerHTML = `
+                    <div style="text-align:center;padding:3rem;">
+                        <p style="color:var(--text-muted);">Could not load basket. <a href="/orders/cart/" style="color:var(--brand);">View full basket</a></p>
+                    </div>`;
+            });
+        }
+    };
+
+    window.closeCartDrawer = function() {
+        const overlay = document.getElementById('cartDrawerOverlay');
+        if (!overlay || !cartDrawerOpen) return;
+
+        cartDrawerOpen = false;
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    };
+
+    window.closeCartDrawerOnOverlay = function(e) {
+        if (e.target === e.currentTarget) window.closeCartDrawer();
+    };
+
+    // Close cart drawer on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && cartDrawerOpen) window.closeCartDrawer();
+    });
+
+    // Drawer quantity update
+    window.drawerUpdateQty = function(itemId, newQty) {
+        if (newQty < 1) {
+            showToast('Use the trash icon to remove items', 'info', 2000);
+            return;
+        }
+
+        const csrftoken = getCSRFToken();
+        fetch(`/orders/cart/update/${itemId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken
+            },
+            body: `quantity=${newQty}`
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Update failed');
+            return fetch(ORDER_ROUTES.cartDrawer);
+        })
+        .then(res => res.text())
+        .then(html => {
+            const content = document.getElementById('cartDrawerContent');
+            if (content) content.innerHTML = html;
+            // Also update the cart badge
+            return fetch('/orders/cart/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken
+                },
+                body: 'menu_item_id=0&quantity=0&modifiers=[]&_check=1'
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.cart_count !== undefined) {
+                updateCartBadge(data.cart_count);
+            }
+        })
+        .catch(() => {
+            showToast('Could not update quantity. Please try again.', 'error');
+        });
     };
 
     // ── Sticky Header Shadow on Scroll ───────────────────────────────────
@@ -227,6 +348,7 @@
                     btn.innerHTML = '✓ Added!';
                     btn.style.background = '#16A34A';
                     updateCartBadge(data.cart_count);
+                    showToast('Added to basket', 'success', 2000);
                     setTimeout(() => {
                         window.closeItemModal();
                         window.location.reload();
@@ -238,6 +360,7 @@
             .catch(() => {
                 btn.innerHTML = '❌ Error';
                 btn.style.background = '#DC2626';
+                showToast('Could not add to basket. Please try again.', 'error');
                 setTimeout(() => {
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
@@ -284,13 +407,25 @@
             .then(data => {
                 if (data.success) {
                     updateCartBadge(data.cart_count);
-                    // Brief visual feedback
+
+                    // Visual feedback on the button
                     const card = document.querySelector(`[data-quick-add="${itemId}"]`);
                     if (card) {
-                        card.style.transform = 'scale(0.95)';
-                        setTimeout(() => { card.style.transform = ''; }, 200);
+                        card.style.transform = 'scale(0.9)';
+                        card.style.background = '#16A34A';
+                        card.style.color = 'white';
+                        setTimeout(() => {
+                            card.style.transform = '';
+                            card.style.background = '';
+                            card.style.color = '';
+                        }, 400);
                     }
+
+                    showToast('Added to basket', 'success', 2000);
                 }
+            })
+            .catch(() => {
+                showToast('Could not add to basket. Please try again.', 'error');
             });
     };
 
