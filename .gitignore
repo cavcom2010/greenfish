@@ -1,4 +1,7 @@
 .env
+.env.local
+.env.production
+.env.staging
 
 staticfiles/
 logs/
