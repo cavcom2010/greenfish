@@ -52,7 +52,9 @@
 <!-- Service Toggle -->
 <div class="service-toggle">
     <button type="button" class="toggle-option {% if service_type == 'pickup' %}active{% endif %}" data-service="pickup" onclick="switchService('pickup')">Pickup</button>
+    {% if delivery_enabled %}
     <button type="button" class="toggle-option {% if service_type == 'delivery' %}active{% endif %}" data-service="delivery" onclick="switchService('delivery')">Delivery</button>
+    {% endif %}
 </div>
 
 <!-- Hero Banner -->
@@ -448,11 +450,16 @@
     window.addEventListener('resize', syncStickyOffset);
 })();
 
-let currentService = '{{ service_type|default:"pickup" }}';
+const deliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
+let currentService = normalizeServiceType('{{ service_type|default:"pickup" }}');
 let currentMenuFilters = {
     category: '',
     dietary: ''
 };
+
+function normalizeServiceType(service) {
+    return service === 'delivery' && !deliveryEnabled ? 'pickup' : service;
+}
 
 function getMenuTitleForFilters(filters) {
     if (filters.category) {
@@ -569,6 +576,7 @@ window.addEventListener('popstate', function(event) {
 });
 
 function applyServiceSelection(service) {
+    service = normalizeServiceType(service);
     currentService = service;
     document.querySelectorAll('.toggle-option').forEach(el => {
         el.classList.toggle('active', el.dataset.service === service);
@@ -588,6 +596,7 @@ function persistServiceSelection(service) {
 }
 
 function switchService(service) {
+    service = normalizeServiceType(service);
     applyServiceSelection(service);
     persistServiceSelection(service);
 }
@@ -693,9 +702,10 @@ function closeItemModal(event) {
 
 const savedService = localStorage.getItem('service_type');
 if (savedService === 'pickup' || savedService === 'delivery') {
-    applyServiceSelection(savedService);
-    if (savedService !== '{{ service_type|default:"pickup" }}') {
-        persistServiceSelection(savedService);
+    const nextService = normalizeServiceType(savedService);
+    applyServiceSelection(nextService);
+    if (nextService !== '{{ service_type|default:"pickup" }}' || nextService !== savedService) {
+        persistServiceSelection(nextService);
     }
 } else {
     applyServiceSelection(currentService);

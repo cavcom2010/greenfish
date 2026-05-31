@@ -21,18 +21,14 @@ from .services import (
     add_menu_item_to_cart,
     clear_selected_offer,
     clear_checkout_session,
-    create_order_from_summary,
-    extract_delivery_details,
+    delivery_enabled,
     get_cart_summary,
     online_payment_available,
     remove_session_cart_item,
-    save_customer_profile,
     selected_offer_id,
     selected_service_type,
     store_service_type,
-    validate_service_details,
     update_session_cart_item,
-    validate_customer_details,
 )
 
 VOUCHER_ATTEMPT_LIMITS = (
@@ -243,6 +239,7 @@ def cart_view(request):
         "cart_total": summary["total"],
         "cart_count": sum(item["quantity"] for item in summary["items"]),
         "service_type": selected_service_type(request),
+        "delivery_enabled": delivery_enabled(),
         "active_offer": summary["selected_offer"],
         "offer_error": summary["offer_error"],
         "voucher_code": summary["voucher_code"],
@@ -413,6 +410,7 @@ def checkout(request):
         "active_offer": summary["selected_offer"],
         "offer_error": summary["offer_error"],
         "online_payment_available": online_payment_available(),
+        "delivery_enabled": delivery_enabled(),
         **_default_delivery_address(request.user),
     }
     template = "desktop/orders/checkout.html" if getattr(request, "is_desktop", True) else "orders/checkout.html"
@@ -422,8 +420,17 @@ def checkout(request):
 @require_POST
 def set_service_type(request):
     """Persist the active service type in the session."""
+    requested_service_type = request.POST.get("service_type")
     service_type = store_service_type(request, request.POST.get("service_type"))
-    return JsonResponse({"success": True, "service_type": service_type})
+    return JsonResponse(
+        {
+            "success": True,
+            "service_type": service_type,
+            "delivery_enabled": delivery_enabled(),
+            "delivery_coerced": requested_service_type == Order.ServiceType.DELIVERY
+            and service_type != Order.ServiceType.DELIVERY,
+        }
+    )
 
 
 @require_POST
@@ -502,82 +509,8 @@ def order_detail_modal(request, order_id):
 
 @require_POST
 def pay_instore(request):
-    """Create order for pay in store (cash on collection)."""
-    service_type = selected_service_type(request)
-    store_service_type(request, service_type)
-    active_offer_id = selected_offer_id(request)
-    summary = get_cart_summary(
-        request.session.get("cart", {}),
-        user=request.user,
-        voucher_code=request.session.get("voucher_code", ""),
-        offer_id=active_offer_id,
-    )
-    if not summary["items"]:
-        return _checkout_error_response(request, "Your basket is empty.")
-
-    customer_name = request.POST.get("customer_name", "").strip()
-    customer_phone = request.POST.get("customer_phone", "").strip()
-    customer_email = request.POST.get("customer_email", "").strip()
-    special_instructions = request.POST.get("special_instructions", "").strip()
-    delivery_details = extract_delivery_details(request.POST)
-
-    try:
-        validate_customer_details(customer_name, customer_phone)
-        validate_service_details(service_type, delivery_details)
-        if service_type == Order.ServiceType.DELIVERY:
-            raise ValidationError("Delivery orders must be paid online.")
-    except ValidationError as exc:
-        return _checkout_error_response(request, str(exc))
-
-    summary = get_cart_summary(
-        request.session.get("cart", {}),
-        user=request.user,
-        voucher_code=request.session.get("voucher_code", ""),
-        offer_id=active_offer_id,
-        guest_phone=customer_phone,
-        guest_email=customer_email,
-    )
-    if request.session.get("voucher_code") and not summary["voucher"]:
-        request.session.pop("voucher_code", None)
-        request.session.modified = True
-        return _checkout_error_response(
-            request,
-            summary["voucher_error"] or "Invalid voucher code.",
-        )
-
-    save_customer_profile(request.user, customer_name, customer_phone, customer_email)
-
-    order = create_order_from_summary(
-        summary,
-        customer_name=customer_name,
-        customer_phone=customer_phone,
-        customer_email=customer_email,
-        user=request.user,
-        special_instructions=special_instructions,
-        pickup_minutes=request.POST.get("pickup_time", 15),
-        service_type=service_type,
-        delivery_details=delivery_details,
-        status=Order.OrderStatus.CONFIRMED,
-        payment_status=Order.PaymentStatus.PENDING,
-    )
-
-    clear_checkout_session(request)
-
-    try:
-        from apps.sms.services import send_order_confirmation
-
-        send_order_confirmation(order)
-    except Exception:
-        pass
-
-    try:
-        from apps.pwa.services import notify_order_confirmed
-
-        notify_order_confirmed(order)
-    except Exception:
-        pass
-
-    return redirect("orders:confirmation_instore", order_number=order.order_number)
+    """Legacy endpoint retained for compatibility; customer orders are online-only."""
+    return _checkout_error_response(request, "Orders must be paid online.")
 
 
 def confirmation_instore(request, order_number):

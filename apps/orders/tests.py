@@ -272,7 +272,7 @@ class OrderFlowTests(TestCase):
             "Spend at least GBP 20.00 to use Big Order Only.",
         )
 
-    def test_guest_voucher_limit_is_enforced_at_pay_instore_submit(self):
+    def test_pay_instore_does_not_process_vouchers_or_create_orders(self):
         limited_offer = create_offer(
             name="Guest Once",
             value=Decimal("3.00"),
@@ -311,7 +311,7 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("orders:checkout"))
         self.assertEqual(Order.objects.filter(voucher_code=voucher.code).count(), 1)
-        self.assertNotIn("voucher_code", self.client.session)
+        self.assertEqual(self.client.session.get("voucher_code"), voucher.code)
 
     def test_service_type_endpoint_persists_delivery_choice(self):
         response = self.client.post(
@@ -321,37 +321,61 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.session["service_type"], Order.ServiceType.DELIVERY)
 
-    def test_pay_instore_validates_phone_and_creates_order(self):
+    @override_settings(DELIVERY_ENABLED=False)
+    def test_delivery_env_switch_forces_pickup(self):
+        response = self.client.post(
+            reverse("orders:set_service_type"),
+            {"service_type": Order.ServiceType.DELIVERY},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["service_type"], Order.ServiceType.PICKUP)
+        self.assertTrue(response.json()["delivery_coerced"])
+        self.assertEqual(self.client.session["service_type"], Order.ServiceType.PICKUP)
+
+        checkout_session = self.client.session
+        checkout_session["service_type"] = Order.ServiceType.DELIVERY
+        checkout_session.save()
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+        checkout_response = self.client.get(reverse("orders:checkout"))
+        self.assertEqual(checkout_response.status_code, 200)
+        self.assertEqual(checkout_response.context["service_type"], Order.ServiceType.PICKUP)
+        self.assertFalse(checkout_response.context["delivery_enabled"])
+        self.assertNotContains(checkout_response, 'data-service="delivery"')
+
+    def test_delivery_admin_switch_forces_pickup(self):
+        ensure_site_settings(delivery_enabled=False)
+        response = self.client.post(
+            reverse("orders:set_service_type"),
+            {"service_type": Order.ServiceType.DELIVERY},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["service_type"], Order.ServiceType.PICKUP)
+        self.assertFalse(response.json()["delivery_enabled"])
+
+    def test_pay_instore_is_blocked_for_customer_checkout(self):
         self.client.force_login(self.user)
         self.client.post(
             reverse("orders:add_to_cart"),
             {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
             HTTP_ACCEPT="application/json",
         )
-        invalid_response = self.client.post(
+        response = self.client.post(
             reverse("orders:pay_instore"),
             {
-                "customer_name": "Bad Phone",
-                "customer_phone": "12345",
-                "pickup_time": "15",
-            },
-        )
-        self.assertEqual(invalid_response.status_code, 302)
-
-        valid_response = self.client.post(
-            reverse("orders:pay_instore"),
-            {
-                "customer_name": "Good Phone",
+                "customer_name": "Online Only",
                 "customer_phone": "07747055935",
                 "customer_email": "guest@example.com",
                 "pickup_time": "30",
             },
         )
-        self.assertEqual(valid_response.status_code, 302)
-        order = Order.objects.latest("id")
-        self.assertEqual(order.status, Order.OrderStatus.CONFIRMED)
-        self.assertEqual(order.user, self.user)
-        self.assertEqual(self.client.session.get("cart"), {})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("orders:checkout"))
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertNotEqual(self.client.session.get("cart"), {})
 
     def test_delivery_order_requires_online_payment_for_pay_instore(self):
         self.client.force_login(self.user)
@@ -379,6 +403,29 @@ class OrderFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Order.objects.count(), 0)
+
+    def test_checkout_is_online_payment_only_on_desktop_and_mobile(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        desktop_response = self.client.get(reverse("orders:checkout"))
+        self.assertEqual(desktop_response.status_code, 200)
+        self.assertContains(desktop_response, "Pay Online")
+        self.assertContains(desktop_response, "Pay £")
+        self.assertNotContains(desktop_response, "Pay in Store")
+        self.assertNotContains(desktop_response, "Pay when you collect")
+        self.assertNotContains(desktop_response, 'orders:pay_instore')
+
+        self.client.cookies["view_mode"] = "mobile"
+        mobile_response = self.client.get(reverse("orders:checkout"))
+        self.assertEqual(mobile_response.status_code, 200)
+        self.assertContains(mobile_response, "Pay Online")
+        self.assertContains(mobile_response, "Pay £")
+        self.assertNotContains(mobile_response, "Pay in Store")
+        self.assertNotContains(mobile_response, "Pay when you collect")
 
     def test_staff_boards_and_tracking_render(self):
         order = create_order(user=self.user, status=Order.OrderStatus.PREPARING)

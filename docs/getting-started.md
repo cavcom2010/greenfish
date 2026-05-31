@@ -66,6 +66,8 @@ SHOP_PHONE=+44 123 456 7890
 SHOP_EMAIL=orders@tinashe.local
 ```
 
+Customer checkout is online-payment-only. In local development, the demo payment flow is available when provider keys are not configured.
+
 ### 5. Run Migrations
 
 ```bash

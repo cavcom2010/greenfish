@@ -29,7 +29,7 @@
                     Fresh & Authentic
                 </div>
                 <h1>Authentic Zimbabwean <span>Cuisine</span></h1>
-                <p>Sadza, Nyama, Muriwo & more. Taste of home, delivered fresh to your door or ready for pickup.</p>
+                <p>Sadza, Nyama, Muriwo & more. Taste of home, ready for pickup{% if delivery_enabled %} or delivered fresh to your door{% endif %}.</p>
                 {% endif %}
 
                 <div class="hero-actions">
@@ -89,9 +89,11 @@
             <button type="button" data-desktop-service="pickup" class="{% if service_type == 'pickup' %}active{% endif %}">
                 <i class="ph ph-storefront" style="margin-right:6px;"></i>Pickup
             </button>
+            {% if delivery_enabled %}
             <button type="button" data-desktop-service="delivery" class="{% if service_type == 'delivery' %}active{% endif %}">
                 <i class="ph ph-moped" style="margin-right:6px;"></i>Delivery
             </button>
+            {% endif %}
         </div>
         <div class="service-info">
             <i class="ph-fill ph-check-circle"></i>

@@ -1,6 +1,7 @@
 """
 Core models for Tinashe Takeaway.
 """
+from django.conf import settings as django_settings
 from django.db import models
 
 from .media import (
@@ -31,6 +32,10 @@ class SiteSettings(models.Model):
     opening_hours = models.JSONField(default=dict, blank=True)
     
     currency = models.CharField(max_length=3, default="GBP")
+    delivery_enabled = models.BooleanField(
+        default=True,
+        help_text="Allow customers to choose delivery when the DELIVERY_ENABLED environment switch is also on.",
+    )
     logo = models.ImageField(upload_to="site/", blank=True, validators=LOGO_IMAGE_VALIDATORS)
     favicon = models.ImageField(upload_to="site/", blank=True, validators=FAVICON_IMAGE_VALIDATORS)
     theme_color = models.CharField(max_length=7, default="#FF6B35", help_text="Hex color code for PWA theme")
@@ -49,6 +54,11 @@ class SiteSettings(models.Model):
     
     def __str__(self):
         return self.shop_name
+
+    @property
+    def is_delivery_enabled(self):
+        """Return whether delivery is available after env and admin controls."""
+        return bool(getattr(django_settings, "DELIVERY_ENABLED", True) and self.delivery_enabled)
     
     def save(self, *args, **kwargs):
         # Ensure only one instance exists

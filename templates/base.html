@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup or delivery.">
+    <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup{% if delivery_enabled %} or delivery{% endif %}.">
     
     <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
     

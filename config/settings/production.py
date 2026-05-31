@@ -43,9 +43,6 @@ elif PAYMENT_PROVIDER == "mollie":
     if not MOLLIE_WEBHOOK_SECRET:
         raise ImproperlyConfigured("MOLLIE_WEBHOOK_SECRET must be set when Mollie payments are enabled.")
 
-if not SENDER_NET_API_KEY:
-    raise ImproperlyConfigured("SENDER_NET_API_KEY must be set in production for marketing emails.")
-
 # Security settings
 SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT", default=True, cast=bool)
 SESSION_COOKIE_SECURE = env("SESSION_COOKIE_SECURE", default=True, cast=bool)
@@ -60,8 +57,22 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 SECURE_REFERRER_POLICY = "same-origin"
 
-# Email backend for production
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Email backend for production. If no external provider credentials are present,
+# emails are printed to the shell via Django's console backend.
+CONSOLE_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+SMTP_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_BACKEND_OVERRIDE = env("EMAIL_BACKEND", default="").strip()
+SMTP_EMAIL_CONFIGURED = bool(EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD)
+SENDGRID_CONFIGURED = bool(SENDGRID_API_KEY)
+SENDER_NET_CONFIGURED = bool(SENDER_NET_API_KEY)
+
+if SMTP_EMAIL_CONFIGURED and EMAIL_BACKEND_OVERRIDE:
+    EMAIL_BACKEND = EMAIL_BACKEND_OVERRIDE
+elif SMTP_EMAIL_CONFIGURED:
+    EMAIL_BACKEND = SMTP_EMAIL_BACKEND
+else:
+    EMAIL_BACKEND = CONSOLE_EMAIL_BACKEND
 
 # Static files
 MIDDLEWARE = ["whitenoise.middleware.WhiteNoiseMiddleware"] + MIDDLEWARE

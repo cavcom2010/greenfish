@@ -26,6 +26,16 @@ DEFAULT_SERVICE_TYPE = Order.ServiceType.PICKUP
 VALID_SERVICE_TYPES = {choice for choice, _ in Order.ServiceType.choices}
 
 
+def delivery_enabled():
+    """Return whether delivery can currently be selected by customers."""
+    if not getattr(settings, "DELIVERY_ENABLED", True):
+        return False
+
+    from apps.core.models import SiteSettings
+
+    return SiteSettings.get().delivery_enabled
+
+
 def online_payment_available():
     """Return whether online checkout is available in the current environment."""
     from apps.payments.services import active_payment_provider, payment_provider_configured
@@ -51,6 +61,8 @@ def normalize_phone_number(phone):
 def normalize_service_type(raw_service_type):
     """Return a supported fulfilment service type."""
     value = (raw_service_type or "").strip().lower()
+    if value == Order.ServiceType.DELIVERY and not delivery_enabled():
+        return DEFAULT_SERVICE_TYPE
     if value in VALID_SERVICE_TYPES:
         return value
     return DEFAULT_SERVICE_TYPE
@@ -118,6 +130,9 @@ def extract_delivery_details(data):
 
 def validate_service_details(service_type, delivery_details):
     """Validate fulfilment-specific checkout details."""
+    if service_type == Order.ServiceType.DELIVERY and not delivery_enabled():
+        raise ValidationError("Delivery is currently unavailable. Please choose pickup.")
+
     if service_type != Order.ServiceType.DELIVERY:
         return
 

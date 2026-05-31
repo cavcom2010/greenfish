@@ -67,7 +67,12 @@
 
 {% block extra_js %}
 <script>
-const menuServiceType = localStorage.getItem('service_type') || '{{ service_type|default:"pickup" }}';
+const menuDeliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
+const storedMenuServiceType = localStorage.getItem('service_type') || '{{ service_type|default:"pickup" }}';
+const menuServiceType = storedMenuServiceType === 'delivery' && !menuDeliveryEnabled ? 'pickup' : storedMenuServiceType;
+if (menuServiceType !== storedMenuServiceType) {
+    localStorage.setItem('service_type', menuServiceType);
+}
 
 function quickAddToCart(itemId) {
     fetch('{% url "orders:add_to_cart" %}', {

@@ -23,9 +23,11 @@
                             <button type="button" data-desktop-service="pickup" class="{% if service_type == 'pickup' %}active{% endif %}">
                                 <i class="ph ph-storefront" style="margin-right:6px;"></i>Pickup
                             </button>
+                            {% if delivery_enabled %}
                             <button type="button" data-desktop-service="delivery" class="{% if service_type == 'delivery' %}active{% endif %}">
                                 <i class="ph ph-moped" style="margin-right:6px;"></i>Delivery
                             </button>
+                            {% endif %}
                         </div>
                         <p id="serviceSummary" style="margin-top:1rem;font-size:0.9rem;color:var(--text-secondary);">
                             {% if service_type == 'delivery' %}
@@ -139,21 +141,12 @@
                                     <span>{% if online_payment_available %}Secure card payment now{% else %}Unavailable right now{% endif %}</span>
                                 </div>
                             </label>
-
-                            <label class="payment-option {% if not online_payment_available and service_type == 'pickup' %}active{% endif %}" id="instorePaymentOption">
-                                <input type="radio" name="payment_method" value="instore" {% if not online_payment_available and service_type == 'pickup' %}checked{% endif %} {% if service_type == 'delivery' %}disabled{% endif %}>
-                                <i class="ph ph-storefront"></i>
-                                <div class="payment-option-info">
-                                    <strong>Pay in Store</strong>
-                                    <span>Pay when you collect with your order number</span>
-                                </div>
-                            </label>
                         </div>
 
-                        {% if service_type == 'delivery' and not online_payment_available %}
+                        {% if not online_payment_available %}
                         <div class="alert-desktop alert-error-desktop" style="margin-top:1rem;">
                             <i class="ph-fill ph-warning-circle"></i>
-                            Delivery is unavailable right now because online card payments are offline.
+                            Online card payments are unavailable right now. Please try again later.
                         </div>
                         {% endif %}
                     </div>
@@ -232,23 +225,19 @@
                     <span>£{{ total|floatformat:2 }}</span>
                 </div>
 
-                <button type="submit" id="submitBtn" form="checkoutForm" class="cart-checkout-btn" style="margin-top:1.25rem;" {% if service_type == 'delivery' and not online_payment_available %}disabled{% endif %}>
-                    {% if service_type == 'delivery' and not online_payment_available %}
-                    Delivery Unavailable
-                    {% elif online_payment_available %}
+                <button type="submit" id="submitBtn" form="checkoutForm" class="cart-checkout-btn" style="margin-top:1.25rem;" {% if not online_payment_available %}disabled{% endif %}>
+                    {% if online_payment_available %}
                     Pay £{{ total|floatformat:2 }}
                     {% else %}
-                    Place Order (Pay in Store)
+                    Online Payment Unavailable
                     {% endif %}
                 </button>
 
                 <p id="paymentNote" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem;">
-                    {% if service_type == 'delivery' and not online_payment_available %}
-                    <i class="ph ph-warning-circle"></i> Switch to pickup to place an order.
-                    {% elif online_payment_available %}
+                    {% if online_payment_available %}
                     <i class="ph ph-lock-key"></i> Secure payment
                     {% else %}
-                    <i class="ph ph-storefront"></i> Pay when you collect
+                    <i class="ph ph-warning-circle"></i> Online payment is required for every order.
                     {% endif %}
                 </p>
             </div>

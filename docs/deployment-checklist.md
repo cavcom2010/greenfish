@@ -33,14 +33,14 @@ Use this checklist before deploying to production.
 - [ ] Webhook secret set and matches
 - [ ] Tested payment flow end-to-end
 - [ ] Tested webhook reception
+- [ ] Confirmed customer checkout is online-payment-only and no pay-in-store option appears
 
 ## Email
 
-- [ ] SMTP server configured
-- [ ] Email credentials working
-- [ ] Test email sent successfully
+- [ ] Confirmed fallback mode prints emails to shell/console when SMTP/SendGrid/Sender.net keys are absent
 - [ ] DEFAULT_FROM_EMAIL set correctly
-- [ ] SPF/DKIM records configured (if using custom domain)
+- [ ] If using SMTP/SendGrid/Sender.net, credentials are working and a test email/signup has been verified
+- [ ] SPF/DKIM records configured if sending from a custom domain
 
 ## Static & Media Files
 
@@ -61,6 +61,7 @@ Use this checklist before deploying to production.
 ## Application
 
 - [ ] Site Settings configured (name, address, phone)
+- [ ] Delivery availability confirmed in `.env` (`DELIVERY_ENABLED`) and Admin → Site Settings
 - [ ] Menu items added with images
 - [ ] Categories created and ordered
 - [ ] Modifiers created and linked
@@ -88,6 +89,7 @@ Use this checklist before deploying to production.
 
 - [ ] Place test order successfully
 - [ ] Payment processed correctly
+- [ ] Checkout is blocked when online payment provider credentials are unavailable
 - [ ] Order appears on order board
 - [ ] Order status updates work
 - [ ] Email notifications received

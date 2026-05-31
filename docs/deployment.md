@@ -111,18 +111,25 @@ STRIPE_SECRET_KEY=sk_live_your_live_key_here
 STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_signing_secret
 
+# Customer checkout is online-payment-only; keep a live provider configured.
+
 # Mollie Payments (optional alternate provider)
 MOLLIE_API_KEY=
 MOLLIE_WEBHOOK_SECRET=
 
-# Email (use real SMTP)
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
+# Email
+# Leave credentials blank to print emails to the shell/console until SMTP/SendGrid/Sender.net is ready.
+EMAIL_BACKEND=
+EMAIL_HOST=
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
 DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
+SENDGRID_API_KEY=
+SENDER_NET_API_KEY=
+SENDER_NET_FROM_EMAIL=offers@yourdomain.com
+SENDER_NET_FROM_NAME=Tinashe Takeaway
 
 # Shop Settings
 SHOP_NAME=Tinashe Takeaway
@@ -135,6 +142,7 @@ TIME_ZONE=Europe/London
 # Order Settings
 ORDER_PREFIX=TN
 DEFAULT_PREP_TIME=15
+DELIVERY_ENABLED=True
 
 # Security
 SECURE_SSL_REDIRECT=True

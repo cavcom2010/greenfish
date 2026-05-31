@@ -19,7 +19,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             "description": "Format: {\"0\": {\"open\": \"09:00\", \"close\": \"22:00\"}} where 0=Monday"
         }),
         ("Settings", {
-            "fields": ("currency",)
+            "fields": ("currency", "delivery_enabled")
         }),
         ("Social Media", {
             "fields": ("facebook_url", "instagram_url", "twitter_url"),

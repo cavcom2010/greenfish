@@ -186,8 +186,14 @@
     // ── Service Type Toggle ──────────────────────────────────────────────
     const serviceToggles = document.querySelectorAll('[data-desktop-service]');
     const serviceTypeInput = document.getElementById('desktopServiceType');
+    const deliveryEnabled = Boolean(window.APP_CONFIG?.deliveryEnabled ?? true);
+
+    function normalizeServiceType(service) {
+        return service === 'delivery' && !deliveryEnabled ? 'pickup' : service;
+    }
 
     function applyServiceType(service) {
+        service = normalizeServiceType(service);
         serviceToggles.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.desktopService === service);
         });
@@ -221,7 +227,7 @@
 
     serviceToggles.forEach(btn => {
         btn.addEventListener('click', () => {
-            applyServiceType(btn.dataset.desktopService);
+            applyServiceType(normalizeServiceType(btn.dataset.desktopService));
         });
     });
 
@@ -300,7 +306,7 @@
     let modalQuantity = 1;
     let modalBasePrice = 0;
     let modalItemId = null;
-    let modalCurrentService = localStorage.getItem('service_type') || 'pickup';
+    let modalCurrentService = normalizeServiceType(localStorage.getItem('service_type') || 'pickup');
 
     function initModalState() {
         modalQuantity = 1;
@@ -469,7 +475,7 @@
     // ── Quick Add to Cart (from menu grid) ───────────────────────────────
     window.quickAddToCart = function (itemId) {
         const csrftoken = getCSRFToken();
-        const service = localStorage.getItem('service_type') || 'pickup';
+        const service = normalizeServiceType(localStorage.getItem('service_type') || 'pickup');
 
         fetch(ORDER_ROUTES.addToCart, {
             method: 'POST',
@@ -531,10 +537,10 @@
     // ── Restore Service Type from LocalStorage ───────────────────────────
     const savedService = localStorage.getItem('service_type');
     if (savedService && (savedService === 'pickup' || savedService === 'delivery')) {
-        applyServiceType(savedService);
+        applyServiceType(normalizeServiceType(savedService));
     } else if (serviceToggles.length > 0) {
         const firstActive = document.querySelector('[data-desktop-service].active');
-        if (firstActive) applyServiceType(firstActive.dataset.desktopService);
+        if (firstActive) applyServiceType(normalizeServiceType(firstActive.dataset.desktopService));
     }
 
 })();

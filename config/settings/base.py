@@ -219,6 +219,7 @@ SHOP_EMAIL = env("SHOP_EMAIL", default="")
 CURRENCY = env("CURRENCY", default="GBP")
 ORDER_PREFIX = env("ORDER_PREFIX", default="TN")
 DEFAULT_PREP_TIME = env("DEFAULT_PREP_TIME", default=15, cast=int)
+DELIVERY_ENABLED = env("DELIVERY_ENABLED", default=True, cast=bool)
 
 # Payment Provider Settings
 PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", default="stripe").strip().lower()
@@ -238,6 +239,9 @@ EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="orders@tinashe.com")
+
+# SendGrid API — optional future transactional email provider.
+SENDGRID_API_KEY = env("SENDGRID_API_KEY", default="")
 
 # Sender.net API — marketing emails (campaigns, offers, newsletters)
 SENDER_NET_API_KEY = env("SENDER_NET_API_KEY", default="")

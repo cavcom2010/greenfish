@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 import tempfile
 from decimal import Decimal
 from io import BytesIO
@@ -161,6 +163,91 @@ class PublicRouteTests(TestCase):
         self.client.cookies["view_mode"] = "mobile"
         response = self.client.get(home_url, HTTP_USER_AGENT=android_tablet_ua)
         self.assertFalse(response.wsgi_request.is_desktop)
+
+
+class ProductionSettingsEmailTests(TestCase):
+    def _run_production_settings_probe(self, env_lines):
+        with tempfile.NamedTemporaryFile("w", delete=False) as env_file:
+            env_file.write("\n".join(env_lines))
+            env_file.write("\n")
+            env_path = env_file.name
+
+        probe_env = os.environ.copy()
+        probe_env["ENV_FILE"] = env_path
+        probe_env["DJANGO_SETTINGS_MODULE"] = "config.settings.production"
+        probe_env.pop("EMAIL_BACKEND", None)
+        probe_env.pop("EMAIL_HOST", None)
+        probe_env.pop("EMAIL_HOST_USER", None)
+        probe_env.pop("EMAIL_HOST_PASSWORD", None)
+        probe_env.pop("SENDER_NET_API_KEY", None)
+        probe_env.pop("SENDGRID_API_KEY", None)
+
+        try:
+            return subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import importlib; "
+                        "settings = importlib.import_module('config.settings.production'); "
+                        "print(settings.EMAIL_BACKEND)"
+                    ),
+                ],
+                cwd=Path(__file__).resolve().parents[2],
+                env=probe_env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        finally:
+            Path(env_path).unlink(missing_ok=True)
+
+    def _required_production_env(self):
+        return [
+            "DJANGO_SECRET_KEY=prod-secret-abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "DJANGO_ALLOWED_HOSTS=example.com,www.example.com",
+            "DATABASE_URL=postgres://user:pass@localhost:5432/greenfish",
+            "PAYMENT_PROVIDER=stripe",
+            "STRIPE_SECRET_KEY=sk_live_example",
+            "STRIPE_WEBHOOK_SECRET=whsec_example",
+        ]
+
+    def test_production_uses_console_email_without_provider_keys(self):
+        result = self._run_production_settings_probe(self._required_production_env())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("django.core.mail.backends.console.EmailBackend", result.stdout)
+
+    def test_production_uses_smtp_when_smtp_credentials_are_present(self):
+        env_lines = self._required_production_env() + [
+            "EMAIL_HOST=smtp.example.com",
+            "EMAIL_HOST_USER=orders@example.com",
+            "EMAIL_HOST_PASSWORD=app-password",
+        ]
+        result = self._run_production_settings_probe(env_lines)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("django.core.mail.backends.smtp.EmailBackend", result.stdout)
+
+    def test_production_falls_back_to_console_when_smtp_backend_lacks_credentials(self):
+        env_lines = self._required_production_env() + [
+            "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend",
+            "EMAIL_HOST=smtp.example.com",
+        ]
+        result = self._run_production_settings_probe(env_lines)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("django.core.mail.backends.console.EmailBackend", result.stdout)
+
+    def test_production_still_requires_payment_credentials(self):
+        env_lines = [
+            line for line in self._required_production_env()
+            if not line.startswith("STRIPE_WEBHOOK_SECRET=")
+        ]
+        result = self._run_production_settings_probe(env_lines)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("STRIPE_WEBHOOK_SECRET", result.stderr)
 
 
 class MediaHardeningTests(TestCase):

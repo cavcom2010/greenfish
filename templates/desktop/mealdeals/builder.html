@@ -91,6 +91,17 @@
 
 {% block extra_js %}
 <script>
+const desktopDealDeliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
+const desktopDealServiceInput = document.getElementById('desktopServiceType');
+const desktopDealSavedService = localStorage.getItem('service_type');
+if (desktopDealServiceInput && (desktopDealSavedService === 'pickup' || desktopDealSavedService === 'delivery')) {
+    const desktopDealService = desktopDealSavedService === 'delivery' && !desktopDealDeliveryEnabled ? 'pickup' : desktopDealSavedService;
+    desktopDealServiceInput.value = desktopDealService;
+    if (desktopDealService !== desktopDealSavedService) {
+        localStorage.setItem('service_type', desktopDealService);
+    }
+}
+
 function updateDealQuantity(change) {
     const input = document.getElementById('dealQuantityInput');
     const label = document.getElementById('dealQuantityLabel');

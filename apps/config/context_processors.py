@@ -8,6 +8,8 @@ from apps.core.models import SiteSettings
 
 def site_settings(request):
     """Add site settings to template context."""
+    settings = SiteSettings.get()
     return {
-        "site_settings": SiteSettings.get(),
+        "site_settings": settings,
+        "delivery_enabled": settings.is_delivery_enabled,
     }

@@ -13,7 +13,9 @@
             <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Fulfilment</h3>
             <div class="service-toggle" style="margin: 0 0 12px;">
                 <button type="button" class="toggle-option {% if service_type == 'pickup' %}active{% endif %}" data-service="pickup" onclick="updateServiceType('pickup')">Pickup</button>
+                {% if delivery_enabled %}
                 <button type="button" class="toggle-option {% if service_type == 'delivery' %}active{% endif %}" data-service="delivery" onclick="updateServiceType('delivery')">Delivery</button>
+                {% endif %}
             </div>
             <p id="serviceSummary" style="font-size: 13px; color: var(--text-secondary); margin: 0;">
                 {% if service_type == 'delivery' %}
@@ -204,53 +206,28 @@
                 </div>
             </label>
 
-            <label id="instorePaymentOption" style="display: flex; align-items: center; padding: 16px; border: 2px solid {% if not online_payment_available and service_type == 'pickup' %}var(--brand){% else %}var(--border){% endif %}; border-radius: 12px; cursor: {% if service_type == 'delivery' %}not-allowed{% else %}pointer{% endif %}; background: {% if not online_payment_available and service_type == 'pickup' %}rgba(255,107,53,0.05){% else %}transparent{% endif %}; opacity: {% if service_type == 'delivery' %}0.5{% else %}1{% endif %};">
-                <input type="radio" name="payment_method" value="instore" {% if not online_payment_available and service_type == 'pickup' %}checked{% endif %} {% if service_type == 'delivery' %}disabled{% endif %} style="margin-right: 12px; width: 20px; height: 20px; accent-color: var(--brand);">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600;">
-                        <i class="ph ph-storefront" style="margin-right: 8px; color: var(--brand);"></i>
-                        Pay in Store
-                    </div>
-                    <div id="instorePaymentCopy" style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Pay when you collect with your order number</div>
-                </div>
-            </label>
-
-            <div id="paymentAvailabilityAlert" class="alert alert-error" style="margin: 12px 0 0; {% if online_payment_available and service_type != 'delivery' %}display: none;{% endif %}">
-                {% if service_type == 'delivery' and not online_payment_available %}
-                Delivery is unavailable right now because online card payments are offline.
-                {% elif service_type == 'delivery' %}
-                Delivery orders must be paid online before dispatch.
-                {% else %}
-                Online card payments are unavailable in this environment. Please pay in store.
-                {% endif %}
+            <div id="paymentAvailabilityAlert" class="alert alert-error" style="margin: 12px 0 0; {% if online_payment_available %}display: none;{% endif %}">
+                Online card payments are unavailable right now. Please try again later.
             </div>
         </div>
 
-        <button type="submit" id="submitBtn" class="btn btn-brand" style="width: 100%; margin-bottom: 12px; {% if service_type == 'delivery' and not online_payment_available %}opacity: 0.6; cursor: not-allowed;{% endif %}" {% if service_type == 'delivery' and not online_payment_available %}disabled{% endif %}>
+        <button type="submit" id="submitBtn" class="btn btn-brand" style="width: 100%; margin-bottom: 12px; {% if not online_payment_available %}opacity: 0.6; cursor: not-allowed;{% endif %}" {% if not online_payment_available %}disabled{% endif %}>
             <span id="btnText">
-                {% if service_type == 'delivery' and not online_payment_available %}
-                Delivery Unavailable
-                {% elif online_payment_available %}
+                {% if online_payment_available %}
                 Pay £{{ total|floatformat:2 }}
                 {% else %}
-                Place Order (Pay in Store)
+                Online Payment Unavailable
                 {% endif %}
             </span>
         </button>
 
         <p id="paymentNote" style="text-align: center; font-size: 13px; color: var(--text-secondary);">
-            {% if service_type == 'delivery' and not online_payment_available %}
-            <i class="ph ph-warning-circle" style="vertical-align: middle;"></i>
-            Switch to pickup or enable online payments to place a delivery order.
-            {% elif service_type == 'delivery' %}
-            <i class="ph ph-lock-key" style="vertical-align: middle;"></i>
-            Delivery orders are paid online before dispatch.
-            {% elif online_payment_available %}
+            {% if online_payment_available %}
             <i class="ph ph-lock-key" style="vertical-align: middle;"></i>
             Secure payment powered by Mollie
             {% else %}
-            <i class="ph ph-storefront" style="vertical-align: middle;"></i>
-            Pay when you collect with your order number
+            <i class="ph ph-warning-circle" style="vertical-align: middle;"></i>
+            Online payment is required for every order.
             {% endif %}
         </p>
     </form>
@@ -260,6 +237,7 @@
 {% block extra_js %}
 <script>
 const onlinePaymentAvailable = {{ online_payment_available|yesno:"true,false" }};
+const deliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
 const checkoutForm = document.getElementById('checkoutForm');
 const serviceTypeInput = document.getElementById('serviceTypeInput');
 const deliveryAddressCard = document.getElementById('deliveryAddressCard');
@@ -272,9 +250,11 @@ const btnText = document.getElementById('btnText');
 const paymentNote = document.getElementById('paymentNote');
 const paymentAlert = document.getElementById('paymentAvailabilityAlert');
 const onlineRadio = document.querySelector('input[name="payment_method"][value="online"]');
-const instoreRadio = document.querySelector('input[name="payment_method"][value="instore"]');
-const instorePaymentCopy = document.getElementById('instorePaymentCopy');
 const totalLabel = '£{{ total|floatformat:2 }}';
+
+function normalizeServiceType(service) {
+    return service === 'delivery' && !deliveryEnabled ? 'pickup' : service;
+}
 
 function setVoucherFeedback(message, isError) {
     const feedback = document.getElementById('voucherFeedback');
@@ -382,14 +362,12 @@ function updatePaymentOptionStyles() {
 }
 
 function applySelectedPaymentMethod() {
-    const isDelivery = serviceTypeInput.value === 'delivery';
-    const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
-
-    if (!selectedPayment) {
+    if (!onlineRadio || !onlineRadio.checked || !onlinePaymentAvailable) {
         submitBtn.disabled = true;
         submitBtn.style.opacity = '0.6';
         submitBtn.style.cursor = 'not-allowed';
-        btnText.textContent = isDelivery ? 'Delivery Unavailable' : 'Choose Payment Method';
+        btnText.textContent = 'Online Payment Unavailable';
+        paymentNote.innerHTML = '<i class="ph ph-warning-circle" style="vertical-align: middle;"></i> Online payment is required for every order.';
         return;
     }
 
@@ -397,64 +375,28 @@ function applySelectedPaymentMethod() {
     submitBtn.style.opacity = '1';
     submitBtn.style.cursor = 'pointer';
 
-    if (selectedPayment.value === 'online') {
-        btnText.textContent = `Pay ${totalLabel}`;
-        paymentNote.innerHTML = isDelivery
-            ? '<i class="ph ph-lock-key" style="vertical-align: middle;"></i> Delivery orders are paid online before dispatch.'
-            : '<i class="ph ph-lock-key" style="vertical-align: middle;"></i> Secure payment powered by Mollie';
-        checkoutForm.action = '{% url "payments:create" %}';
-    } else {
-        btnText.textContent = 'Place Order (Pay in Store)';
-        paymentNote.innerHTML = '<i class="ph ph-storefront" style="vertical-align: middle;"></i> Pay when you collect with your order number';
-        checkoutForm.action = '{% url "orders:pay_instore" %}';
-    }
+    btnText.textContent = `Pay ${totalLabel}`;
+    paymentNote.innerHTML = '<i class="ph ph-lock-key" style="vertical-align: middle;"></i> Secure payment powered by Mollie';
+    checkoutForm.action = '{% url "payments:create" %}';
 }
 
 function syncPaymentState() {
-    const isDelivery = serviceTypeInput.value === 'delivery';
-
     onlineRadio.disabled = !onlinePaymentAvailable;
-    instoreRadio.disabled = isDelivery;
-    instorePaymentCopy.textContent = isDelivery
-        ? 'Available for pickup orders only'
-        : 'Pay when you collect with your order number';
-
-    if (isDelivery) {
-        if (onlinePaymentAvailable) {
-            onlineRadio.checked = true;
-            paymentAlert.style.display = 'block';
-            paymentAlert.textContent = 'Delivery orders must be paid online before dispatch.';
-        } else {
-            onlineRadio.checked = false;
-            instoreRadio.checked = false;
-            paymentAlert.style.display = 'block';
-            paymentAlert.textContent = 'Delivery is unavailable right now because online card payments are offline.';
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.6';
-            submitBtn.style.cursor = 'not-allowed';
-            btnText.textContent = 'Delivery Unavailable';
-            paymentNote.innerHTML = '<i class="ph ph-warning-circle" style="vertical-align: middle;"></i> Switch to pickup or enable online payments to place a delivery order.';
-        }
+    if (onlinePaymentAvailable) {
+        onlineRadio.checked = true;
+        paymentAlert.style.display = 'none';
     } else {
-        if (onlinePaymentAvailable) {
-            if (!onlineRadio.checked && !instoreRadio.checked) {
-                onlineRadio.checked = true;
-            }
-            paymentAlert.style.display = 'none';
-        } else {
-            instoreRadio.checked = true;
-            paymentAlert.style.display = 'block';
-            paymentAlert.textContent = 'Online card payments are unavailable in this environment. Please pay in store.';
-        }
+        onlineRadio.checked = false;
+        paymentAlert.style.display = 'block';
+        paymentAlert.textContent = 'Online card payments are unavailable right now. Please try again later.';
     }
 
     updatePaymentOptionStyles();
-    if (!(isDelivery && !onlinePaymentAvailable)) {
-        applySelectedPaymentMethod();
-    }
+    applySelectedPaymentMethod();
 }
 
 function updateServiceType(service, persist = true) {
+    service = normalizeServiceType(service);
     serviceTypeInput.value = service;
     localStorage.setItem('service_type', service);
     updateServiceButtons(service);
@@ -507,7 +449,8 @@ document.querySelector('input[name="customer_phone"]').addEventListener('blur', 
 
 const savedServiceType = localStorage.getItem('service_type');
 if (savedServiceType === 'pickup' || savedServiceType === 'delivery') {
-    updateServiceType(savedServiceType, savedServiceType !== serviceTypeInput.value);
+    const nextServiceType = normalizeServiceType(savedServiceType);
+    updateServiceType(nextServiceType, nextServiceType !== serviceTypeInput.value || nextServiceType !== savedServiceType);
 } else {
     updateServiceType(serviceTypeInput.value, false);
 }

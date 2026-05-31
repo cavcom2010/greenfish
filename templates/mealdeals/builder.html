@@ -209,8 +209,13 @@
 
 <script>
 const savedDealServiceType = localStorage.getItem('service_type');
+const dealDeliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
 if (savedDealServiceType === 'pickup' || savedDealServiceType === 'delivery') {
-    document.getElementById('dealServiceTypeInput').value = savedDealServiceType;
+    const dealServiceType = savedDealServiceType === 'delivery' && !dealDeliveryEnabled ? 'pickup' : savedDealServiceType;
+    document.getElementById('dealServiceTypeInput').value = dealServiceType;
+    if (dealServiceType !== savedDealServiceType) {
+        localStorage.setItem('service_type', dealServiceType);
+    }
 }
 
 function updateDealQuantity(change) {

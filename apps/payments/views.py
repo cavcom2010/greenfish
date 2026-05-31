@@ -114,11 +114,7 @@ def create_payment(request):
     if not online_payment_available():
         return _payment_error_response(
             request,
-            (
-                "Online payments are unavailable right now. Switch to pickup or try again later."
-                if service_type == Order.ServiceType.DELIVERY
-                else "Online payments are unavailable right now. Please choose pay in store."
-            ),
+            "Online payments are unavailable right now. Please try again later.",
             status=503,
         )
 

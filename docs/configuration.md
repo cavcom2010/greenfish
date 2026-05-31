@@ -43,20 +43,27 @@ Complete reference for all configuration options in Tinashe Takeaway.
 1. Keep your Mollie keys in `.env`, but leave `PAYMENT_PROVIDER=stripe` while Stripe is active.
 2. Switch `PAYMENT_PROVIDER=mollie` only when you want to route checkout through Mollie again.
 
+Customer checkout is online-payment-only. If the configured provider is unavailable, customers cannot place new orders until payments are restored.
+
 ### Email Settings
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EMAIL_BACKEND` | console.EmailBackend | Email backend. Use `smtp.EmailBackend` for production. |
-| `EMAIL_HOST` | Empty | SMTP server hostname. |
+| `EMAIL_BACKEND` | Empty/console | Optional backend override. If SMTP/provider credentials are missing, production prints emails to the shell with Django's console backend. |
+| `EMAIL_HOST` | Empty | SMTP server hostname. Leave empty for shell/console email output. |
 | `EMAIL_PORT` | 587 | SMTP server port. |
 | `EMAIL_USE_TLS` | True | Use TLS encryption for SMTP. |
-| `EMAIL_HOST_USER` | Empty | SMTP username. |
-| `EMAIL_HOST_PASSWORD` | Empty | SMTP password or app-specific password. |
+| `EMAIL_HOST_USER` | Empty | SMTP username. Leave empty for shell/console email output. |
+| `EMAIL_HOST_PASSWORD` | Empty | SMTP password or app-specific password. Leave empty for shell/console email output. |
 | `DEFAULT_FROM_EMAIL` | orders@tinashe.com | Default sender email address. |
+| `SENDGRID_API_KEY` | Empty | Reserved for SendGrid integration. Missing key does not block startup. |
+| `SENDER_NET_API_KEY` | Empty | Optional marketing email key. Missing key logs newsletter signups instead of calling Sender.net. |
+
+**Fallback behavior:** if SMTP/SendGrid/Sender.net credentials are absent, all Django emails are printed to the shell/console and marketing signup activity is logged.
 
 **Gmail SMTP Example:**
 ```bash
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
@@ -81,6 +88,9 @@ DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
 |----------|---------|-------------|
 | `ORDER_PREFIX` | TN | Prefix for order numbers (e.g., TN-12345). |
 | `DEFAULT_PREP_TIME` | 15 | Default preparation time in minutes. |
+| `DELIVERY_ENABLED` | True | Deployment-level delivery switch. Set to `False` to force pickup only, regardless of the admin setting. |
+
+Delivery also has an admin toggle at Admin Panel → Core → Site Settings → Settings. Delivery is available only when both `DELIVERY_ENABLED=True` and the admin checkbox is enabled.
 
 ### Security Settings (Production)
 

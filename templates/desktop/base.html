@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup or delivery.">
+    <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup{% if delivery_enabled %} or delivery{% endif %}.">
     <meta name="theme-color" content="{{ site_settings.theme_color|default:'#FF6B35' }}">
 
     <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
@@ -151,7 +151,7 @@
                     {% endif %}
                     {{ site_settings.shop_name }}
                 </a>
-                <p>{{ site_settings.shop_description|default:"Fresh, authentic cuisine made with love. Order for pickup or delivery." }}</p>
+                <p>{{ site_settings.shop_description|default:"Fresh, authentic cuisine made with love. Order for pickup." }}{% if delivery_enabled %} Delivery is available too.{% endif %}</p>
 
                 <!-- Newsletter -->
                 <div class="footer-newsletter">
@@ -244,6 +244,12 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        window.APP_CONFIG = Object.assign({}, window.APP_CONFIG, {
+            deliveryEnabled: {{ delivery_enabled|yesno:"true,false" }}
+        });
+    </script>
 
     <!-- Desktop JS -->
     <script src="{% static 'js/desktop.js' %}"></script>
