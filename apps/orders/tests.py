@@ -40,6 +40,8 @@ class OrderFlowTests(TestCase):
             HTTP_ACCEPT="application/json",
         )
         self.assertEqual(add_response.status_code, 200)
+        self.assertEqual(add_response.json()["cart_count"], 2)
+        self.assertEqual(add_response.json()["cart_total"], "25.00")
         cart = self.client.session["cart"]
         item_id = next(iter(cart.keys()))
 
@@ -60,6 +62,59 @@ class OrderFlowTests(TestCase):
         remove_response = self.client.post(reverse("orders:remove_from_cart", args=[item_id]))
         self.assertEqual(remove_response.status_code, 302)
         self.assertEqual(self.client.session.get("cart"), {})
+
+    def test_ajax_cart_updates_return_count_and_total(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+        item_id = next(iter(self.client.session["cart"].keys()))
+
+        update_response = self.client.post(
+            reverse("orders:update_cart_item", args=[item_id]),
+            {"quantity": 3},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.json()["cart_count"], 3)
+        self.assertEqual(update_response.json()["cart_total"], "37.50")
+
+    def test_htmx_remove_from_cart_refreshes_drawer_and_triggers_cart_state(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+        item_id = next(iter(self.client.session["cart"].keys()))
+
+        remove_response = self.client.post(
+            reverse("orders:remove_from_cart", args=[item_id]),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(remove_response.status_code, 200)
+        self.assertContains(remove_response, "Your basket is empty")
+        self.assertIn("cart-updated", remove_response.headers["HX-Trigger"])
+        self.assertIn('"cart_count": 0', remove_response.headers["HX-Trigger"])
+
+    def test_ajax_remove_from_cart_returns_count_and_total(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+        item_id = next(iter(self.client.session["cart"].keys()))
+
+        remove_response = self.client.post(
+            reverse("orders:remove_from_cart", args=[item_id]),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(remove_response.status_code, 200)
+        self.assertEqual(remove_response.json()["cart_count"], 0)
+        self.assertEqual(remove_response.json()["cart_total"], "0.00")
 
     def test_meal_deal_can_be_added_to_cart(self):
         deal_item = self.deal.items.first()

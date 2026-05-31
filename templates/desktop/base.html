@@ -32,7 +32,7 @@
 
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% if '/ops/' not in request.path and '/analytics/' not in request.path and '/admin/' not in request.path %}customer-ui customer-ui-desktop{% endif %}">
 
     <!-- Skip to Content (A11y) -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -47,6 +47,8 @@
                 <a href="{% url 'core:home' %}" class="logo">
                     {% if site_settings.logo %}
                     <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}">
+                    {% else %}
+                    <span class="logo-mark" aria-hidden="true"><i class="ph-fill ph-bowl-food"></i></span>
                     {% endif %}
                     <div class="logo-text">
                         {{ site_settings.shop_name }}
@@ -70,11 +72,9 @@
 
             <div class="header-right">
                 <!-- Cart -->
-                <a href="javascript:void(0)" class="header-icon-btn" onclick="openCartDrawer()" aria-label="View cart">
+                <a href="javascript:void(0)" class="header-icon-btn" id="desktopCartButton" onclick="openCartDrawer()" aria-label="View cart{% if cart_count > 0 %}, {{ cart_count }} item{{ cart_count|pluralize }}{% endif %}">
                     <i class="ph ph-shopping-cart"></i>
-                    {% if cart_count > 0 %}
-                    <span class="cart-badge-desktop">{{ cart_count }}</span>
-                    {% endif %}
+                    <span class="cart-badge-desktop" {% if cart_count <= 0 %}hidden{% endif %}>{{ cart_count|default:0 }}</span>
                 </a>
 
                 <!-- Account -->
@@ -270,18 +270,22 @@
     <!-- ═══════════════════════════════════════════════════════════
          STICKY CART BAR (Desktop)
          ═══════════════════════════════════════════════════════════ -->
-    {% if cart_count > 0 and 'checkout' not in request.path and 'cart' not in request.path %}
-    <div class="sticky-cart-bar visible" id="stickyCartBar">
+    {% if 'checkout' not in request.path and 'cart' not in request.path %}
+    <div class="sticky-cart-bar {% if cart_count > 0 %}visible{% endif %}" id="stickyCartBar" {% if cart_count <= 0 %}aria-hidden="true"{% endif %}>
         <div class="sticky-cart-bar-count">
             <i class="ph-fill ph-shopping-cart"></i>
-            <span>{{ cart_count }} item{{ cart_count|pluralize }}</span>
+            <span id="stickyCartCount">{{ cart_count|default:0 }} item{{ cart_count|pluralize }}</span>
         </div>
-        <div class="sticky-cart-bar-total">£{{ cart_total|floatformat:2 }}</div>
+        <div class="sticky-cart-bar-total" id="stickyCartTotal">£{{ cart_total|floatformat:2 }}</div>
         <a href="{% url 'orders:checkout' %}" class="sticky-cart-bar-checkout">
             Checkout <i class="ph-bold ph-arrow-right"></i>
         </a>
     </div>
     {% endif %}
+
+    <button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top">
+        <i class="ph-bold ph-arrow-up"></i>
+    </button>
 
     {% block extra_js %}{% endblock %}
 

@@ -165,6 +165,10 @@ The home server uses these ports:
 | 8006 | Nginx (public-facing) |
 | 8026 | Gunicorn (application server) |
 
+If `HOME_APP_PORT` is occupied when you start the home server, `start.sh`
+will move Gunicorn to the next available port above the requested one and
+persist that choice for the matching stop script.
+
 To change ports, set environment variables before running start.sh:
 
 ```bash

@@ -169,21 +169,32 @@ def _default_delivery_address(user):
 
 def _cart_button_response(request):
     summary = get_cart_summary(request.session.get("cart", {}), user=request.user)
+    cart_count = sum(item["quantity"] for item in summary["items"])
     if request.headers.get("HX-Request"):
         return render(
             request,
             "orders/partials/cart_button.html",
             {
-                "cart_count": sum(item["quantity"] for item in summary["items"]),
+                "cart_count": cart_count,
                 "cart_total": summary["subtotal"],
             },
         )
     return JsonResponse(
         {
             "success": True,
-            "cart_count": sum(item["quantity"] for item in summary["items"]),
+            "cart_count": cart_count,
+            "cart_total": f"{summary['total']:.2f}",
         }
     )
+
+
+def _cart_state_payload(request):
+    summary = get_cart_summary(request.session.get("cart", {}), user=request.user)
+    return {
+        "success": True,
+        "cart_count": sum(item["quantity"] for item in summary["items"]),
+        "cart_total": f"{summary['total']:.2f}",
+    }
 
 
 def _selected_deal_modifiers(request, deal):
@@ -320,6 +331,8 @@ def update_cart_item(request, item_id):
         return _checkout_error_response(request, "Please choose a valid quantity.")
 
     update_session_cart_item(request, item_id, quantity)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse(_cart_state_payload(request))
     return redirect("orders:cart")
 
 
@@ -328,9 +341,36 @@ def remove_from_cart(request, item_id):
     """Remove item from cart."""
     remove_session_cart_item(request, item_id)
 
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse(_cart_state_payload(request))
+
     if request.headers.get("HX-Request"):
-        summary = get_cart_summary(request.session.get("cart", {}), user=request.user)
-        return render(request, "orders/partials/cart_content.html", {"cart_items": summary["items"]})
+        active_offer_id = selected_offer_id(request)
+        summary = get_cart_summary(
+            request.session.get("cart", {}),
+            user=request.user,
+            voucher_code=request.session.get("voucher_code", ""),
+            offer_id=active_offer_id,
+        )
+        cart_count = sum(item["quantity"] for item in summary["items"])
+        response = render(
+            request,
+            "orders/partials/cart_drawer.html",
+            {
+                "cart_items": summary["items"],
+                "subtotal": summary["subtotal"],
+                "discount": summary["discount"],
+                "cart_total": summary["total"],
+                "cart_count": cart_count,
+                "active_offer": summary["selected_offer"],
+                "offer_error": summary["offer_error"],
+                "voucher_code": summary["voucher_code"],
+            },
+        )
+        response["HX-Trigger"] = json.dumps(
+            {"cart-updated": {"cart_count": cart_count, "cart_total": f"{summary['total']:.2f}"}}
+        )
+        return response
 
     return redirect("orders:cart")
 

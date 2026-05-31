@@ -7,6 +7,7 @@ HOME_DIR="$ROOT/.home_nginx"
 RUN_DIR="$HOME_DIR/run"
 NGINX_PID="$RUN_DIR/nginx.pid"
 GUNICORN_PID="$RUN_DIR/gunicorn.pid"
+GUNICORN_PORT_FILE="$RUN_DIR/gunicorn.port"
 
 echo "Stopping Tinashe Takeaway home server..."
 
@@ -43,9 +44,17 @@ if [[ -f "$GUNICORN_PID" ]]; then
   rm -f "$GUNICORN_PID"
 fi
 
+gunicorn_port="${HOME_APP_PORT:-8026}"
+if [[ -f "$GUNICORN_PORT_FILE" ]]; then
+  stored_port="$(tr -dc '0-9' < "$GUNICORN_PORT_FILE")"
+  if [[ -n "$stored_port" ]]; then
+    gunicorn_port="$stored_port"
+  fi
+fi
+
 # Kill any remaining processes on our ports
 NGINX_PORT="${HOME_PORT:-8006}"
-GUNICORN_PORT="${HOME_APP_PORT:-8026}"
+GUNICORN_PORT="$gunicorn_port"
 
 pids="$(ss -ltnp "( sport = :${NGINX_PORT} or sport = :${GUNICORN_PORT} )" 2>/dev/null | grep -o 'pid=[0-9]\+' | cut -d= -f2 | sort -u || true)"
 if [[ -n "$pids" ]]; then
@@ -53,5 +62,7 @@ if [[ -n "$pids" ]]; then
   sleep 0.5
   kill -9 $pids 2>/dev/null || true
 fi
+
+rm -f "$GUNICORN_PORT_FILE"
 
 echo "Done."

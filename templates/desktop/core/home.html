@@ -10,55 +10,72 @@
 <!-- ═══════════════════════════════════════════════════════════
      HERO SECTION
      ═══════════════════════════════════════════════════════════ -->
-{% if site_settings.hero_image %}
-<section class="hero-section has-image" style="background-image: url('{{ site_settings.hero_image.url }}');">
-{% else %}
 <section class="hero-section">
-{% endif %}
-    <div class="hero-content">
-        <div class="hero-text">
-            {% if hero_offers %}
-            {% with offer=hero_offers.0 %}
-            <div class="hero-badge">
-                <i class="ph-fill ph-fire"></i>
-                {{ offer.name }}
+    <div class="hero-card {% if site_settings.hero_image %}has-restaurant-image{% endif %}"{% if site_settings.hero_image %} style="--hero-bg-image: url('{{ site_settings.hero_image.url }}');"{% endif %}>
+        <div class="hero-copy">
+            <div class="hero-text">
+                {% if hero_offers %}
+                {% with offer=hero_offers.0 %}
+                <div class="hero-badge">
+                    <i class="ph-fill ph-fire"></i>
+                    {{ offer.name }}
+                </div>
+                <h1>{{ offer.hero_title|default:offer.name }}</h1>
+                <p>{{ offer.hero_subtitle|default:offer.description }}</p>
+                {% endwith %}
+                {% else %}
+                <div class="hero-badge">
+                    <i class="ph-fill ph-fire"></i>
+                    Fresh & Authentic
+                </div>
+                <h1>Authentic Zimbabwean <span>Cuisine</span></h1>
+                <p>Sadza, Nyama, Muriwo & more. Taste of home, delivered fresh to your door or ready for pickup.</p>
+                {% endif %}
+
+                <div class="hero-actions">
+                    <a href="#menu-section" class="hero-btn-primary">
+                        <i class="ph-bold ph-fork-knife"></i>
+                        Order Now
+                    </a>
+                    <a href="{% url 'menu:menu' %}" class="hero-btn-secondary">
+                        View Full Menu
+                    </a>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">~15 min</div>
+                        <div class="hero-stat-label">Pickup Time</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">4.8★</div>
+                        <div class="hero-stat-label">Customer Rating</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">Fresh</div>
+                        <div class="hero-stat-label">Made to Order</div>
+                    </div>
+                </div>
             </div>
-            <h1>{{ offer.hero_title|default:offer.name }}</h1>
-            <p>{{ offer.hero_subtitle|default:offer.description }}</p>
-            {% endwith %}
-            {% else %}
-            <div class="hero-badge">
-                <i class="ph-fill ph-fire"></i>
-                Fresh & Authentic
+        </div>
+
+        <div class="hero-plate" aria-hidden="true">
+            <div class="plate-glow"></div>
+            <div class="plate">
+                <div class="plate-food">
+                    {% if popular_items.0.image %}
+                    <img src="{{ popular_items.0.image|image_variant:'card' }}" alt="">
+                    {% else %}
+                    <span>{{ popular_items.0.category.icon|default:"🍲" }}</span>
+                    {% endif %}
+                </div>
             </div>
-            <h1>Authentic Zimbabwean <span>Cuisine</span></h1>
-            <p>Sadza, Nyama, Muriwo & more. Taste of home, delivered fresh to your door or ready for pickup.</p>
+            {% if popular_items %}
+            <div class="floating-chip">
+                <strong>Popular this week</strong>
+                <span>{{ popular_items.0.name }} · £{{ popular_items.0.price }}</span>
+            </div>
             {% endif %}
-
-            <div class="hero-actions">
-                <a href="#menu-section" class="hero-btn-primary">
-                    <i class="ph-bold ph-fork-knife"></i>
-                    Order Now
-                </a>
-                <a href="{% url 'menu:menu' %}" class="hero-btn-secondary">
-                    View Full Menu
-                </a>
-            </div>
-
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <div class="hero-stat-value">~15 min</div>
-                    <div class="hero-stat-label">Pickup Time</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value">4.8★</div>
-                    <div class="hero-stat-label">Customer Rating</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value">Fresh</div>
-                    <div class="hero-stat-label">Made to Order</div>
-                </div>
-            </div>
         </div>
     </div>
 </section>
@@ -205,43 +222,26 @@
         </div>
 
         <!-- Dietary Filters -->
-        <div style="display:flex;gap:0.75rem;padding:1.5rem 0 0;flex-wrap:wrap;">
+        <div class="dietary-filter-row">
             <a href="{% url 'core:home' %}?dietary=vegetarian{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section"
-               style="padding:0.5rem 1.25rem;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                      background:{% if dietary_filter == 'vegetarian' %}var(--success-bg){% else %}var(--surface){% endif %};
-                      border:1px solid {% if dietary_filter == 'vegetarian' %}var(--success){% else %}var(--border){% endif %};
-                      color:{% if dietary_filter == 'vegetarian' %}var(--success){% else %}var(--text-secondary){% endif %};
-                      transition:all 0.2s;">
+               class="dietary-filter-pill {% if dietary_filter == 'vegetarian' %}active{% endif %}">
                 🥬 Vegetarian
             </a>
             <a href="{% url 'core:home' %}?dietary=vegan{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section"
-               style="padding:0.5rem 1.25rem;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                      background:{% if dietary_filter == 'vegan' %}var(--success-bg){% else %}var(--surface){% endif %};
-                      border:1px solid {% if dietary_filter == 'vegan' %}var(--success){% else %}var(--border){% endif %};
-                      color:{% if dietary_filter == 'vegan' %}var(--success){% else %}var(--text-secondary){% endif %};
-                      transition:all 0.2s;">
+               class="dietary-filter-pill {% if dietary_filter == 'vegan' %}active{% endif %}">
                 🌱 Vegan
             </a>
             <a href="{% url 'core:home' %}?dietary=gluten-free{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section"
-               style="padding:0.5rem 1.25rem;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                      background:{% if dietary_filter == 'gluten-free' %}var(--success-bg){% else %}var(--surface){% endif %};
-                      border:1px solid {% if dietary_filter == 'gluten-free' %}var(--success){% else %}var(--border){% endif %};
-                      color:{% if dietary_filter == 'gluten-free' %}var(--success){% else %}var(--text-secondary){% endif %};
-                      transition:all 0.2s;">
+               class="dietary-filter-pill {% if dietary_filter == 'gluten-free' %}active{% endif %}">
                 🌾 Gluten-Free
             </a>
             <a href="{% url 'core:home' %}?dietary=halal{% if active_category %}&category={{ active_category.id }}{% endif %}#menu-section"
-               style="padding:0.5rem 1.25rem;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                      background:{% if dietary_filter == 'halal' %}var(--success-bg){% else %}var(--surface){% endif %};
-                      border:1px solid {% if dietary_filter == 'halal' %}var(--success){% else %}var(--border){% endif %};
-                      color:{% if dietary_filter == 'halal' %}var(--success){% else %}var(--text-secondary){% endif %};
-                      transition:all 0.2s;">
+               class="dietary-filter-pill {% if dietary_filter == 'halal' %}active{% endif %}">
                 ☪️ Halal
             </a>
             {% if dietary_filter %}
             <a href="{% url 'core:home' %}{% if active_category %}?category={{ active_category.id }}{% endif %}#menu-section"
-               style="padding:0.5rem 1.25rem;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;
-                      background:var(--error-bg);border:1px solid var(--error);color:var(--error);transition:all 0.2s;">
+               class="dietary-filter-pill clear">
                 ✕ Clear Filter
             </a>
             {% endif %}

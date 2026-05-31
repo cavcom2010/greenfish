@@ -46,7 +46,8 @@ def home(request):
     dietary_filter = request.GET.get("dietary")
 
     # Build base queryset
-    items = MenuItem.objects.filter(is_available=True)
+    all_items = MenuItem.objects.filter(is_available=True).select_related("category").order_by("category__sort_order", "sort_order")
+    items = all_items
 
     # Apply category filter
     if category_id:
@@ -58,8 +59,6 @@ def home(request):
     # Apply dietary filter
     if dietary_filter:
         items, dietary_filter = _filter_items_by_dietary_tag(items, dietary_filter)
-
-    items = items.select_related("category").order_by("category__sort_order", "sort_order")
 
     # Get popular items for "Popular Now" section
     popular_items = MenuItem.objects.filter(
@@ -82,6 +81,7 @@ def home(request):
     context = {
         "categories": categories,
         "items": items,
+        "all_items": all_items,
         "popular_items": popular_items,
         "active_category": active_category,
         "dietary_filter": dietary_filter,

@@ -61,13 +61,13 @@ Check `STATIC_ROOT` is set in settings and directory exists.
 
 **Solutions:**
 ```bash
-# Find process using port 8026
+# Find the process using the requested app port
 sudo lsof -i :8026
 
 # Kill the process
 sudo kill -9 <PID>
 
-# Or use different port
+# Or let start.sh pick the next free app port automatically by starting it again
 export HOME_APP_PORT=9000
 ./deploy/home/start.sh
 ```

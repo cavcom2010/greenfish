@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="{{ site_settings.theme_color|default:'#FF6B35' }}">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup or delivery.">
@@ -798,11 +799,215 @@
             color: var(--text-secondary);
             border: 1px solid var(--border);
         }
+
+        /* Customer responsive polish */
+        .customer-ui {
+            --warm-bg: #fffaf6;
+            --warm-panel: rgba(255, 255, 255, 0.92);
+            --warm-border: #ece7e2;
+            --warm-muted: #6b7280;
+            background:
+                radial-gradient(circle at 12% 0%, rgba(255,107,53,0.12), transparent 30%),
+                linear-gradient(180deg, #fffaf6 0%, #f8f4ef 52%, #ffffff 100%);
+        }
+
+        .customer-ui .mobile-container {
+            width: min(100%, 430px);
+            background: transparent;
+        }
+
+        .customer-ui .status-bar {
+            background: rgba(255, 250, 246, 0.94);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom-color: var(--warm-border);
+            box-shadow: 0 8px 22px rgba(21, 21, 21, 0.05);
+        }
+
+        .customer-ui .status-bar h1 {
+            font-size: clamp(22px, 7vw, 28px);
+            letter-spacing: 0;
+        }
+
+        .customer-ui .location-icon {
+            background: #171717;
+            box-shadow: 0 10px 24px rgba(21, 21, 21, 0.14);
+        }
+
+        .customer-ui .hero {
+            background:
+                radial-gradient(circle at 86% 18%, rgba(255,107,53,0.34), transparent 30%),
+                linear-gradient(135deg, #121212 0%, #1c1b19 48%, #2b211d 100%);
+            border-radius: 26px;
+            padding: clamp(22px, 6vw, 32px);
+            box-shadow: 0 18px 45px rgba(21, 21, 21, 0.16);
+        }
+
+        .customer-ui .hero h3 {
+            font-size: clamp(26px, 9vw, 38px);
+            line-height: 1;
+            letter-spacing: 0;
+        }
+
+        .customer-ui .hero-btn,
+        .customer-ui .btn-brand,
+        .customer-ui .btn-primary,
+        .customer-ui .basket-btn {
+            border-radius: 16px;
+            font-weight: 900;
+            box-shadow: 0 14px 28px rgba(255,107,53,0.24);
+        }
+
+        .customer-ui .service-toggle,
+        .customer-ui .list-item,
+        .customer-ui .food-card,
+        .customer-ui .account-page,
+        .customer-ui .page-content > div[style*="background"],
+        .customer-ui .form-input,
+        .customer-ui input,
+        .customer-ui select,
+        .customer-ui textarea {
+            background: var(--warm-panel) !important;
+            border-color: var(--warm-border) !important;
+            box-shadow: 0 10px 24px rgba(21, 21, 21, 0.06);
+        }
+
+        .customer-ui .category-pill,
+        .customer-ui .dietary-pill,
+        .customer-ui .btn-secondary {
+            background: rgba(255,255,255,0.82) !important;
+            border-color: var(--warm-border) !important;
+            border-radius: 999px !important;
+            box-shadow: 0 8px 18px rgba(21,21,21,0.04);
+        }
+
+        .customer-ui .category-pill.active,
+        .customer-ui .dietary-pill.active,
+        .customer-ui .toggle-option.active {
+            background: var(--brand) !important;
+            border-color: var(--brand) !important;
+            color: #ffffff !important;
+        }
+
+        .customer-ui .section-title {
+            font-size: clamp(20px, 6vw, 26px);
+            letter-spacing: 0;
+        }
+
+        .customer-ui .food-card,
+        .customer-ui .list-item {
+            border-radius: 20px;
+        }
+
+        .customer-ui .deals-header {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            border-radius: 0 0 26px 26px;
+        }
+
+        .customer-ui .deals-grid {
+            padding-left: clamp(12px, 4vw, 16px);
+            padding-right: clamp(12px, 4vw, 16px);
+            max-width: 100%;
+        }
+
+        .customer-ui .deal-card {
+            border-radius: 20px;
+            max-width: 100%;
+        }
+
+        .customer-ui .deal-footer {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .customer-ui .btn-build {
+            width: 100%;
+            text-align: center;
+        }
+
+        .customer-ui .food-image,
+        .customer-ui .list-image {
+            background: linear-gradient(145deg, #fbfaf8, #f1eee9);
+        }
+
+        .customer-ui .bottom-nav {
+            background: rgba(255, 250, 246, 0.96);
+            border-top-color: var(--warm-border);
+            box-shadow: 0 -10px 30px rgba(21,21,21,0.08);
+        }
+
+        .customer-ui .nav-item {
+            min-width: 64px;
+            padding-inline: 10px;
+        }
+
+        .customer-ui .basket-bar {
+            background: rgba(20, 20, 20, 0.92);
+            color: #ffffff;
+            border-color: rgba(255,255,255,0.14);
+            box-shadow: 0 20px 55px rgba(0,0,0,0.28);
+        }
+
+        .customer-ui .basket-text h4,
+        .customer-ui .basket-text p {
+            color: #ffffff;
+        }
+
+        .customer-ui .basket-icon {
+            background: var(--brand);
+        }
+
+        .customer-ui .basket-icon i {
+            color: #ffffff;
+        }
+
+        .customer-ui .basket-btn {
+            background: #ffffff;
+            color: #111827;
+        }
+
+        .customer-ui .page-content {
+            padding: clamp(14px, 4vw, 20px);
+        }
+
+        .customer-ui .page-content h1,
+        .customer-ui .account-page h2 {
+            font-size: clamp(26px, 8vw, 36px);
+            line-height: 1;
+            letter-spacing: 0;
+        }
+
+        .customer-ui .btn,
+        .customer-ui button,
+        .customer-ui input,
+        .customer-ui select,
+        .customer-ui textarea {
+            max-width: 100%;
+        }
+
+        @media (min-width: 431px) {
+            .customer-ui .mobile-container {
+                border-left: 1px solid rgba(236,231,226,0.8);
+                border-right: 1px solid rgba(236,231,226,0.8);
+                box-shadow: 0 24px 80px rgba(21,21,21,0.08);
+            }
+        }
+
+        @media (max-width: 380px) {
+            .customer-ui .menu-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .customer-ui .bottom-nav span {
+                font-size: 10px;
+            }
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% if '/ops/' not in request.path and '/analytics/' not in request.path and '/admin/' not in request.path %}customer-ui customer-ui-mobile{% endif %}">
     <div class="mobile-container">
         {% block header %}
         <div class="status-bar">
@@ -887,85 +1092,10 @@
         {% block extra_content %}{% endblock %}
     </div>
     
-    <!-- PWA Install Prompt -->
-    <div id="pwa-install-banner" style="display: none; position: fixed; bottom: calc(80px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 400px; background: var(--brand); color: white; padding: 16px 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 9999;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 48px; height: 48px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <img src="/static/icons/icon-72.png" alt="App" style="width: 36px; height: 36px; border-radius: 8px;">
-            </div>
-            <div style="flex: 1;">
-                <div style="font-weight: 700; font-size: 16px;">Install {{ site_settings.shop_name }}</div>
-                <div style="font-size: 13px; opacity: 0.9;">Add to home screen for faster ordering</div>
-            </div>
-            <button onclick="installPWA()" style="background: white; color: var(--brand); border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap;">
-                Install
-            </button>
-            <button onclick="dismissInstallBanner()" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer; padding: 4px;">
-                <i class="ph ph-x"></i>
-            </button>
-        </div>
-    </div>
-
     <!-- PWA Registration -->
     <script>
-        // PWA Install Prompt Logic
-        let deferredPrompt;
-        const installBanner = document.getElementById('pwa-install-banner');
-        
-        // Listen for install prompt
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            e.preventDefault();
-            // Stash the event so it can be triggered later
-            deferredPrompt = e;
-            // Show our custom install banner
-            if (!localStorage.getItem('pwa-install-dismissed')) {
-                installBanner.style.display = 'block';
-            }
-        });
-        
-        // Handle install
-        async function installPWA() {
-            if (!deferredPrompt) {
-                // If no prompt available, show App Store style instructions
-                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                    alert('Tap the Share button in Safari, then "Add to Home Screen"');
-                } else {
-                    alert('Open your browser menu and select "Install app" or "Add to home screen"');
-                }
-                return;
-            }
-            
-            // Show the browser install prompt
-            deferredPrompt.prompt();
-            
-            // Wait for the user to respond to the prompt
-            const { outcome } = await deferredPrompt.userChoice;
-            
-            if (outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-                installBanner.style.display = 'none';
-                localStorage.setItem('pwa-install-dismissed', 'true');
-            } else {
-                console.log('User dismissed the install prompt');
-            }
-            
-            // Clear the saved prompt since it can't be used again
-            deferredPrompt = null;
-        }
-        
-        // Dismiss banner
-        function dismissInstallBanner() {
-            installBanner.style.display = 'none';
-            localStorage.setItem('pwa-install-dismissed', 'true');
-        }
-        
-        // Hide banner if app is installed
         window.addEventListener('appinstalled', () => {
             console.log('PWA was installed');
-            installBanner.style.display = 'none';
-            localStorage.setItem('pwa-install-dismissed', 'true');
-            deferredPrompt = null;
         });
         
         // Service Worker Registration
@@ -1087,4 +1217,3 @@
     </script>
 </body>
 </html>
-

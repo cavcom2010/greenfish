@@ -20,6 +20,8 @@ Environment:
   HOME_FOREGROUND=1  Same as --foreground (default).
   HOME_FOREGROUND=0  Same as --daemon.
   HOME_CLIENT_MAX_BODY_SIZE=8m  Nginx request body limit for uploads.
+  HOME_APP_PORT=8026  Requested Gunicorn port. If occupied, start.sh uses the
+                       next free port above it and records that choice for stop.sh.
 
 Home server for Tinashe Takeaway - runs on port :8026
 EOF
@@ -158,6 +160,20 @@ port_in_use() {
   ss -ltn "sport = :$1" | awk 'NR>1 {print $4}' | grep -q ":$1$"
 }
 
+find_next_free_port() {
+  local port="$1"
+
+  while port_in_use "$port"; do
+    ((port++))
+    if (( port > 65535 )); then
+      echo "No free port found before 65535." >&2
+      return 1
+    fi
+  done
+
+  printf '%s' "$port"
+}
+
 wait_for_port() {
   local port="$1"
 
@@ -180,6 +196,17 @@ read_pid_file() {
   [[ -n "$pid" ]] || return 1
 
   printf '%s' "$pid"
+}
+
+read_port_file() {
+  local port_file="$1"
+  local port=""
+
+  [[ -f "$port_file" ]] || return 1
+  port="$(tr -dc '0-9' < "$port_file")"
+  [[ -n "$port" ]] || return 1
+
+  printf '%s' "$port"
 }
 
 pid_is_running() {
@@ -206,7 +233,8 @@ HOME_BIND="${HOME_BIND:-0.0.0.0}"
 
 # Port configuration for Tinashe Takeaway
 NGINX_PORT="${HOME_PORT:-8006}"
-GUNICORN_PORT="${HOME_APP_PORT:-8026}"
+REQUESTED_GUNICORN_PORT="${HOME_APP_PORT:-8026}"
+GUNICORN_PORT="$(find_next_free_port "$REQUESTED_GUNICORN_PORT")"
 GUNICORN_WORKERS="${HOME_GUNICORN_WORKERS:-3}"
 GUNICORN_TIMEOUT="${HOME_GUNICORN_TIMEOUT:-120}"
 APP_MODULE="${HOME_APP_MODULE:-${GUNICORN_APP_MODULE:-config.wsgi:application}}"
@@ -217,6 +245,7 @@ CHECK_MODEL_MIGRATIONS="${HOME_CHECK_MODEL_MIGRATIONS:-1}"
 RUN_MIGRATIONS="${HOME_RUN_MIGRATIONS:-1}"
 
 GUNICORN_PID="$RUN_DIR/gunicorn.pid"
+GUNICORN_PORT_FILE="$RUN_DIR/gunicorn.port"
 NGINX_PID="$RUN_DIR/nginx.pid"
 HOME_HOST_FILE="$RUN_DIR/home_host"
 HOME_SCHEME_FILE="$RUN_DIR/home_scheme"
@@ -240,6 +269,7 @@ stop_foreground_services() {
     kill_pid_tree "$gunicorn_pid"
   fi
   rm -f "$GUNICORN_PID"
+  rm -f "$GUNICORN_PORT_FILE"
 
   if [[ -f "$NGINX_PID" ]] || port_in_use "$NGINX_PORT"; then
     echo "Stopping Nginx..."
@@ -365,6 +395,11 @@ describe_server_state
 run_preflight_checks
 
 if [[ "$FORCE_RESTART" == "1" ]]; then
+  FORCE_RESTART_GUNICORN_PORT="$GUNICORN_PORT"
+  if [[ -f "$GUNICORN_PORT_FILE" ]]; then
+    FORCE_RESTART_GUNICORN_PORT="$(read_port_file "$GUNICORN_PORT_FILE" 2>/dev/null || printf '%s' "$GUNICORN_PORT")"
+  fi
+
   if [[ -f "$NGINX_PID" ]] && pid_is_running "$(cat "$NGINX_PID")"; then
     echo "Stopping existing home Nginx (pid $(cat "$NGINX_PID"))..."
     nginx -p "$HOME_DIR" -c "$HOME_DIR/nginx.conf" -s stop 2>/dev/null || true
@@ -378,10 +413,15 @@ if [[ "$FORCE_RESTART" == "1" ]]; then
   fi
 
   kill_listeners_on_port "$NGINX_PORT"
-  kill_listeners_on_port "$GUNICORN_PORT"
+  kill_listeners_on_port "$FORCE_RESTART_GUNICORN_PORT"
+  rm -f "$GUNICORN_PORT_FILE"
 fi
 
 if [[ -f "$GUNICORN_PID" ]] && pid_is_running "$(cat "$GUNICORN_PID")"; then
+  if [[ -f "$GUNICORN_PORT_FILE" ]]; then
+    GUNICORN_PORT="$(read_port_file "$GUNICORN_PORT_FILE" 2>/dev/null || printf '%s' "$GUNICORN_PORT")"
+  fi
+
   PREVIOUS_HOME_HOST=""
   if [[ -f "$HOME_HOST_FILE" ]]; then
     PREVIOUS_HOME_HOST="$(cat "$HOME_HOST_FILE" 2>/dev/null || true)"
@@ -391,6 +431,7 @@ if [[ -f "$GUNICORN_PID" ]] && pid_is_running "$(cat "$GUNICORN_PID")"; then
     echo "LAN IP changed (${PREVIOUS_HOME_HOST} -> ${LAN_IP}); restarting Gunicorn..."
     kill_pid_tree "$(cat "$GUNICORN_PID")"
     rm -f "$GUNICORN_PID"
+    rm -f "$GUNICORN_PORT_FILE"
   else
     echo "Gunicorn already running (pid $(cat "$GUNICORN_PID"))."
   fi
@@ -400,15 +441,15 @@ if [[ "$HOME_FOREGROUND_MODE" == "1" ]] && [[ -f "$GUNICORN_PID" ]] && pid_is_ru
   echo "Foreground mode requires a fresh Gunicorn process to attach live logs; restarting existing Gunicorn..."
   kill_pid_tree "$(cat "$GUNICORN_PID")"
   rm -f "$GUNICORN_PID"
+  rm -f "$GUNICORN_PORT_FILE"
 fi
 
 if [[ ! -f "$GUNICORN_PID" ]] || ! pid_is_running "$(cat "$GUNICORN_PID")"; then
   rm -f "$GUNICORN_PID"
+  rm -f "$GUNICORN_PORT_FILE"
 
-  if port_in_use "$GUNICORN_PORT"; then
-    echo "App port ${GUNICORN_PORT} is already in use. Stop the existing process and retry." >&2
-    ss -ltnp "( sport = :${GUNICORN_PORT} )" || true
-    exit 1
+  if [[ "$GUNICORN_PORT" != "$REQUESTED_GUNICORN_PORT" ]]; then
+    echo "App port ${REQUESTED_GUNICORN_PORT} is already in use; using ${GUNICORN_PORT} instead."
   fi
 
   if [[ "$HOME_FOREGROUND_MODE" == "1" ]]; then
@@ -428,8 +469,10 @@ if [[ ! -f "$GUNICORN_PID" ]] || ! pid_is_running "$(cat "$GUNICORN_PID")"; then
       --log-level info \
       --pid "$GUNICORN_PID" &
     FOREGROUND_GUNICORN_PID="$!"
+    printf '%s' "$GUNICORN_PORT" >"$GUNICORN_PORT_FILE"
 
     if ! wait_for_port "$GUNICORN_PORT"; then
+      rm -f "$GUNICORN_PORT_FILE"
       echo "Gunicorn did not start listening on 127.0.0.1:${GUNICORN_PORT}." >&2
       exit 1
     fi
@@ -446,6 +489,7 @@ if [[ ! -f "$GUNICORN_PID" ]] || ! pid_is_running "$(cat "$GUNICORN_PID")"; then
       --log-level info \
       --daemon \
       --pid "$GUNICORN_PID"
+    printf '%s' "$GUNICORN_PORT" >"$GUNICORN_PORT_FILE"
   fi
 fi
 

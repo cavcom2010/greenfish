@@ -81,6 +81,15 @@
         if (e.target === e.currentTarget) window.closeCartDrawer();
     };
 
+    function refreshCartDrawer() {
+        return fetch(ORDER_ROUTES.cartDrawer)
+            .then(res => res.text())
+            .then(html => {
+                const content = document.getElementById('cartDrawerContent');
+                if (content) content.innerHTML = html;
+            });
+    }
+
     // Close cart drawer on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && cartDrawerOpen) window.closeCartDrawer();
@@ -94,42 +103,62 @@
         }
 
         const csrftoken = getCSRFToken();
+        let cartState = null;
         fetch(`/orders/cart/update/${itemId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrftoken
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: `quantity=${newQty}`
         })
         .then(res => {
             if (!res.ok) throw new Error('Update failed');
-            return fetch(ORDER_ROUTES.cartDrawer);
+            return res.json();
         })
-        .then(res => res.text())
-        .then(html => {
-            const content = document.getElementById('cartDrawerContent');
-            if (content) content.innerHTML = html;
-            // Also update the cart badge
-            return fetch('/orders/cart/add/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': csrftoken
-                },
-                body: 'menu_item_id=0&quantity=0&modifiers=[]&_check=1'
-            });
-        })
-        .then(res => res.json())
         .then(data => {
-            if (data.cart_count !== undefined) {
-                updateCartBadge(data.cart_count);
-            }
+            cartState = data;
+            return refreshCartDrawer();
+        })
+        .then(() => {
+            updateCartState(cartState);
         })
         .catch(() => {
             showToast('Could not update quantity. Please try again.', 'error');
         });
     };
+
+    document.addEventListener('submit', function(e) {
+        const form = e.target.closest('.cart-drawer-item-remove');
+        if (!form) return;
+
+        e.preventDefault();
+        const csrftoken = getCSRFToken();
+        let cartState = null;
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Remove failed');
+                return res.json();
+            })
+            .then(data => {
+                cartState = data;
+                return refreshCartDrawer();
+            })
+            .then(() => {
+                updateCartState(cartState);
+            })
+            .catch(() => {
+                showToast('Could not remove item. Please try again.', 'error');
+            });
+    });
 
     // ── Sticky Header Shadow on Scroll ───────────────────────────────────
     const header = document.querySelector('.site-header');
@@ -139,6 +168,19 @@
         };
         window.addEventListener('scroll', toggleHeaderShadow, { passive: true });
         toggleHeaderShadow();
+    }
+
+    // ── Scroll to Top ───────────────────────────────────────────────────
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    if (scrollToTopBtn) {
+        const toggleScrollButton = () => {
+            scrollToTopBtn.classList.toggle('visible', window.scrollY > 360);
+        };
+        window.addEventListener('scroll', toggleScrollButton, { passive: true });
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        toggleScrollButton();
     }
 
     // ── Service Type Toggle ──────────────────────────────────────────────
@@ -347,7 +389,7 @@
                 if (data.success) {
                     btn.innerHTML = '✓ Added!';
                     btn.style.background = '#16A34A';
-                    updateCartBadge(data.cart_count);
+                    updateCartState(data);
                     showToast('Added to basket', 'success', 2000);
                     setTimeout(() => {
                         window.closeItemModal();
@@ -378,14 +420,51 @@
             </div>`;
     }
 
-    // ── Cart Badge Update ────────────────────────────────────────────────
+    // ── Cart State Update ────────────────────────────────────────────────
+    function pluralizeItems(count) {
+        return count === 1 ? 'item' : 'items';
+    }
+
     function updateCartBadge(count) {
         const badges = document.querySelectorAll('.cart-badge-desktop');
         badges.forEach(badge => {
             badge.textContent = count;
-            badge.style.display = count > 0 ? 'flex' : 'none';
+            badge.hidden = count <= 0;
         });
+
+        const cartButton = document.getElementById('desktopCartButton');
+        if (cartButton) {
+            const countText = count > 0 ? `, ${count} ${pluralizeItems(count)}` : '';
+            cartButton.setAttribute('aria-label', `View cart${countText}`);
+        }
     }
+
+    function updateStickyCartBar(count, total) {
+        const stickyBar = document.getElementById('stickyCartBar');
+        if (!stickyBar) return;
+
+        stickyBar.classList.toggle('visible', count > 0);
+        stickyBar.setAttribute('aria-hidden', count > 0 ? 'false' : 'true');
+
+        const countEl = document.getElementById('stickyCartCount');
+        if (countEl) countEl.textContent = `${count} ${pluralizeItems(count)}`;
+
+        const totalEl = document.getElementById('stickyCartTotal');
+        if (totalEl && total !== undefined && total !== null) {
+            totalEl.textContent = `£${Number(total).toFixed(2)}`;
+        }
+    }
+
+    function updateCartState(data) {
+        if (!data || data.cart_count === undefined) return;
+        const count = Number(data.cart_count) || 0;
+        updateCartBadge(count);
+        updateStickyCartBar(count, data.cart_total);
+    }
+
+    document.body.addEventListener('cart-updated', function(event) {
+        updateCartState(event.detail);
+    });
 
     // ── Quick Add to Cart (from menu grid) ───────────────────────────────
     window.quickAddToCart = function (itemId) {
@@ -406,7 +485,7 @@
             })
             .then(data => {
                 if (data.success) {
-                    updateCartBadge(data.cart_count);
+                    updateCartState(data);
 
                     // Visual feedback on the button
                     const card = document.querySelector(`[data-quick-add="${itemId}"]`);
