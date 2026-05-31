@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.accounts.models import CustomerProfile
 from apps.menu.models import MenuCategory, MenuItem
 from apps.offers.models import Offer
 from apps.orders.services import selected_service_type
@@ -78,11 +79,26 @@ def home(request):
         if offer.is_valid()
     ][:3]
 
+    favorite_items = []
+    recent_orders = []
+    if request.user.is_authenticated:
+        profile = CustomerProfile.objects.filter(user=request.user).first()
+        if profile:
+            favorite_items = profile.favorite_items.filter(is_available=True).select_related("category")[:6]
+        recent_orders = (
+            request.user.orders.prefetch_related("items__menu_item")
+            .filter(items__menu_item__is_available=True)
+            .distinct()
+            .order_by("-created_at")[:3]
+        )
+
     context = {
         "categories": categories,
         "items": items,
         "all_items": all_items,
         "popular_items": popular_items,
+        "favorite_items": favorite_items,
+        "recent_orders": recent_orders,
         "active_category": active_category,
         "dietary_filter": dietary_filter,
         "hero_offers": hero_offers,

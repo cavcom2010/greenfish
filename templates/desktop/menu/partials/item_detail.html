@@ -123,6 +123,16 @@
                     {% if item.description %}
                     <p class="desktop-item-detail__description">{{ item.description }}</p>
                     {% endif %}
+                    {% if request.user.is_authenticated %}
+                    <form method="post" action="{% url 'accounts:toggle_favorite' item.id %}" style="margin-top:0.85rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'core:home' %}">
+                        <button type="submit" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1rem;border-radius:999px;border:1px solid var(--border-light);background:var(--bg);color:{% if is_favorite %}var(--brand){% else %}var(--text-secondary){% endif %};font-weight:800;cursor:pointer;">
+                            <i class="ph{% if is_favorite %}-fill{% endif %} ph-heart"></i>
+                            {% if is_favorite %}Saved to favourites{% else %}Save to favourites{% endif %}
+                        </button>
+                    </form>
+                    {% endif %}
                 </div>
                 <div class="desktop-item-detail__base-price">From £{{ item.price }}</div>
             </div>

@@ -33,6 +33,19 @@
                     {{ order.service_status_display }}
                 </span>
             </div>
+            <div style="display: flex; gap: 8px; width: 100%; margin-top: 12px;">
+                <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-secondary" style="flex: 1; padding: 11px 14px;">
+                    <i class="ph ph-map-trifold" style="margin-right: 6px;"></i>
+                    Track
+                </a>
+                <form method="post" action="{% url 'accounts:reorder' order.id %}" style="flex: 1;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-brand" style="width: 100%; padding: 11px 14px;">
+                        <i class="ph ph-clock-counter-clockwise" style="margin-right: 6px;"></i>
+                        Order Again
+                    </button>
+                </form>
+            </div>
         </div>
         {% endfor %}
     </div>

@@ -384,6 +384,8 @@ class OrderFlowTests(TestCase):
         order = create_order(user=self.user, status=Order.OrderStatus.PREPARING)
         tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
         self.assertEqual(tracking_response.status_code, 200)
+        self.assertContains(tracking_response, "This page refreshes automatically")
+        self.assertContains(tracking_response, order.items.first().item_name)
 
         self.client.force_login(self.staff_user)
         for url in [
@@ -403,6 +405,26 @@ class OrderFlowTests(TestCase):
         self.assertEqual(update_response.status_code, 200)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.OrderStatus.READY)
+
+    def test_confirmation_pages_link_to_tracking(self):
+        order = create_order(user=self.user)
+        tracking_url = reverse("orders:tracking", args=[order.order_number])
+
+        for name in ["orders:confirmation", "orders:confirmation_instore"]:
+            with self.subTest(template="desktop", route=name):
+                response = self.client.get(reverse(name, args=[order.order_number]))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, tracking_url)
+                self.assertContains(response, "Track Order")
+
+            with self.subTest(template="mobile", route=name):
+                response = self.client.get(
+                    reverse(name, args=[order.order_number]),
+                    HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, tracking_url)
+                self.assertContains(response, "Track Order")
 
     def test_delivery_tracking_renders_out_for_delivery_state(self):
         order = create_order(

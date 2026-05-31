@@ -107,6 +107,91 @@
     </div>
 </div>
 
+{% if recent_orders %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Order <span>Again</span></h2>
+                <p>Your recent favourites, ready to add back to your basket.</p>
+            </div>
+            <a href="{% url 'accounts:order_history' %}" class="section-link">
+                Order History <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;">
+            {% for order in recent_orders %}
+            <form method="post" action="{% url 'accounts:reorder' order.id %}" style="background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:0 8px 22px rgba(15,23,42,0.05);">
+                {% csrf_token %}
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                    <span style="width:42px;height:42px;border-radius:50%;background:var(--brand-light);color:var(--brand);display:grid;place-items:center;font-size:1.25rem;">
+                        <i class="ph ph-clock-counter-clockwise"></i>
+                    </span>
+                    <div>
+                        <div style="font-weight:800;">{{ order.order_number }}</div>
+                        <div style="color:var(--text-muted);font-size:0.85rem;">{{ order.created_at|date:"d M Y" }}</div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;color:var(--text-secondary);font-size:0.9rem;">
+                    <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>
+                    <strong style="color:var(--brand);font-size:1.05rem;">£{{ order.total_amount }}</strong>
+                </div>
+                <button type="submit" class="hero-btn-primary" style="width:100%;justify-content:center;border:0;cursor:pointer;">
+                    Reorder
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if favorite_items %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Your <span>Favourites</span></h2>
+                <p>Saved dishes for faster repeat ordering.</p>
+            </div>
+            <a href="{% url 'menu:menu' %}" class="section-link">
+                Browse Menu <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="menu-grid-desktop">
+            {% for item in favorite_items %}
+            <div class="menu-card" onclick="openItemModal({{ item.id }})">
+                <div class="menu-card-image">
+                    {% if item.image %}
+                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" width="640" height="640">
+                    {% else %}
+                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
+                    {% endif %}
+                    <div class="menu-card-badges">
+                        <span class="popular-badge"><i class="ph-fill ph-heart"></i> Saved</span>
+                    </div>
+                </div>
+                <div class="menu-card-body">
+                    <div class="menu-card-title">{{ item.name }}</div>
+                    {% if item.description %}
+                    <div class="menu-card-desc">{{ item.description }}</div>
+                    {% endif %}
+                    <div class="menu-card-footer">
+                        <span class="menu-card-price">£{{ item.price }}</span>
+                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
 <!-- ═══════════════════════════════════════════════════════════
      POPULAR ITEMS
      ═══════════════════════════════════════════════════════════ -->

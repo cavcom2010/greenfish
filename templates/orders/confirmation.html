@@ -72,7 +72,11 @@
     </div>
     
     <!-- Actions -->
-    <a href="{% url 'core:home' %}" class="btn btn-brand" style="display: block; margin-bottom: 12px;">
+    <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-brand" style="display: block; margin-bottom: 12px;">
+        <i class="ph ph-map-trifold"></i> Track Order
+    </a>
+
+    <a href="{% url 'core:home' %}" class="btn btn-secondary" style="display: block; margin-bottom: 12px;">
         Back to Home
     </a>
     

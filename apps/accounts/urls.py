@@ -10,6 +10,9 @@ app_name = "accounts"
 urlpatterns = [
     path("profile/", views.profile, name="profile"),
     path("my-orders/", views.order_history, name="order_history"),
+    path("my-orders/<int:order_id>/reorder/", views.reorder, name="reorder"),
+    path("favorites/<int:item_id>/add/", views.add_favorite_to_cart, name="add_favorite_to_cart"),
+    path("favorites/<int:item_id>/toggle/", views.toggle_favorite, name="toggle_favorite"),
     # Override allauth auth pages with desktop-aware views
     path("login/", views.desktop_aware_login, name="account_login"),
     path("signup/", views.desktop_aware_signup, name="account_signup"),

@@ -4,6 +4,7 @@ Views for the menu app.
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
+from apps.accounts.models import CustomerProfile
 from apps.core.media import get_image_variant_url
 from apps.orders.services import selected_service_type
 
@@ -50,6 +51,11 @@ def menu_item_detail(request, pk):
     
     # Get recommendations
     recommendations = get_recommendations(item.id, limit=4)
+    is_favorite = False
+    if request.user.is_authenticated:
+        profile = CustomerProfile.objects.filter(user=request.user).first()
+        if profile:
+            is_favorite = profile.favorite_items.filter(pk=item.pk).exists()
     
     # Return HTML for browser requests (modal), JSON for API requests
     accept_header = request.headers.get("Accept", "")
@@ -64,6 +70,7 @@ def menu_item_detail(request, pk):
         return render(request, detail_template, {
             "item": item,
             "recommendations": recommendations,
+            "is_favorite": is_favorite,
         })
     
     return JsonResponse({
@@ -82,6 +89,7 @@ def menu_item_detail(request, pk):
             {"id": r.id, "name": r.name, "price": str(r.price)}
             for r in recommendations
         ],
+        "is_favorite": is_favorite,
     })
 
 

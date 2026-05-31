@@ -37,6 +37,31 @@
         
         <button type="submit" class="btn btn-brand">Save Changes</button>
     </form>
+
+    {% if favorite_items %}
+    <div style="margin-top: 32px; text-align: left;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; padding: 0 4px;">Your Favourites</h3>
+        <div class="menu-grid">
+            {% for item in favorite_items %}
+            <div class="food-card">
+                <div class="food-image">
+                    {% if item.image %}
+                    <img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">
+                    {% else %}
+                    <span style="font-size: 42px;">{{ item.category.icon|default:"🍽️" }}</span>
+                    {% endif %}
+                </div>
+                <div class="food-name">{{ item.name }}</div>
+                <div class="food-price">£{{ item.price }}</div>
+                <form method="post" action="{% url 'accounts:add_favorite_to_cart' item.id %}" style="margin-top: 10px;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-brand" style="padding: 9px 10px; font-size: 13px;">Add</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Quick Links -->
     <div style="margin-top: 32px; text-align: left;">

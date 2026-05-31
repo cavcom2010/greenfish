@@ -67,7 +67,11 @@
 
         <!-- Actions -->
         <div style="display:flex;gap:1rem;justify-content:center;">
-            <a href="{% url 'core:home' %}" class="hero-btn-primary" style="text-decoration:none;">
+            <a href="{% url 'orders:tracking' order.order_number %}" class="hero-btn-primary" style="text-decoration:none;">
+                <i class="ph-bold ph-map-trifold"></i>
+                Track Order
+            </a>
+            <a href="{% url 'core:home' %}" class="hero-btn-secondary" style="text-decoration:none;color:var(--text);border-color:var(--border);">
                 <i class="ph-bold ph-house"></i>
                 Back to Home
             </a>
