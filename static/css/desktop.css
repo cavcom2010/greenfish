@@ -175,6 +175,22 @@ p {
     text-transform: uppercase;
 }
 
+.site-header .logo-text {
+    background: linear-gradient(135deg, #FF6B35, #E55A2B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+}
+
+.site-header .logo-text small {
+    background: none;
+    -webkit-text-fill-color: var(--text-muted);
+    color: var(--text-muted);
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+}
+
 .main-nav {
     display: flex;
     align-items: center;
@@ -1496,6 +1512,7 @@ p {
 
 .footer-brand .logo {
     color: white;
+    text-transform: uppercase;
 }
 
 .footer-col h4 {

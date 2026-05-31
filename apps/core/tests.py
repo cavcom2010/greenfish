@@ -121,6 +121,47 @@ class PublicRouteTests(TestCase):
         self.assertEqual(self.client.get(reverse("accounts:profile")).status_code, 200)
         self.assertEqual(self.client.get(reverse("accounts:order_history")).status_code, 200)
 
+    def test_phone_tablet_and_cookie_layout_detection(self):
+        home_url = reverse("core:home")
+        offline_url = reverse("pwa:offline")
+        phone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"
+        android_phone_ua = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Mobile Safari/537.36"
+        android_tablet_ua = "Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+        ipad_ua = "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1"
+
+        for ua in [phone_ua, android_phone_ua]:
+            with self.subTest(device="phone", ua=ua):
+                response = self.client.get(home_url, HTTP_USER_AGENT=ua)
+                self.assertFalse(response.wsgi_request.is_desktop)
+                self.assertContains(response, 'class="mobile-container"')
+                self.assertNotContains(response, 'class="site-header"')
+                offline_response = self.client.get(offline_url, HTTP_USER_AGENT=ua)
+                self.assertContains(offline_response, 'class="mobile-container"')
+
+        for ua in [android_tablet_ua, ipad_ua]:
+            with self.subTest(device="tablet", ua=ua):
+                response = self.client.get(home_url, HTTP_USER_AGENT=ua)
+                self.assertTrue(response.wsgi_request.is_desktop)
+                self.assertContains(response, 'class="site-header"')
+                self.assertNotContains(response, 'class="mobile-container"')
+                offline_response = self.client.get(offline_url, HTTP_USER_AGENT=ua)
+                self.assertContains(offline_response, 'class="site-header"')
+                self.assertNotContains(offline_response, 'class="mobile-container"')
+
+        response = self.client.get(home_url, HTTP_USER_AGENT=phone_ua, HTTP_SEC_CH_UA_MOBILE="?0")
+        self.assertFalse(response.wsgi_request.is_desktop)
+
+        response = self.client.get(home_url, HTTP_USER_AGENT=android_tablet_ua, HTTP_SEC_CH_UA_MOBILE="?1")
+        self.assertFalse(response.wsgi_request.is_desktop)
+
+        self.client.cookies["view_mode"] = "desktop"
+        response = self.client.get(home_url, HTTP_USER_AGENT=phone_ua)
+        self.assertTrue(response.wsgi_request.is_desktop)
+
+        self.client.cookies["view_mode"] = "mobile"
+        response = self.client.get(home_url, HTTP_USER_AGENT=android_tablet_ua)
+        self.assertFalse(response.wsgi_request.is_desktop)
+
 
 class MediaHardeningTests(TestCase):
     def setUp(self):
