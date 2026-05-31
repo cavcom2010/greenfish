@@ -4,7 +4,11 @@ import os
 import requests
 import json
 
-API_KEY = "27970871-c474d538664ed4ce5ab390e01"
+API_KEY = os.getenv("PIXABAY_API_KEY", "")
+if not API_KEY:
+    print("Error: PIXABAY_API_KEY environment variable not set.")
+    print("Get a free API key at https://pixabay.com/api/docs/")
+    exit(1)
 BASE_URL = "https://pixabay.com/api/"
 MEDIA_DIR = "/home/cmazh/django/two_fish/media/menu/items"
 
