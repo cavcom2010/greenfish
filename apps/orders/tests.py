@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 from django.core.cache import cache
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.auth.models import Group
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
@@ -17,6 +18,7 @@ from apps.core.test_support import (
     ensure_site_settings,
 )
 from apps.offers.models import Offer, VoucherUsage
+from apps.operations.permissions import OPERATIONS_MANAGER_GROUP
 from apps.orders.models import Order
 from apps.orders.services import get_cart_summary
 from apps.payments.models import Payment
@@ -428,12 +430,18 @@ class OrderFlowTests(TestCase):
         self.assertNotContains(mobile_response, "Pay when you collect")
 
     def test_staff_boards_and_tracking_render(self):
-        order = create_order(user=self.user, status=Order.OrderStatus.PREPARING)
+        order = create_order(
+            user=self.user,
+            status=Order.OrderStatus.PREPARING,
+            payment_status=Order.PaymentStatus.PAID,
+        )
         tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
         self.assertEqual(tracking_response.status_code, 200)
         self.assertContains(tracking_response, "This page refreshes automatically")
         self.assertContains(tracking_response, order.items.first().item_name)
 
+        manager_group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.staff_user.groups.add(manager_group)
         self.client.force_login(self.staff_user)
         for url in [
             reverse("orders:order_board"),

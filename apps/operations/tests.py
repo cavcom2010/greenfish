@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
@@ -17,7 +19,7 @@ class OperationsBoardTests(TestCase):
         self.manager_user = self._create_ops_user("ops-manager@example.com", OPERATIONS_MANAGER_GROUP)
         self.cashier_user = self._create_ops_user("ops-cashier@example.com", OPERATIONS_CASHIER_GROUP)
         self.kitchen_user = self._create_ops_user("ops-kitchen@example.com", OPERATIONS_KITCHEN_GROUP)
-        self.staff_fallback_user = create_user(email="ops-staff@example.com", is_staff=True)
+        self.ungrouped_staff_user = create_user(email="ops-staff@example.com", is_staff=True)
         self.user = create_user(email="ops-user@example.com")
 
     def _create_ops_user(self, email, group_name):
@@ -64,10 +66,10 @@ class OperationsBoardTests(TestCase):
             with self.subTest(route=route):
                 self.assertEqual(self.client.get(route).status_code, 200)
 
-        self.client.force_login(self.staff_fallback_user)
+        self.client.force_login(self.ungrouped_staff_user)
         for route in collection_routes + kitchen_routes:
             with self.subTest(route=route):
-                self.assertEqual(self.client.get(route).status_code, 200)
+                self.assertIn(self.client.get(route).status_code, {302, 403})
 
     def test_kitchen_user_can_progress_order_to_ready_but_not_dispatch(self):
         order = create_order(
@@ -184,7 +186,7 @@ class OperationsBoardTests(TestCase):
 
     def test_legacy_orders_update_route_still_works_through_operations_service(self):
         order = create_order(status=Order.OrderStatus.PREPARING, payment_status=Order.PaymentStatus.PAID)
-        self.client.force_login(self.staff_fallback_user)
+        self.client.force_login(self.manager_user)
 
         response = self.client.post(
             reverse("orders:update_order_status", args=[order.id]),
@@ -195,3 +197,88 @@ class OperationsBoardTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Order.OrderStatus.READY)
         self.assertIsNotNone(order.ready_at)
+
+    def test_boards_only_show_paid_operational_orders(self):
+        paid_order = create_order(
+            status=Order.OrderStatus.CONFIRMED,
+            payment_status=Order.PaymentStatus.PAID,
+        )
+        unpaid_order = create_order(
+            status=Order.OrderStatus.CONFIRMED,
+            payment_status=Order.PaymentStatus.PENDING,
+            customer_name="Unpaid Customer",
+        )
+
+        self.client.force_login(self.kitchen_user)
+        kitchen_response = self.client.get(reverse("operations:kanban_column", args=["confirmed"]))
+        self.assertContains(kitchen_response, paid_order.order_number)
+        self.assertNotContains(kitchen_response, unpaid_order.order_number)
+        self.assertNotContains(kitchen_response, "Unpaid Customer")
+
+        paid_ready = create_order(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+        )
+        unpaid_ready = create_order(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PENDING,
+            customer_name="Unpaid Ready",
+        )
+        self.client.force_login(self.cashier_user)
+        collection_response = self.client.get(reverse("operations:collection_list_fragment"))
+        self.assertContains(collection_response, paid_ready.order_number)
+        self.assertNotContains(collection_response, unpaid_ready.order_number)
+        self.assertNotContains(collection_response, "Unpaid Ready")
+
+    def test_stale_expected_status_is_rejected(self):
+        order = create_order(status=Order.OrderStatus.PREPARING, payment_status=Order.PaymentStatus.PAID)
+        self.client.force_login(self.kitchen_user)
+
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {"action": "mark_ready", "expected_status": Order.OrderStatus.CONFIRMED},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"], "Order changed. Refresh the board and try again.")
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.OrderStatus.PREPARING)
+
+    def test_unpaid_orders_cannot_be_actioned_directly(self):
+        order = create_order(status=Order.OrderStatus.CONFIRMED, payment_status=Order.PaymentStatus.PENDING)
+        self.client.force_login(self.kitchen_user)
+
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {"action": "start_preparing", "expected_status": Order.OrderStatus.CONFIRMED},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["error"],
+            "Only paid orders can be actioned on the operations boards.",
+        )
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.OrderStatus.CONFIRMED)
+
+    @patch("apps.pwa.services.notify_order_ready", side_effect=RuntimeError("push unavailable"))
+    @patch("apps.sms.services.send_order_ready", side_effect=RuntimeError("sms unavailable"))
+    def test_side_effect_failures_are_logged_without_blocking_status_change(self, mocked_sms, mocked_push):
+        order = create_order(
+            status=Order.OrderStatus.PREPARING,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.PICKUP,
+        )
+        self.client.force_login(self.kitchen_user)
+
+        with self.assertLogs("apps.operations.services", level="ERROR") as logs:
+            response = self.client.post(
+                reverse("operations:order_action", args=[order.id]),
+                {"action": "mark_ready"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.OrderStatus.READY)
+        self.assertIn("Operations side effect failed: send_order_ready", "\n".join(logs.output))
+        self.assertIn("Operations side effect failed: notify_order_ready", "\n".join(logs.output))

@@ -37,9 +37,6 @@ def get_operations_roles(user):
     if OPERATIONS_CASHIER_GROUP in group_names:
         roles.add(ROLE_CASHIER)
 
-    # Backward-compatible fallback for existing staff users.
-    if not roles:
-        roles.add(ROLE_MANAGER)
     return roles
 
 

@@ -53,6 +53,7 @@
     </div>
 
     <form id="orderDetailForm-{{ order.id }}" onsubmit="saveOrderNotes(event, {{ order.id }})" style="display: grid; gap: 14px;">
+        <input type="hidden" name="expected_status" value="{{ order.status }}">
         <div>
             <label for="staffNotes{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Kitchen Notes</label>
             <textarea id="staffNotes{{ order.id }}" name="staff_notes" rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: vertical;">{{ order.staff_notes }}</textarea>

@@ -58,15 +58,11 @@ Use Django admin:
 4. add the correct operations group
 5. save
 
-### Current fallback behavior
+### Explicit role behavior
 
-If a staff user is not in any operations group, they still get manager-level operations access.
+Staff users must be in an operations group before they can access an operations board.
 
-This exists only to keep older staff accounts working during rollout.
-
-Recommended operational policy:
-- assign every staff user to a real group
-- remove the fallback later
+Existing ungrouped staff users are assigned to `Operations Manager` by migration during the hardening rollout. New staff users must be assigned deliberately.
 
 ## 3. Standard Pickup Flow
 
@@ -223,6 +219,19 @@ Check:
 Check:
 - user is `is_staff=True`
 - user belongs to `Operations Kitchen` or `Operations Manager`
+
+### Board says refresh failed
+
+Check:
+- device network connection
+- whether the staff session expired
+- server logs for `403`, `500`, or database errors
+
+Use the board's Refresh button after fixing the connection or login state.
+
+### Action says order changed
+
+Another staff member already changed the order. Refresh the board and continue from the latest status.
 
 ### Order was cancelled but there is no explanation
 

@@ -1,10 +1,14 @@
 """
 Staff order-board workflow services.
 """
+import logging
+
 from django.db.models import Prefetch
 
 from apps.orders.models import Order, OrderItem
 from .permissions import can_perform_action
+
+logger = logging.getLogger(__name__)
 
 KITCHEN_BOARD_STATUSES = (
     Order.OrderStatus.PENDING,
@@ -38,6 +42,7 @@ def board_queryset():
     return (
         Order.objects.select_related("user")
         .prefetch_related(Prefetch("items", queryset=OrderItem.objects.order_by("id")))
+        .filter(payment_status=Order.PaymentStatus.PAID)
         .order_by("created_at")
     )
 
@@ -51,14 +56,15 @@ def collection_board_queryset():
 
 
 def get_board_counts():
+    paid_orders = Order.objects.filter(payment_status=Order.PaymentStatus.PAID)
     return {
-        "pending_count": Order.objects.filter(status=Order.OrderStatus.PENDING).count(),
-        "confirmed_count": Order.objects.filter(status=Order.OrderStatus.CONFIRMED).count(),
-        "preparing_count": Order.objects.filter(status=Order.OrderStatus.PREPARING).count(),
-        "ready_count": Order.objects.filter(status=Order.OrderStatus.READY).count(),
-        "out_for_delivery_count": Order.objects.filter(status=Order.OrderStatus.OUT_FOR_DELIVERY).count(),
-        "collection_count": Order.objects.filter(status__in=COLLECTION_BOARD_STATUSES).count(),
-        "kanban_confirmed_count": Order.objects.filter(status__in=KANBAN_COLUMNS["confirmed"]).count(),
+        "pending_count": paid_orders.filter(status=Order.OrderStatus.PENDING).count(),
+        "confirmed_count": paid_orders.filter(status=Order.OrderStatus.CONFIRMED).count(),
+        "preparing_count": paid_orders.filter(status=Order.OrderStatus.PREPARING).count(),
+        "ready_count": paid_orders.filter(status=Order.OrderStatus.READY).count(),
+        "out_for_delivery_count": paid_orders.filter(status=Order.OrderStatus.OUT_FOR_DELIVERY).count(),
+        "collection_count": paid_orders.filter(status__in=COLLECTION_BOARD_STATUSES).count(),
+        "kanban_confirmed_count": paid_orders.filter(status__in=KANBAN_COLUMNS["confirmed"]).count(),
     }
 
 
@@ -137,6 +143,9 @@ def perform_order_action(order, action, actor, *, staff_notes="", handover_notes
     if not can_perform_action(actor, action):
         raise ValueError("You do not have permission to perform this action.")
 
+    if order.payment_status != Order.PaymentStatus.PAID and action != ACTION_SAVE_NOTES:
+        raise ValueError("Only paid orders can be actioned on the operations boards.")
+
     allowed = {item["name"] for item in available_actions(order, user=actor)}
     if action == ACTION_CANCEL_ORDER and order.status not in {
         Order.OrderStatus.COMPLETED,
@@ -187,48 +196,35 @@ def perform_order_action(order, action, actor, *, staff_notes="", handover_notes
     order.update_status(target_status, actor)
 
     if target_status == Order.OrderStatus.READY and old_status != Order.OrderStatus.READY and not order.is_delivery:
-        try:
-            from apps.sms.services import send_order_ready
+        from apps.sms.services import send_order_ready
+        from apps.pwa.services import notify_order_ready
 
-            send_order_ready(order)
-        except Exception:
-            pass
-
-        try:
-            from apps.pwa.services import notify_order_ready
-
-            notify_order_ready(order)
-        except Exception:
-            pass
+        _run_side_effect("send_order_ready", send_order_ready, order)
+        _run_side_effect("notify_order_ready", notify_order_ready, order)
 
     if target_status == Order.OrderStatus.OUT_FOR_DELIVERY and old_status != Order.OrderStatus.OUT_FOR_DELIVERY:
-        try:
-            from apps.sms.services import send_order_out_for_delivery
+        from apps.sms.services import send_order_out_for_delivery
+        from apps.pwa.services import notify_order_out_for_delivery
 
-            send_order_out_for_delivery(order)
-        except Exception:
-            pass
-
-        try:
-            from apps.pwa.services import notify_order_out_for_delivery
-
-            notify_order_out_for_delivery(order)
-        except Exception:
-            pass
+        _run_side_effect("send_order_out_for_delivery", send_order_out_for_delivery, order)
+        _run_side_effect("notify_order_out_for_delivery", notify_order_out_for_delivery, order)
 
     if target_status == Order.OrderStatus.COMPLETED and order.is_delivery and old_status != Order.OrderStatus.COMPLETED:
-        try:
-            from apps.sms.services import send_order_delivered
+        from apps.sms.services import send_order_delivered
+        from apps.pwa.services import notify_order_delivered
 
-            send_order_delivered(order)
-        except Exception:
-            pass
-
-        try:
-            from apps.pwa.services import notify_order_delivered
-
-            notify_order_delivered(order)
-        except Exception:
-            pass
+        _run_side_effect("send_order_delivered", send_order_delivered, order)
+        _run_side_effect("notify_order_delivered", notify_order_delivered, order)
 
     return order
+
+
+def _run_side_effect(name, func, order):
+    try:
+        func(order)
+    except Exception:
+        logger.exception(
+            "Operations side effect failed: %s for order %s",
+            name,
+            order.order_number,
+        )

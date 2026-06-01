@@ -185,6 +185,10 @@
         <button class="status-tab" onclick="filterOrders(event, 'ready')">Ready</button>
         <button class="status-tab" onclick="filterOrders(event, 'out_for_delivery')">Out for Delivery</button>
     </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; color: var(--text-secondary); font-size: 13px;">
+        <span id="collectionBoardStatus">Connecting...</span>
+        <button type="button" class="status-tab" style="padding: 8px 14px;" onclick="refreshCollectionBoard()">Refresh</button>
+    </div>
 
     <div id="ordersContainer" hx-get="{% url 'operations:collection_list_fragment' %}" hx-trigger="load, every 5s" hx-swap="innerHTML">
         <div style="text-align: center; padding: 40px;">
@@ -204,6 +208,7 @@
 const collectionFragmentUrl = '{% url "operations:collection_list_fragment" %}';
 const boardActionUrlTemplate = '{% url "operations:order_action" 0 %}';
 const orderDetailUrlTemplate = '{% url "operations:order_detail_modal" 0 %}';
+const collectionBoardStatus = document.getElementById('collectionBoardStatus');
 
 function actionUrl(orderId) {
     return boardActionUrlTemplate.replace('/0/action/', `/${orderId}/action/`);
@@ -218,6 +223,12 @@ function refreshCollectionBoard() {
     htmx.trigger(container, 'load');
 }
 
+function setCollectionBoardStatus(message, isError = false) {
+    if (!collectionBoardStatus) return;
+    collectionBoardStatus.textContent = message;
+    collectionBoardStatus.style.color = isError ? 'var(--error)' : 'var(--text-secondary)';
+}
+
 function filterOrders(event, status) {
     document.querySelectorAll('.status-tab').forEach(tab => tab.classList.remove('active'));
     event.target.classList.add('active');
@@ -228,20 +239,22 @@ function filterOrders(event, status) {
     htmx.trigger(container, 'load');
 }
 
-function orderFormData(orderId, actionName) {
+function orderFormData(orderId, actionName, expectedStatus = '') {
     const form = document.getElementById(`orderDetailForm-${orderId}`);
     const formData = form ? new FormData(form) : new FormData();
+    const card = document.querySelector(`[data-order-id="${orderId}"]`);
     formData.set('action', actionName);
+    formData.set('expected_status', expectedStatus || formData.get('expected_status') || (card ? card.dataset.status : ''));
     formData.set('csrfmiddlewaretoken', '{{ csrf_token }}');
     return formData;
 }
 
-function postOrderAction(orderId, actionName) {
+function postOrderAction(orderId, actionName, expectedStatus = '') {
     return fetch(actionUrl(orderId), {
         method: 'POST',
-        body: orderFormData(orderId, actionName)
+        body: orderFormData(orderId, actionName, expectedStatus)
     }).then(async response => {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             throw new Error(data.error || 'Unable to update order.');
         }
@@ -249,13 +262,28 @@ function postOrderAction(orderId, actionName) {
     });
 }
 
-function runOrderAction(orderId, actionName) {
-    postOrderAction(orderId, actionName)
+function runOrderAction(orderId, actionName, expectedStatus = '') {
+    const clickedButton = event && event.currentTarget ? event.currentTarget : null;
+    if (clickedButton) {
+        clickedButton.disabled = true;
+        clickedButton.style.opacity = '0.65';
+    }
+    postOrderAction(orderId, actionName, expectedStatus)
         .then(() => {
             closeOrderDetail();
             refreshCollectionBoard();
         })
-        .catch(error => window.alert(error.message));
+        .catch(error => {
+            setCollectionBoardStatus(error.message, true);
+            window.alert(error.message);
+            refreshCollectionBoard();
+        })
+        .finally(() => {
+            if (clickedButton) {
+                clickedButton.disabled = false;
+                clickedButton.style.opacity = '';
+            }
+        });
 }
 
 function showOrderDetail(orderId) {
@@ -292,6 +320,24 @@ function saveOrderNotes(event, orderId) {
 function submitOrderDetailAction(orderId, actionName) {
     runOrderAction(orderId, actionName);
 }
+
+document.body.addEventListener('htmx:beforeRequest', function(event) {
+    if (event.target && event.target.id === 'ordersContainer') {
+        setCollectionBoardStatus('Refreshing...');
+    }
+});
+
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.target && event.target.id === 'ordersContainer') {
+        setCollectionBoardStatus(`Last updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'})}`);
+    }
+});
+
+document.body.addEventListener('htmx:responseError', function(event) {
+    if (event.target && event.target.id === 'ordersContainer') {
+        setCollectionBoardStatus('Refresh failed. Check connection.', true);
+    }
+});
 </script>
 {% endblock %}
 

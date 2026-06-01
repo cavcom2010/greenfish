@@ -155,20 +155,11 @@ Not allowed:
 - mark ready
 - cancel
 
-### Backward-compatible fallback
+### Explicit roles only
 
-If a user is `is_staff=True` but belongs to none of the operations groups, the code currently treats them as a manager.
+Operations access requires `is_staff=True` and membership in one of the operations groups.
 
-Reason:
-- existing staff users should not be locked out during rollout
-
-Tradeoff:
-- this is convenient for migration
-- it is looser than the final intended security model
-
-Recommended production follow-up:
-- assign all staff users explicitly
-- remove the fallback once the rollout is complete
+Ungrouped staff users do not receive board access. A one-time migration assigns existing ungrouped staff users to `Operations Manager` so current accounts keep access while new staff must be assigned deliberately.
 
 ## 5. Order Status Model
 
@@ -352,6 +343,8 @@ Source queryset:
 - `preparing`
 - `ready`
 
+Only paid orders are included. Unpaid `pending` orders from abandoned online checkout sessions stay out of the staff workflow.
+
 Kanban columns:
 
 - `confirmed`
@@ -372,12 +365,26 @@ Source queryset:
 - `ready`
 - `out_for_delivery`
 
+Only paid orders are included.
+
 Operational interpretation:
 - pickup orders are completed here
 - delivery orders are dispatched here
 - delivery orders can also be marked delivered here
 
 The collection board is the handoff board, not the kitchen production board.
+
+## 9.1 Stale Board Actions
+
+Board cards and detail modals post the order status they were rendered with as `expected_status`.
+
+If another staff member changes the order first, the action endpoint returns `409` and the board should be refreshed before trying again.
+
+## 9.2 Refresh and Side-Effect Visibility
+
+Both boards use 5-second HTMX polling and show a visible last-updated or refresh-failed state.
+
+SMS and push notification failures are logged with stack traces but do not block the staff workflow action.
 
 ## 10. Detail Modal
 
@@ -547,4 +554,4 @@ Before using this in a real environment:
 4. verify SMS and push settings
 5. test one pickup order end-to-end
 6. test one delivery order end-to-end
-7. remove the staff fallback once the team is fully assigned
+7. confirm no active staff users are missing an operations group

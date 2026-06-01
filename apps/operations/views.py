@@ -2,6 +2,7 @@
 Staff-facing operations boards and actions.
 """
 from django.http import JsonResponse
+from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
@@ -97,26 +98,34 @@ def order_detail_modal(request, order_id):
 @operations_staff_required(json_response=True)
 @require_POST
 def order_action(request, order_id):
-    order = get_object_or_404(
-        Order.objects.select_related("user").prefetch_related("items"),
-        pk=order_id,
-    )
-
     action = (request.POST.get("action") or "").strip()
-    if not action:
-        action = action_from_legacy_status(order, request.POST.get("status"))
-    if not action:
-        return JsonResponse({"error": "Invalid action"}, status=400)
+    expected_status = (request.POST.get("expected_status") or "").strip()
 
     try:
-        order = perform_order_action(
-            order,
-            action,
-            request.user,
-            staff_notes=request.POST.get("staff_notes", ""),
-            handover_notes=request.POST.get("handover_notes", ""),
-            cancel_reason=request.POST.get("cancel_reason", ""),
-        )
+        with transaction.atomic():
+            order = get_object_or_404(
+                Order.objects.select_for_update(of=("self",)).select_related("user").prefetch_related("items"),
+                pk=order_id,
+            )
+            if expected_status and order.status != expected_status:
+                return JsonResponse(
+                    {"error": "Order changed. Refresh the board and try again."},
+                    status=409,
+                )
+
+            if not action:
+                action = action_from_legacy_status(order, request.POST.get("status"))
+            if not action:
+                return JsonResponse({"error": "Invalid action"}, status=400)
+
+            order = perform_order_action(
+                order,
+                action,
+                request.user,
+                staff_notes=request.POST.get("staff_notes", ""),
+                handover_notes=request.POST.get("handover_notes", ""),
+                cancel_reason=request.POST.get("cancel_reason", ""),
+            )
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
 

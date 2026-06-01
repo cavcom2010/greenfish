@@ -1,5 +1,5 @@
 {% load duration_filters %}
-<div class="kanban-card status-{{ order.status }}" data-order-id="{{ order.id }}" data-created-at="{{ order.created_at|date:'c' }}">
+<div class="kanban-card status-{{ order.status }}" data-order-id="{{ order.id }}" data-status="{{ order.status }}" data-created-at="{{ order.created_at|date:'c' }}">
     {% if order.requested_service_time %}
     <div class="pickup-indicator {% if order.minutes_elapsed > 15 %}urgent{% endif %}" title="{{ order.service_time_label }}: {{ order.requested_service_time|time:'H:i' }}">
         <i class="ph-fill ph-clock"></i>
@@ -52,7 +52,7 @@
         </button>
         {% if order.available_actions %}
         {% for action in order.available_actions %}
-        <button class="action-btn {% if action.css_class == 'btn-confirm' %}btn-confirm{% elif action.css_class == 'btn-preparing' %}btn-prepare{% elif action.css_class == 'btn-ready' %}btn-ready{% elif action.css_class == 'btn-dispatch' %}btn-dispatch{% elif action.css_class == 'btn-cancel' %}btn-cancel{% else %}btn-complete{% endif %}" onclick="moveOrder({{ order.id }}, '{{ action.name }}')">
+        <button class="action-btn {% if action.css_class == 'btn-confirm' %}btn-confirm{% elif action.css_class == 'btn-preparing' %}btn-prepare{% elif action.css_class == 'btn-ready' %}btn-ready{% elif action.css_class == 'btn-dispatch' %}btn-dispatch{% elif action.css_class == 'btn-cancel' %}btn-cancel{% else %}btn-complete{% endif %}" onclick="moveOrder({{ order.id }}, '{{ action.name }}', '{{ order.status }}')">
             {% if action.name == 'accept_order' %}
             <i class="ph-fill ph-check-circle"></i>
             {% elif action.name == 'start_preparing' %}

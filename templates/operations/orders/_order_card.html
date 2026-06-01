@@ -1,4 +1,4 @@
-<div class="order-card status-{{ order.status }}">
+<div class="order-card status-{{ order.status }}" data-order-id="{{ order.id }}" data-status="{{ order.status }}">
     <div class="order-header">
         <span class="order-number">#{{ order.order_number }}</span>
         <span class="order-time">{{ order.created_at|time:"H:i" }}</span>
@@ -24,7 +24,7 @@
         </button>
         {% if order.available_actions %}
         {% for action in order.available_actions %}
-        <button class="action-btn {{ action.css_class }}" onclick="runOrderAction({{ order.id }}, '{{ action.name }}')">
+        <button class="action-btn {{ action.css_class }}" onclick="runOrderAction({{ order.id }}, '{{ action.name }}', '{{ order.status }}')">
             {{ action.label }}
         </button>
         {% endfor %}
