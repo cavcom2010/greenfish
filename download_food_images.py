@@ -3,6 +3,7 @@
 import os
 import requests
 import json
+from pathlib import Path
 
 API_KEY = os.getenv("PIXABAY_API_KEY", "")
 if not API_KEY:
@@ -10,7 +11,8 @@ if not API_KEY:
     print("Get a free API key at https://pixabay.com/api/docs/")
     exit(1)
 BASE_URL = "https://pixabay.com/api/"
-MEDIA_DIR = "/home/cmazh/django/two_fish/media/menu/items"
+BASE_DIR = Path(__file__).resolve().parent
+MEDIA_DIR = BASE_DIR / "media" / "menu" / "items"
 
 # Ensure directory exists
 os.makedirs(MEDIA_DIR, exist_ok=True)

@@ -27,7 +27,7 @@ Tinashe Takeaway is a production-ready Django web application designed for takea
 ## Architecture
 
 ```
-two_fish/
+greenfish/
 ├── apps/
 │   ├── core/          # Site settings, utilities
 │   ├── accounts/      # User authentication (django-allauth)

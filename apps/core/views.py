@@ -127,7 +127,7 @@ def health(request):
     payload = {
         "status": "ok",
         "database": "ok",
-        "service": "two_fish",
+        "service": "greenfish",
         "timestamp": timezone.now().isoformat(),
     }
 

@@ -381,7 +381,7 @@ pip install -r requirements.txt
 
 ```bash
 # Ensure you're in project root
-cd /home/cmazh/django/two_fish
+cd /home/cmazh/django/greenfish
 python manage.py check
 ```
 

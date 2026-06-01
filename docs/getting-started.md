@@ -13,7 +13,7 @@ This guide will help you set up Tinashe Takeaway on your local machine for devel
 ### 1. Clone the Repository
 
 ```bash
-cd /home/cmazh/django/two_fish
+cd /home/cmazh/django/greenfish
 ```
 
 ### 2. Create Virtual Environment

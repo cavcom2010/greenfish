@@ -1,6 +1,6 @@
 # Operations Order Board
 
-This document covers the staff-facing order operations subsystem in `two_fish`.
+This document covers the staff-facing order operations subsystem in `greenfish`.
 
 It documents:
 - the `apps.operations` app

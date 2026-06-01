@@ -179,7 +179,7 @@ CACHES = {
             "DJANGO_CACHE_BACKEND",
             default="django.core.cache.backends.locmem.LocMemCache",
         ),
-        "LOCATION": env("DJANGO_CACHE_LOCATION", default="two_fish-default"),
+        "LOCATION": env("DJANGO_CACHE_LOCATION", default="greenfish-default"),
     }
 }
 
