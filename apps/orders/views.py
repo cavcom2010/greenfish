@@ -22,6 +22,7 @@ from .services import (
     clear_selected_offer,
     clear_checkout_session,
     delivery_enabled,
+    delivery_map_settings,
     get_cart_summary,
     online_payment_available,
     payment_fallback_available,
@@ -144,6 +145,10 @@ def _empty_delivery_context():
         "delivery_address_line2": "",
         "delivery_city": "",
         "delivery_postcode": "",
+        "delivery_formatted_address": "",
+        "delivery_place_id": "",
+        "delivery_latitude": "",
+        "delivery_longitude": "",
     }
 
 
@@ -433,6 +438,7 @@ def checkout(request):
         "default_customer_phone": default_customer_phone,
         "default_customer_email": default_customer_email,
         "delivery_enabled": delivery_enabled(),
+        "delivery_map": delivery_map_settings(),
         **_default_delivery_address(request.user),
     }
     template = "desktop/orders/checkout.html" if getattr(request, "is_desktop", True) else "orders/checkout.html"

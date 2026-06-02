@@ -62,6 +62,7 @@ Use this checklist before deploying to production.
 
 - [ ] Site Settings configured (name, address, phone)
 - [ ] Delivery availability confirmed in `.env` (`DELIVERY_ENABLED`) and Admin → Site Settings
+- [ ] Delivery map configured if delivery is enabled: Google Maps API key restricted to the production domain, shop latitude/longitude set, and delivery radius checked
 - [ ] Menu items added with images
 - [ ] Categories created and ordered
 - [ ] Modifiers created and linked

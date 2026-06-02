@@ -3,8 +3,9 @@ Checkout and cart helpers shared by order and payment views.
 """
 import hashlib
 import json
+import math
 import re
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -34,6 +35,64 @@ def delivery_enabled():
     from apps.core.models import SiteSettings
 
     return SiteSettings.get().delivery_enabled
+
+
+def _decimal_from_value(value):
+    try:
+        if value in (None, ""):
+            return None
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
+def _float_from_value(value):
+    parsed = _decimal_from_value(value)
+    if parsed is None:
+        return None
+    return float(parsed)
+
+
+def haversine_miles(origin_lat, origin_lng, destination_lat, destination_lng):
+    """Return the great-circle distance between two coordinates in miles."""
+    origin_lat = _float_from_value(origin_lat)
+    origin_lng = _float_from_value(origin_lng)
+    destination_lat = _float_from_value(destination_lat)
+    destination_lng = _float_from_value(destination_lng)
+    if None in (origin_lat, origin_lng, destination_lat, destination_lng):
+        return None
+
+    radius_miles = 3958.7613
+    lat1, lng1, lat2, lng2 = map(
+        math.radians,
+        [origin_lat, origin_lng, destination_lat, destination_lng],
+    )
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng / 2) ** 2
+    return radius_miles * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
+
+
+def delivery_map_settings():
+    """Return checkout-safe Google Maps delivery configuration."""
+    from apps.core.models import SiteSettings
+
+    site_settings = SiteSettings.get()
+    coordinates = site_settings.shop_coordinates
+    shop_latitude = coordinates[0] if coordinates else None
+    shop_longitude = coordinates[1] if coordinates else None
+    api_key = getattr(settings, "GOOGLE_MAPS_API_KEY", "")
+    map_enabled = bool(site_settings.is_delivery_enabled and site_settings.delivery_map_enabled)
+
+    return {
+        "enabled": map_enabled,
+        "configured": bool(map_enabled and api_key and shop_latitude is not None and shop_longitude is not None),
+        "api_key": api_key,
+        "map_id": getattr(settings, "GOOGLE_MAPS_MAP_ID", ""),
+        "shop_lat": shop_latitude,
+        "shop_lng": shop_longitude,
+        "radius_miles": site_settings.delivery_radius_value,
+    }
 
 
 def online_payment_available():
@@ -138,6 +197,13 @@ def extract_delivery_details(data):
         "line2": (data.get("line2") or data.get("delivery_address_line2", "") or "").strip(),
         "city": (data.get("city") or data.get("delivery_city", "") or "").strip(),
         "postcode": normalize_postcode(data.get("postcode") or data.get("delivery_postcode", "")),
+        "formatted_address": (
+            data.get("formatted_address") or data.get("delivery_formatted_address", "") or ""
+        ).strip(),
+        "place_id": (data.get("place_id") or data.get("delivery_place_id", "") or "").strip(),
+        "latitude": _decimal_from_value(data.get("latitude") or data.get("delivery_latitude")),
+        "longitude": _decimal_from_value(data.get("longitude") or data.get("delivery_longitude")),
+        "distance_miles": _decimal_from_value(data.get("distance_miles") or data.get("delivery_distance_miles")),
     }
 
 
@@ -157,6 +223,34 @@ def validate_service_details(service_type, delivery_details):
         raise ValidationError("Delivery postcode is required.")
     if not POSTCODE_RE.match(delivery_details["postcode"]):
         raise ValidationError("Please enter a valid UK postcode.")
+
+    map_settings = delivery_map_settings()
+    if not map_settings["configured"]:
+        return
+
+    latitude = delivery_details.get("latitude")
+    longitude = delivery_details.get("longitude")
+    if latitude is None or longitude is None:
+        raise ValidationError("Please choose your delivery address from the map suggestions.")
+
+    distance = haversine_miles(
+        map_settings["shop_lat"],
+        map_settings["shop_lng"],
+        latitude,
+        longitude,
+    )
+    if distance is None:
+        raise ValidationError("We could not confirm that delivery address. Please choose it from the map suggestions.")
+
+    radius = float(map_settings["radius_miles"])
+    if distance > radius:
+        radius_label = f"{radius:g}"
+        raise ValidationError(f"That address is outside our {radius_label} mile delivery area.")
+
+    delivery_details["distance_miles"] = Decimal(str(distance)).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
 
 
 def validate_customer_details(customer_name, customer_phone):
@@ -544,6 +638,11 @@ def create_order_from_summary(
         delivery_address_line2=delivery_details["line2"],
         delivery_city=delivery_details["city"],
         delivery_postcode=delivery_details["postcode"],
+        delivery_formatted_address=delivery_details["formatted_address"],
+        delivery_place_id=delivery_details["place_id"],
+        delivery_latitude=delivery_details["latitude"],
+        delivery_longitude=delivery_details["longitude"],
+        delivery_distance_miles=delivery_details["distance_miles"],
         subtotal=summary["subtotal"],
         discount_amount=summary["discount"],
         total_amount=summary["total"],

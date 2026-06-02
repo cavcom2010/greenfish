@@ -220,6 +220,11 @@ CURRENCY = env("CURRENCY", default="GBP")
 ORDER_PREFIX = env("ORDER_PREFIX", default="TN")
 DEFAULT_PREP_TIME = env("DEFAULT_PREP_TIME", default=15, cast=int)
 DELIVERY_ENABLED = env("DELIVERY_ENABLED", default=True, cast=bool)
+GOOGLE_MAPS_API_KEY = env("GOOGLE_MAPS_API_KEY", default="")
+GOOGLE_MAPS_MAP_ID = env("GOOGLE_MAPS_MAP_ID", default="")
+SHOP_LATITUDE = env("SHOP_LATITUDE", default="")
+SHOP_LONGITUDE = env("SHOP_LONGITUDE", default="")
+DELIVERY_RADIUS_MILES = env("DELIVERY_RADIUS_MILES", default=3, cast=float)
 
 # Payment Provider Settings
 PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", default="stripe").strip().lower()

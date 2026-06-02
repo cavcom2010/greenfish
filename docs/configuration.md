@@ -91,8 +91,15 @@ DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
 | `ORDER_PREFIX` | TN | Prefix for order numbers (e.g., TN-12345). |
 | `DEFAULT_PREP_TIME` | 15 | Default preparation time in minutes. |
 | `DELIVERY_ENABLED` | True | Deployment-level delivery switch. Set to `False` to force pickup only, regardless of the admin setting. |
+| `GOOGLE_MAPS_API_KEY` | Empty | Enables Google Maps address search and delivery-zone validation when shop coordinates are configured. |
+| `GOOGLE_MAPS_MAP_ID` | Empty | Optional Google Maps styled map ID. |
+| `SHOP_LATITUDE` | Empty | Shop latitude fallback when Admin → Site Settings does not define coordinates. |
+| `SHOP_LONGITUDE` | Empty | Shop longitude fallback when Admin → Site Settings does not define coordinates. |
+| `DELIVERY_RADIUS_MILES` | 3 | Delivery radius fallback when Admin → Site Settings does not define a radius. |
 
 Delivery also has an admin toggle at Admin Panel → Core → Site Settings → Settings. Delivery is available only when both `DELIVERY_ENABLED=True` and the admin checkbox is enabled. When either switch is off, customer-facing order screens become pickup-only and delivery labels/address fields are removed from the public UI; existing delivery-order history and staff workflows remain available.
+
+Google Maps delivery checks are enabled only when delivery is enabled, Admin → Site Settings → Delivery Map is enabled, `GOOGLE_MAPS_API_KEY` is present, and shop coordinates are configured either in admin or `.env`. When Maps is not configured, checkout falls back to manual address entry and staff confirm delivery details before preparation.
 
 ### Security Settings (Production)
 

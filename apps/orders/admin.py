@@ -39,6 +39,8 @@ class OrderAdmin(admin.ModelAdmin):
         "customer_email",
         "delivery_address_line1",
         "delivery_postcode",
+        "delivery_formatted_address",
+        "delivery_place_id",
     ]
     readonly_fields = [
         "order_number",
@@ -54,6 +56,7 @@ class OrderAdmin(admin.ModelAdmin):
         "delivered_at",
         "completed_at",
         "cancelled_at",
+        "delivery_distance_miles",
     ]
     inlines = [OrderItemInline, OrderStatusHistoryInline]
     
@@ -68,7 +71,17 @@ class OrderAdmin(admin.ModelAdmin):
             "fields": ("accepted_by", "completed_by", "cancelled_by"),
         }),
         ("Delivery", {
-            "fields": ("delivery_address_line1", "delivery_address_line2", "delivery_city", "delivery_postcode"),
+            "fields": (
+                "delivery_address_line1",
+                "delivery_address_line2",
+                "delivery_city",
+                "delivery_postcode",
+                "delivery_formatted_address",
+                "delivery_place_id",
+                "delivery_latitude",
+                "delivery_longitude",
+                "delivery_distance_miles",
+            ),
         }),
         ("Financial", {
             "fields": ("subtotal", "discount_amount", "total_amount")

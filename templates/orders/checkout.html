@@ -47,26 +47,55 @@
 
         {% if delivery_enabled %}
         <div id="deliveryAddressCard" style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); {% if service_type != 'delivery' %}display: none;{% endif %}">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Delivery Address</h3>
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Delivery Address</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 14px;">
+                {% if delivery_map.configured %}
+                Search your address so we can confirm it is inside our {{ delivery_map.radius_miles|floatformat:1 }} mile delivery area.
+                {% else %}
+                Enter your address manually. The shop will confirm delivery details before preparation.
+                {% endif %}
+            </p>
+
+            <input type="hidden" name="delivery_formatted_address" id="deliveryFormattedAddress" value="{{ checkout_form.delivery_formatted_address|default:delivery_formatted_address }}">
+            <input type="hidden" name="delivery_place_id" id="deliveryPlaceId" value="{{ checkout_form.delivery_place_id|default:delivery_place_id }}">
+            <input type="hidden" name="delivery_latitude" id="deliveryLatitude" value="{{ checkout_form.delivery_latitude|default:delivery_latitude }}">
+            <input type="hidden" name="delivery_longitude" id="deliveryLongitude" value="{{ checkout_form.delivery_longitude|default:delivery_longitude }}">
+
+            {% if delivery_map.configured %}
+            <div class="form-group">
+                <label class="form-label">Find your address *</label>
+                <input type="search" id="deliveryAddressSearch" class="form-input" placeholder="Start typing your street and postcode" autocomplete="off">
+            </div>
+            <div id="deliveryMapShell" style="border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 14px; background: var(--bg);">
+                <div id="deliveryMap" style="height: 220px; width: 100%;"></div>
+                <div id="deliveryMapStatus" style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: var(--text-secondary);">
+                    Choose an address to check delivery availability.
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning" style="margin-bottom: 14px;">
+                Map lookup is not configured yet, so address entry is manual.
+            </div>
+            {% endif %}
 
             <div class="form-group">
                 <label class="form-label">Address Line 1 *</label>
-                <input type="text" name="delivery_address_line1" class="form-input" value="{{ checkout_form.delivery_address_line1|default:delivery_address_line1 }}">
+                <input type="text" name="delivery_address_line1" id="addressLine1" class="form-input" value="{{ checkout_form.delivery_address_line1|default:delivery_address_line1 }}">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Address Line 2</label>
-                <input type="text" name="delivery_address_line2" class="form-input" value="{{ checkout_form.delivery_address_line2|default:delivery_address_line2 }}">
+                <input type="text" name="delivery_address_line2" id="addressLine2" class="form-input" value="{{ checkout_form.delivery_address_line2|default:delivery_address_line2 }}">
             </div>
 
             <div class="form-group">
                 <label class="form-label">City / Town *</label>
-                <input type="text" name="delivery_city" class="form-input" value="{{ checkout_form.delivery_city|default:delivery_city }}">
+                <input type="text" name="delivery_city" id="deliveryCity" class="form-input" value="{{ checkout_form.delivery_city|default:delivery_city }}">
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label">Postcode *</label>
-                <input type="text" name="delivery_postcode" class="form-input" value="{{ checkout_form.delivery_postcode|default:delivery_postcode }}" style="text-transform: uppercase;">
+                <input type="text" name="delivery_postcode" id="deliveryPostcode" class="form-input" value="{{ checkout_form.delivery_postcode|default:delivery_postcode }}" style="text-transform: uppercase;">
             </div>
         </div>
         {% endif %}
@@ -274,10 +303,172 @@ const paymentAlert = document.getElementById('paymentAvailabilityAlert');
 const paymentAlertMessage = document.getElementById('paymentAvailabilityMessage');
 const onlineRadio = document.querySelector('input[name="payment_method"][value="online"]');
 const totalLabel = '£{{ total|floatformat:2 }}';
+const deliveryMapConfig = {
+    configured: {{ delivery_map.configured|yesno:"true,false" }},
+    shopLat: {{ delivery_map.shop_lat|default:"null" }},
+    shopLng: {{ delivery_map.shop_lng|default:"null" }},
+    radiusMiles: {{ delivery_map.radius_miles|default:"3"|floatformat:2 }},
+    mapId: '{{ delivery_map.map_id|escapejs }}'
+};
+const deliveryFields = {
+    line1: document.getElementById('addressLine1'),
+    line2: document.getElementById('addressLine2'),
+    city: document.getElementById('deliveryCity'),
+    postcode: document.getElementById('deliveryPostcode'),
+    formatted: document.getElementById('deliveryFormattedAddress'),
+    placeId: document.getElementById('deliveryPlaceId'),
+    latitude: document.getElementById('deliveryLatitude'),
+    longitude: document.getElementById('deliveryLongitude'),
+    search: document.getElementById('deliveryAddressSearch'),
+    map: document.getElementById('deliveryMap'),
+    status: document.getElementById('deliveryMapStatus')
+};
+let deliveryMap;
+let deliveryCustomerMarker;
+let deliveryPlaceIsValid = !deliveryMapConfig.configured || Boolean(deliveryFields.latitude?.value && deliveryFields.longitude?.value);
 
 function normalizeServiceType(service) {
     return service === 'delivery' && !deliveryEnabled ? 'pickup' : service;
 }
+
+function deliveryIsSelected() {
+    return serviceTypeInput?.value === 'delivery' && deliveryEnabled;
+}
+
+function distanceMiles(lat1, lng1, lat2, lng2) {
+    const toRadians = value => value * Math.PI / 180;
+    const earthMiles = 3958.7613;
+    const dLat = toRadians(lat2 - lat1);
+    const dLng = toRadians(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
+    return earthMiles * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+function setDeliveryStatus(message, state = 'neutral') {
+    if (!deliveryFields.status) return;
+    const styles = {
+        neutral: ['var(--text-secondary)', 'var(--bg)'],
+        success: ['#166534', '#DCFCE7'],
+        error: ['#991B1B', '#FEE2E2']
+    }[state] || ['var(--text-secondary)', 'var(--bg)'];
+    deliveryFields.status.textContent = message;
+    deliveryFields.status.style.color = styles[0];
+    deliveryFields.status.style.background = styles[1];
+}
+
+function clearDeliveryMapSelection() {
+    deliveryPlaceIsValid = !deliveryMapConfig.configured;
+    ['formatted', 'placeId', 'latitude', 'longitude'].forEach(key => {
+        if (deliveryFields[key]) deliveryFields[key].value = '';
+    });
+    setDeliveryStatus('Choose an address to check delivery availability.');
+}
+
+function applyDeliveryLocationGate() {
+    if (!deliveryMapConfig.configured || !deliveryIsSelected() || deliveryPlaceIsValid) {
+        return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.6';
+    submitBtn.style.cursor = 'not-allowed';
+    btnText.textContent = 'Choose Delivery Address';
+    paymentNote.innerHTML = '<i class="ph ph-map-pin" style="vertical-align: middle;"></i> Select an address from the suggestions before placing a delivery order.';
+}
+
+function syncCheckoutSubmitState() {
+    applySelectedPaymentMethod();
+    applyDeliveryLocationGate();
+}
+
+function addressComponent(components, types) {
+    const match = components.find(component => types.some(type => component.types.includes(type)));
+    return match ? match.long_name : '';
+}
+
+function fillDeliveryAddress(place) {
+    const components = place.address_components || [];
+    const streetNumber = addressComponent(components, ['street_number']);
+    const route = addressComponent(components, ['route']);
+    const city = addressComponent(components, ['postal_town', 'locality', 'administrative_area_level_2']);
+    const postcode = addressComponent(components, ['postal_code']);
+    if (deliveryFields.line1) deliveryFields.line1.value = [streetNumber, route].filter(Boolean).join(' ') || place.name || '';
+    if (deliveryFields.city && city) deliveryFields.city.value = city;
+    if (deliveryFields.postcode && postcode) deliveryFields.postcode.value = postcode.toUpperCase();
+    if (deliveryFields.formatted) deliveryFields.formatted.value = place.formatted_address || '';
+    if (deliveryFields.placeId) deliveryFields.placeId.value = place.place_id || '';
+}
+
+function markDeliveryPlace(place) {
+    if (!place.geometry || !place.geometry.location) {
+        clearDeliveryMapSelection();
+        setDeliveryStatus('That address could not be located. Choose a result from the suggestions.', 'error');
+        syncCheckoutSubmitState();
+        return;
+    }
+    const location = place.geometry.location;
+    const lat = location.lat();
+    const lng = location.lng();
+    const distance = distanceMiles(deliveryMapConfig.shopLat, deliveryMapConfig.shopLng, lat, lng);
+    deliveryPlaceIsValid = distance <= deliveryMapConfig.radiusMiles;
+    if (deliveryFields.latitude) deliveryFields.latitude.value = lat.toFixed(6);
+    if (deliveryFields.longitude) deliveryFields.longitude.value = lng.toFixed(6);
+    fillDeliveryAddress(place);
+
+    if (deliveryMap) {
+        const position = { lat, lng };
+        if (!deliveryCustomerMarker) {
+            deliveryCustomerMarker = new google.maps.Marker({ map: deliveryMap, title: 'Delivery address' });
+        }
+        deliveryCustomerMarker.setPosition(position);
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend({ lat: deliveryMapConfig.shopLat, lng: deliveryMapConfig.shopLng });
+        bounds.extend(position);
+        deliveryMap.fitBounds(bounds, 60);
+    }
+
+    if (deliveryPlaceIsValid) {
+        setDeliveryStatus(`Delivery available. This address is ${distance.toFixed(1)} miles from the shop.`, 'success');
+    } else {
+        setDeliveryStatus(`Outside our ${deliveryMapConfig.radiusMiles.toFixed(1)} mile delivery area. Please choose pickup or another address.`, 'error');
+    }
+    syncCheckoutSubmitState();
+}
+
+window.initDeliveryMap = function initDeliveryMap() {
+    if (!deliveryMapConfig.configured || !deliveryFields.map || !window.google?.maps) {
+        return;
+    }
+    const shopPosition = { lat: deliveryMapConfig.shopLat, lng: deliveryMapConfig.shopLng };
+    deliveryMap = new google.maps.Map(deliveryFields.map, {
+        center: shopPosition,
+        zoom: 13,
+        mapId: deliveryMapConfig.mapId || undefined,
+        streetViewControl: false,
+        fullscreenControl: false,
+        mapTypeControl: false
+    });
+    new google.maps.Marker({ map: deliveryMap, position: shopPosition, title: '{{ site_settings.shop_name|escapejs }}' });
+    const radiusCircle = new google.maps.Circle({
+        map: deliveryMap,
+        center: shopPosition,
+        radius: deliveryMapConfig.radiusMiles * 1609.344,
+        fillColor: '#FF6B35',
+        fillOpacity: 0.12,
+        strokeColor: '#FF6B35',
+        strokeOpacity: 0.7,
+        strokeWeight: 2
+    });
+    deliveryMap.fitBounds(radiusCircle.getBounds());
+    if (deliveryFields.search && google.maps.places) {
+        const autocomplete = new google.maps.places.Autocomplete(deliveryFields.search, {
+            componentRestrictions: { country: 'gb' },
+            fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id'],
+            types: ['address']
+        });
+        autocomplete.addListener('place_changed', () => markDeliveryPlace(autocomplete.getPlace()));
+    }
+};
 
 function setVoucherFeedback(message, isError) {
     const feedback = document.getElementById('voucherFeedback');
@@ -373,6 +564,9 @@ function updateServiceCopy(service) {
     }
     if (deliveryAddressCard) {
         deliveryAddressCard.style.display = isDelivery ? 'block' : 'none';
+        if (isDelivery && deliveryMap) {
+            setTimeout(() => google.maps.event.trigger(deliveryMap, 'resize'), 120);
+        }
     }
 
     ['delivery_address_line1', 'delivery_city', 'delivery_postcode'].forEach(name => {
@@ -448,7 +642,7 @@ function syncPaymentState() {
     }
 
     updatePaymentOptionStyles();
-    applySelectedPaymentMethod();
+    syncCheckoutSubmitState();
 }
 
 function updateServiceType(service, persist = true) {
@@ -458,6 +652,7 @@ function updateServiceType(service, persist = true) {
     updateServiceButtons(service);
     updateServiceCopy(service);
     syncPaymentState();
+    syncCheckoutSubmitState();
     if (persist) {
         persistServiceType(service);
     }
@@ -479,8 +674,19 @@ document.querySelectorAll('input[name="pickup_time"]').forEach(radio => {
 document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
     radio.addEventListener('change', function() {
         updatePaymentOptionStyles();
-        applySelectedPaymentMethod();
+        syncCheckoutSubmitState();
     });
+});
+
+['line1', 'line2', 'city', 'postcode'].forEach(key => {
+    if (deliveryFields[key]) {
+        deliveryFields[key].addEventListener('input', () => {
+            if (deliveryMapConfig.configured) {
+                clearDeliveryMapSelection();
+                syncCheckoutSubmitState();
+            }
+        });
+    }
 });
 
 document.querySelector('input[name="customer_phone"]').addEventListener('blur', function() {
@@ -503,6 +709,15 @@ document.querySelector('input[name="customer_phone"]').addEventListener('blur', 
     }
 });
 
+checkoutForm.addEventListener('submit', function(event) {
+    if (deliveryMapConfig.configured && deliveryIsSelected() && !deliveryPlaceIsValid) {
+        event.preventDefault();
+        setDeliveryStatus('Choose an address from the suggestions before placing a delivery order.', 'error');
+        deliveryFields.search?.focus();
+        syncCheckoutSubmitState();
+    }
+});
+
 const savedServiceType = localStorage.getItem('service_type');
 if (savedServiceType === 'pickup' || savedServiceType === 'delivery') {
     const nextServiceType = normalizeServiceType(savedServiceType);
@@ -511,4 +726,7 @@ if (savedServiceType === 'pickup' || savedServiceType === 'delivery') {
     updateServiceType(serviceTypeInput.value, false);
 }
 </script>
+{% if delivery_enabled and delivery_map.configured %}
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ delivery_map.api_key|urlencode }}&libraries=places&callback=initDeliveryMap{% if delivery_map.map_id %}&map_ids={{ delivery_map.map_id|urlencode }}{% endif %}"></script>
+{% endif %}
 {% endblock %}

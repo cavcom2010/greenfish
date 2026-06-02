@@ -21,6 +21,15 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ("Settings", {
             "fields": ("currency", "delivery_enabled")
         }),
+        ("Delivery Map", {
+            "fields": (
+                "delivery_map_enabled",
+                "shop_latitude",
+                "shop_longitude",
+                "delivery_radius_miles",
+            ),
+            "description": "Configure Google Maps delivery-zone checks. Coordinates can also come from .env as SHOP_LATITUDE and SHOP_LONGITUDE.",
+        }),
         ("Social Media", {
             "fields": ("facebook_url", "instagram_url", "twitter_url"),
             "classes": ("collapse",)

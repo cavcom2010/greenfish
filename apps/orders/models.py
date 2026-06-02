@@ -67,6 +67,11 @@ class Order(models.Model):
     delivery_address_line2 = models.CharField(max_length=255, blank=True)
     delivery_city = models.CharField(max_length=100, blank=True)
     delivery_postcode = models.CharField(max_length=20, blank=True)
+    delivery_formatted_address = models.CharField(max_length=255, blank=True)
+    delivery_place_id = models.CharField(max_length=255, blank=True)
+    delivery_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    delivery_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    delivery_distance_miles = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     
     # Order status
     status = models.CharField(
@@ -195,6 +200,8 @@ class Order(models.Model):
 
     @property
     def delivery_address_display(self):
+        if self.delivery_formatted_address:
+            return self.delivery_formatted_address
         parts = [
             self.delivery_address_line1,
             self.delivery_address_line2,

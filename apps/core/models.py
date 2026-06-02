@@ -1,7 +1,10 @@
 """
 Core models for Tinashe Takeaway.
 """
+from decimal import Decimal, InvalidOperation
+
 from django.conf import settings as django_settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .media import (
@@ -36,6 +39,33 @@ class SiteSettings(models.Model):
         default=True,
         help_text="Allow customers to choose delivery when the DELIVERY_ENABLED environment switch is also on.",
     )
+    delivery_map_enabled = models.BooleanField(
+        default=True,
+        help_text="Use Google Maps address search and delivery-zone validation when API keys and shop coordinates are configured.",
+    )
+    shop_latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("-90")), MaxValueValidator(Decimal("90"))],
+        help_text="Shop latitude used for delivery maps. Leave blank to use SHOP_LATITUDE from .env.",
+    )
+    shop_longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("-180")), MaxValueValidator(Decimal("180"))],
+        help_text="Shop longitude used for delivery maps. Leave blank to use SHOP_LONGITUDE from .env.",
+    )
+    delivery_radius_miles = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("3.00"),
+        validators=[MinValueValidator(Decimal("0.10"))],
+        help_text="Maximum delivery distance from the shop in miles.",
+    )
     logo = models.ImageField(upload_to="site/", blank=True, validators=LOGO_IMAGE_VALIDATORS)
     favicon = models.ImageField(upload_to="site/", blank=True, validators=FAVICON_IMAGE_VALIDATORS)
     theme_color = models.CharField(max_length=7, default="#FF6B35", help_text="Hex color code for PWA theme")
@@ -59,6 +89,45 @@ class SiteSettings(models.Model):
     def is_delivery_enabled(self):
         """Return whether delivery is available after env and admin controls."""
         return bool(getattr(django_settings, "DELIVERY_ENABLED", True) and self.delivery_enabled)
+
+    @staticmethod
+    def _decimal_from_setting(value):
+        try:
+            if value in (None, ""):
+                return None
+            return Decimal(str(value))
+        except (InvalidOperation, TypeError, ValueError):
+            return None
+
+    @property
+    def shop_coordinates(self):
+        """Return shop coordinates from admin settings with env fallback."""
+        latitude = self.shop_latitude
+        longitude = self.shop_longitude
+        if latitude is None:
+            latitude = self._decimal_from_setting(getattr(django_settings, "SHOP_LATITUDE", ""))
+        if longitude is None:
+            longitude = self._decimal_from_setting(getattr(django_settings, "SHOP_LONGITUDE", ""))
+        if latitude is None or longitude is None:
+            return None
+        return (latitude, longitude)
+
+    @property
+    def delivery_radius_value(self):
+        """Return delivery radius from admin settings with env fallback."""
+        if self.delivery_radius_miles:
+            return self.delivery_radius_miles
+        return self._decimal_from_setting(getattr(django_settings, "DELIVERY_RADIUS_MILES", 3)) or Decimal("3.00")
+
+    @property
+    def is_delivery_map_configured(self):
+        """Return whether Google Maps delivery-zone UX can be used."""
+        return bool(
+            self.is_delivery_enabled
+            and self.delivery_map_enabled
+            and getattr(django_settings, "GOOGLE_MAPS_API_KEY", "")
+            and self.shop_coordinates
+        )
     
     def save(self, *args, **kwargs):
         # Ensure only one instance exists

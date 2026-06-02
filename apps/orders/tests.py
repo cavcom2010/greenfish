@@ -2,6 +2,7 @@ from decimal import Decimal
 from unittest.mock import Mock, patch
 
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth.models import Group
@@ -22,7 +23,12 @@ from apps.core.test_support import (
 from apps.offers.models import Offer, VoucherUsage
 from apps.operations.permissions import OPERATIONS_MANAGER_GROUP
 from apps.orders.models import Order, OrderItem
-from apps.orders.services import get_cart_summary
+from apps.orders.services import (
+    delivery_map_settings,
+    get_cart_summary,
+    haversine_miles,
+    validate_service_details,
+)
 from apps.payments.models import Payment
 
 
@@ -390,6 +396,171 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["service_type"], Order.ServiceType.PICKUP)
         self.assertFalse(response.json()["delivery_enabled"])
+
+    def test_haversine_miles_calculates_expected_distance(self):
+        distance = haversine_miles("53.800755", "-1.549077", "53.796500", "-1.541800")
+        self.assertIsNotNone(distance)
+        self.assertGreater(distance, 0.40)
+        self.assertLess(distance, 0.50)
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        SHOP_LATITUDE="",
+        SHOP_LONGITUDE="",
+        DELIVERY_RADIUS_MILES=3,
+    )
+    def test_delivery_map_settings_require_key_and_shop_coordinates(self):
+        settings_obj = ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            shop_latitude=Decimal("53.800755"),
+            shop_longitude=Decimal("-1.549077"),
+            delivery_radius_miles=Decimal("3.00"),
+        )
+
+        config = delivery_map_settings()
+
+        self.assertTrue(settings_obj.is_delivery_map_configured)
+        self.assertTrue(config["configured"])
+        self.assertEqual(config["api_key"], "test-google-key")
+        self.assertEqual(config["radius_miles"], Decimal("3.00"))
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+    )
+    def test_delivery_validation_accepts_inside_radius_and_rejects_outside(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        inside_details = {
+            "line1": "12 Test Street",
+            "line2": "",
+            "city": "Leeds",
+            "postcode": "LS1 1AA",
+            "formatted_address": "12 Test Street, Leeds LS1 1AA, UK",
+            "place_id": "inside-place",
+            "latitude": Decimal("53.801000"),
+            "longitude": Decimal("-1.548000"),
+            "distance_miles": None,
+        }
+        validate_service_details(Order.ServiceType.DELIVERY, inside_details)
+        self.assertIsNotNone(inside_details["distance_miles"])
+
+        outside_details = {
+            **inside_details,
+            "latitude": Decimal("51.507400"),
+            "longitude": Decimal("-0.127800"),
+            "distance_miles": None,
+        }
+        with self.assertRaisesMessage(ValidationError, "outside our 3 mile delivery area"):
+            validate_service_details(Order.ServiceType.DELIVERY, outside_details)
+
+    @override_settings(
+        DEBUG=True,
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_delivery_checkout_post_stores_map_metadata(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 1,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "customer_name": "Delivery Customer",
+                "customer_phone": "07747055935",
+                "customer_email": "delivery@example.com",
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "Leeds",
+                "delivery_postcode": "LS1 1AA",
+                "delivery_formatted_address": "12 Test Street, Leeds LS1 1AA, UK",
+                "delivery_place_id": "inside-place",
+                "delivery_latitude": "53.801000",
+                "delivery_longitude": "-1.548000",
+                "pickup_time": "30",
+                "payment_method": "online",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.get()
+        self.assertEqual(order.service_type, Order.ServiceType.DELIVERY)
+        self.assertEqual(order.delivery_formatted_address, "12 Test Street, Leeds LS1 1AA, UK")
+        self.assertEqual(order.delivery_place_id, "inside-place")
+        self.assertIsNotNone(order.delivery_distance_miles)
+
+    @override_settings(
+        DEBUG=True,
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_delivery_checkout_outside_radius_does_not_create_order(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 1,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "customer_name": "Delivery Customer",
+                "customer_phone": "07747055935",
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "London",
+                "delivery_postcode": "SW1A 1AA",
+                "delivery_formatted_address": "London SW1A 1AA, UK",
+                "delivery_place_id": "outside-place",
+                "delivery_latitude": "51.507400",
+                "delivery_longitude": "-0.127800",
+                "pickup_time": "30",
+                "payment_method": "online",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
 
     def test_confirmed_order_eta_uses_slowest_item_prep_snapshot(self):
         short_item = create_menu_item(name="Quick Side", price=Decimal("2.50"), preparation_time=10)
