@@ -44,7 +44,19 @@
                     <div style="font-weight: 800; margin-bottom: 0.35rem;">What is happening now</div>
                     <div style="color: var(--text-secondary); line-height: 1.6;">
                         {% if order.status == 'pending' %}
+                        {% if order.payment.provider == 'offline_pending' %}
+                        We are holding this order while waiting for shop payment. Please call or visit the shop to pay{% if order.payment.expires_at %} before {{ order.payment.expires_at|time:"H:i" }}{% endif %}. The kitchen will not start until payment is received.
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem;">
+                            {% if site_settings.phone %}
+                            <a href="tel:{{ site_settings.phone }}" class="hero-btn-primary" style="text-decoration: none; padding: 0.75rem 1rem;"><i class="ph-bold ph-phone"></i> Call store</a>
+                            {% endif %}
+                            {% if site_settings.address %}
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border); padding: 0.75rem 1rem;" target="_blank" rel="noopener"><i class="ph-bold ph-map-pin"></i> Get directions</a>
+                            {% endif %}
+                        </div>
+                        {% else %}
                         We are waiting for payment before the kitchen starts this order.
+                        {% endif %}
                         {% elif order.status == 'confirmed' %}
                         The kitchen has your order and will start preparing it shortly.
                         {% elif order.status == 'preparing' %}

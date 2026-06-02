@@ -70,6 +70,14 @@
                     {% if order.status == 'pending' %}
                     {% if order.payment.provider == 'offline_pending' %}
                     We are holding this order while waiting for shop payment. Please call or visit the shop to pay{% if order.payment.expires_at %} before {{ order.payment.expires_at|time:"H:i" }}{% endif %}. The kitchen will not start until payment is received.
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 14px;">
+                        {% if site_settings.phone %}
+                        <a href="tel:{{ site_settings.phone }}" class="btn btn-brand" style="padding: 12px;"><i class="ph ph-phone" style="vertical-align: middle;"></i> Call store</a>
+                        {% endif %}
+                        {% if site_settings.address %}
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn-secondary" style="padding: 12px; margin-top: 0;" target="_blank" rel="noopener"><i class="ph ph-map-pin" style="vertical-align: middle;"></i> Get directions</a>
+                        {% endif %}
+                    </div>
                     {% else %}
                     We are waiting for payment before the kitchen starts this order.
                     {% endif %}

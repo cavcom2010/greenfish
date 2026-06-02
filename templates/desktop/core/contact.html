@@ -22,7 +22,8 @@
                         <i class="ph-fill ph-map-pin" style="font-size: 1.25rem; color: var(--brand); flex-shrink: 0; margin-top: 2px;"></i>
                         <div>
                             <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">Address</div>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">{{ site_settings.address }}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem;">{{ site_settings.address }}</div>
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" style="font-size: 0.85rem; color: var(--brand);" target="_blank" rel="noopener">Get directions</a>
                         </div>
                     </div>
                     {% endif %}

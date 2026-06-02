@@ -207,7 +207,7 @@
             <div class="footer-col">
                 <h4>Contact</h4>
                 {% if site_settings.address %}
-                <a href="#">{{ site_settings.address }}</a>
+                <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" target="_blank" rel="noopener">{{ site_settings.address }}</a>
                 {% endif %}
                 {% if site_settings.phone %}
                 <a href="tel:{{ site_settings.phone }}">{{ site_settings.phone }}</a>

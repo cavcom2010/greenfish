@@ -734,6 +734,10 @@ class OrderFlowTests(TestCase):
         PAYMENT_FALLBACK_HOLD_MINUTES=15,
     )
     def test_mobile_checkout_keeps_fallback_acknowledgement_checkbox(self):
+        ensure_site_settings(
+            phone="+441131234567",
+            address="45 High Street, Leeds LS1 1AA",
+        )
         self.client.post(
             reverse("orders:add_to_cart"),
             {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
@@ -747,7 +751,21 @@ class OrderFlowTests(TestCase):
         self.assertContains(response, 'id="paymentAvailabilityMessage"')
         self.assertContains(response, 'name="payment_fallback_acknowledged"')
         self.assertContains(response, "I understand I must pay the shop within 15 minutes")
+        self.assertContains(response, 'href="tel:+441131234567"')
+        self.assertContains(response, "Call store")
+        self.assertContains(response, "Get directions")
+        self.assertContains(
+            response,
+            "https://www.google.com/maps/search/?api=1&query=45%20High%20Street%2C%20Leeds%20LS1%201AA",
+        )
         self.assertNotContains(response, "paymentAlert.textContent")
+
+        self.client.cookies["view_mode"] = "desktop"
+        desktop_response = self.client.get(reverse("orders:checkout"))
+        self.assertEqual(desktop_response.status_code, 200)
+        self.assertContains(desktop_response, 'href="tel:+441131234567"')
+        self.assertContains(desktop_response, "Call store")
+        self.assertContains(desktop_response, "Get directions")
 
     def test_staff_boards_and_tracking_render(self):
         order = create_order(
@@ -1031,6 +1049,76 @@ class PaymentFlowTests(TestCase):
         self.assertEqual(payment.status, Payment.Status.PENDING)
         self.assertIsNotNone(payment.expires_at)
         self.assertIn(reverse("payments:return", args=[order.order_number]), response.url)
+
+    def test_offline_pending_payment_status_shows_call_and_directions_actions(self):
+        ensure_site_settings(
+            phone="+441131234567",
+            address="45 High Street, Leeds LS1 1AA",
+        )
+        order = create_order(status=Order.OrderStatus.PENDING, payment_status=Order.PaymentStatus.PENDING)
+        Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_pending_actions",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+            expires_at=timezone.now() + timezone.timedelta(minutes=15),
+        )
+
+        response = self.client.get(reverse("payments:return", args=[order.order_number]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your order is being held for payment.")
+        self.assertContains(response, "Shop phone:")
+        self.assertContains(response, "+441131234567")
+        self.assertContains(response, 'href="tel:+441131234567"')
+        self.assertContains(response, "Call store")
+        self.assertContains(response, "Get directions")
+        self.assertContains(
+            response,
+            "https://www.google.com/maps/search/?api=1&query=45%20High%20Street%2C%20Leeds%20LS1%201AA",
+        )
+        self.assertContains(response, "Track order")
+
+        tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+        self.assertEqual(tracking_response.status_code, 200)
+        self.assertContains(tracking_response, 'href="tel:+441131234567"')
+        self.assertContains(tracking_response, "Call store")
+        self.assertContains(tracking_response, "Get directions")
+        self.assertContains(
+            tracking_response,
+            "https://www.google.com/maps/search/?api=1&query=45%20High%20Street%2C%20Leeds%20LS1%201AA",
+        )
+
+        self.client.cookies["view_mode"] = "desktop"
+        desktop_tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+        self.assertEqual(desktop_tracking_response.status_code, 200)
+        self.assertContains(desktop_tracking_response, 'href="tel:+441131234567"')
+        self.assertContains(desktop_tracking_response, "Call store")
+        self.assertContains(desktop_tracking_response, "Get directions")
+
+    def test_offline_pending_payment_status_hides_missing_contact_actions(self):
+        ensure_site_settings(phone="", address="")
+        order = create_order(status=Order.OrderStatus.PENDING, payment_status=Order.PaymentStatus.PENDING)
+        Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_pending_no_contact",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+            expires_at=timezone.now() + timezone.timedelta(minutes=15),
+        )
+
+        response = self.client.get(reverse("payments:return", args=[order.order_number]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your order is being held for payment.")
+        self.assertNotContains(response, "Call store")
+        self.assertNotContains(response, "Get directions")
+        self.assertNotContains(response, "Shop phone:")
+        self.assertContains(response, "Track order")
 
     @override_settings(
         DEBUG=False,

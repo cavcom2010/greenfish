@@ -6,8 +6,8 @@
 
 {% block content %}
 <div class="page-content" style="text-align: center; padding-top: 40px;">
-    <div style="width: 88px; height: 88px; margin: 0 auto 24px; border-radius: 50%; background: {% if status == 'paid' %}var(--success-bg){% else %}var(--error-bg){% endif %}; display: flex; align-items: center; justify-content: center;">
-        <i class="ph {% if status == 'paid' %}ph-check-circle{% else %}ph-warning-circle{% endif %}" style="font-size: 48px; color: {% if status == 'paid' %}var(--success){% else %}var(--error){% endif %};"></i>
+    <div style="width: 88px; height: 88px; margin: 0 auto 24px; border-radius: 50%; background: {% if status == 'paid' %}var(--success-bg){% elif payment and payment.provider == 'offline_pending' and status == 'pending' %}#FEF3C7{% else %}var(--error-bg){% endif %}; display: flex; align-items: center; justify-content: center;">
+        <i class="ph {% if status == 'paid' %}ph-check-circle{% else %}ph-warning-circle{% endif %}" style="font-size: 48px; color: {% if status == 'paid' %}var(--success){% elif payment and payment.provider == 'offline_pending' and status == 'pending' %}#D97706{% else %}var(--error){% endif %};"></i>
     </div>
 
     <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">
@@ -21,7 +21,7 @@
         <strong>Your order is being held for payment.</strong><br>
         Please call or visit the shop to pay within {{ payment_fallback_hold_minutes }} minutes. The kitchen will not start preparing your order until payment is received.
         {% if payment.expires_at %}<br><strong>Payment deadline:</strong> {{ payment.expires_at|date:"H:i" }}{% endif %}
-        {% if site_settings.shop_phone %}<br><strong>Shop phone:</strong> {{ site_settings.shop_phone }}{% endif %}
+        {% if site_settings.phone %}<br><strong>Shop phone:</strong> {{ site_settings.phone }}{% endif %}
     </div>
     {% endif %}
 
@@ -42,6 +42,20 @@
         {% else %}
         {% if order.payment.checkout_url and status == 'pending' and order.payment.provider != 'offline_pending' %}
         <a href="{{ order.payment.checkout_url }}" class="btn btn-brand">Continue payment</a>
+        {% endif %}
+        {% if payment and payment.provider == 'offline_pending' and status == 'pending' %}
+            {% if site_settings.phone %}
+            <a href="tel:{{ site_settings.phone }}" class="btn btn-brand">
+                <i class="ph ph-phone" style="vertical-align: middle;"></i>
+                Call store
+            </a>
+            {% endif %}
+            {% if site_settings.address %}
+            <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn-secondary" target="_blank" rel="noopener">
+                <i class="ph ph-map-pin" style="vertical-align: middle;"></i>
+                Get directions
+            </a>
+            {% endif %}
         {% endif %}
         <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-brand">Track order</a>
         <a href="{% url 'menu:menu' %}" class="btn btn-secondary">Back to menu</a>

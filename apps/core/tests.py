@@ -44,6 +44,28 @@ class PublicRouteTests(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
 
+    def test_contact_page_has_call_and_directions_actions(self):
+        ensure_site_settings(
+            phone="+441131234567",
+            address="45 High Street, Leeds LS1 1AA",
+        )
+
+        response = self.client.get(reverse("core:contact"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="tel:+441131234567"')
+        self.assertContains(response, "Get directions")
+        self.assertContains(
+            response,
+            "https://www.google.com/maps/search/?api=1&query=45%20High%20Street%2C%20Leeds%20LS1%201AA",
+        )
+
+        self.client.cookies["view_mode"] = "desktop"
+        desktop_response = self.client.get(reverse("core:contact"))
+        self.assertEqual(desktop_response.status_code, 200)
+        self.assertContains(desktop_response, 'href="tel:+441131234567"')
+        self.assertContains(desktop_response, "Get directions")
+
     def test_health_endpoint_reports_database_state(self):
         response = self.client.get(reverse("core:health"))
         self.assertEqual(response.status_code, 200)

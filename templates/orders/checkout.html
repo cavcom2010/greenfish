@@ -246,6 +246,16 @@
                     {% endif %}
                 </span>
                 {% if payment_fallback_available %}
+                {% if site_settings.phone or site_settings.address %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;">
+                    {% if site_settings.phone %}
+                    <a href="tel:{{ site_settings.phone }}" class="btn btn-brand" style="padding: 12px;"><i class="ph ph-phone" style="vertical-align: middle;"></i> Call store</a>
+                    {% endif %}
+                    {% if site_settings.address %}
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn-secondary" style="padding: 12px; margin-top: 0;" target="_blank" rel="noopener"><i class="ph ph-map-pin" style="vertical-align: middle;"></i> Get directions</a>
+                    {% endif %}
+                </div>
+                {% endif %}
                 <label style="display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-weight: 700;">
                     <input type="checkbox" name="payment_fallback_acknowledged" value="1" {% if not online_payment_available %}required{% endif %} style="margin-top: 3px; width: 18px; height: 18px;">
                     <span>I understand I must pay the shop within {{ payment_fallback_hold_minutes }} minutes or the order will be cancelled.</span>

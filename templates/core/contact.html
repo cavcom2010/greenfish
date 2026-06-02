@@ -11,11 +11,20 @@
         <div style="display: grid; gap: 14px;">
             <div>
                 <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Address</div>
-                <div style="font-weight: 600;">{{ site_settings.address }}</div>
+                {% if site_settings.address %}
+                <div style="font-weight: 600; margin-bottom: 8px;">{{ site_settings.address }}</div>
+                <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn-secondary" style="padding: 12px; margin-top: 0;" target="_blank" rel="noopener"><i class="ph ph-map-pin" style="vertical-align: middle;"></i> Get directions</a>
+                {% else %}
+                <div style="font-weight: 600;">Please check in store</div>
+                {% endif %}
             </div>
             <div>
                 <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Phone</div>
-                <div style="font-weight: 600;">{{ site_settings.phone|default:"Please check in store" }}</div>
+                {% if site_settings.phone %}
+                <a href="tel:{{ site_settings.phone }}" style="font-weight: 600; color: var(--brand); text-decoration: none;">{{ site_settings.phone }}</a>
+                {% else %}
+                <div style="font-weight: 600;">Please check in store</div>
+                {% endif %}
             </div>
             <div>
                 <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Email</div>
