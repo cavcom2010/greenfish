@@ -343,7 +343,7 @@ Source queryset:
 - `preparing`
 - `ready`
 
-Only paid orders are included. Unpaid `pending` orders from abandoned online checkout sessions stay out of the staff workflow.
+Kitchen/preparation workflow only includes paid orders. Customer-approved fallback orders with `offline_pending` payments appear on the collection/front-counter board as Awaiting Payment so cashier/manager staff can take payment and record manual payment evidence; abandoned unpaid online checkout sessions stay out of the staff workflow.
 
 Kanban columns:
 
@@ -365,7 +365,9 @@ Source queryset:
 - `ready`
 - `out_for_delivery`
 
-Only paid orders are included.
+Only paid handover orders plus customer-approved Awaiting Payment fallback orders are included on the front-counter board. Awaiting Payment orders must have payment method, amount received, and receipt/auth reference recorded before they enter kitchen preparation.
+
+Manual payment records are stored as immutable `ManualPaymentReceipt` audit rows linked to the payment. Staff must use receipt/auth references only; full card numbers must never be stored. The payment log also records the staff user, IP address, user agent, method, amount, and reference used to release the order.
 
 Operational interpretation:
 - pickup orders are completed here

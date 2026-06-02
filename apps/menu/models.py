@@ -119,7 +119,8 @@ class MenuItem(models.Model):
     
     preparation_time = models.PositiveIntegerField(
         default=15,
-        help_text="Estimated preparation time in minutes"
+        validators=[MinValueValidator(1)],
+        help_text="Estimated kitchen prep time in minutes. Used to calculate order ready times."
     )
     
     # Dietary Information

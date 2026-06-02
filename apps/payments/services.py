@@ -2,7 +2,9 @@
 Payment provider services.
 """
 import logging
-from decimal import Decimal, ROUND_HALF_UP
+import re
+import uuid
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -15,8 +17,12 @@ from mollie.api.client import Client
 from mollie.api.error import Error as MollieError
 
 from apps.orders.models import Order
+from config.settings.payment_credentials import (
+    mollie_credentials_configured,
+    stripe_credentials_configured,
+)
 
-from .models import Payment, PaymentLog
+from .models import ManualPaymentReceipt, Payment, PaymentLog
 
 logger = logging.getLogger(__name__)
 
@@ -43,22 +49,35 @@ def active_payment_provider():
 
 
 def payment_provider_configured(provider=None):
-    """Return whether the requested payment provider has the required credentials."""
+    """Return whether the requested payment provider has usable credentials."""
     provider = normalize_payment_provider(provider or active_payment_provider())
 
     if provider == Payment.Provider.STRIPE:
-        return bool(
-            getattr(settings, "STRIPE_SECRET_KEY", "").strip()
-            and getattr(settings, "STRIPE_WEBHOOK_SECRET", "").strip()
+        return stripe_credentials_configured(
+            getattr(settings, "STRIPE_SECRET_KEY", ""),
+            getattr(settings, "STRIPE_WEBHOOK_SECRET", ""),
         )
 
     if provider == Payment.Provider.MOLLIE:
-        return bool(
-            getattr(settings, "MOLLIE_API_KEY", "").strip()
-            and getattr(settings, "MOLLIE_WEBHOOK_SECRET", "").strip()
+        return mollie_credentials_configured(
+            getattr(settings, "MOLLIE_API_KEY", ""),
+            getattr(settings, "MOLLIE_WEBHOOK_SECRET", ""),
         )
 
     return False
+
+
+def payment_fallback_enabled():
+    """Return whether unpaid fallback orders are allowed."""
+    return bool(getattr(settings, "PAYMENT_FALLBACK_ENABLED", True))
+
+
+def payment_fallback_hold_minutes():
+    """Return the unpaid fallback hold window in minutes."""
+    try:
+        return max(1, int(getattr(settings, "PAYMENT_FALLBACK_HOLD_MINUTES", 15)))
+    except (TypeError, ValueError):
+        return 15
 
 
 def payment_service_for_provider(provider=None):
@@ -74,7 +93,7 @@ def payment_service_for_provider(provider=None):
 
 def payment_service_for_payment(payment):
     """Return the provider service that owns a local payment record."""
-    if not payment or payment.is_demo:
+    if not payment or payment.is_demo or payment.is_offline_pending:
         return None
     return payment_service_for_provider(payment.provider)
 
@@ -94,6 +113,34 @@ def refresh_payment_status(payment, *, external_id=None, payload=None, event_typ
 def _minor_units(amount):
     quantized = Decimal(amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return int((quantized * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _money(value):
+    try:
+        return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError("Enter a valid payment amount.")
+
+
+def _reject_full_card_number(value):
+    digits = re.sub(r"\D", "", value or "")
+    if len(digits) >= 12:
+        raise ValueError("Do not store full card numbers. Use the receipt or auth code only.")
+
+
+def _request_ip(request):
+    if not request:
+        return None
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip() or None
+    return request.META.get("REMOTE_ADDR") or None
+
+
+def _user_agent(request):
+    if not request:
+        return ""
+    return (request.META.get("HTTP_USER_AGENT") or "")[:500]
 
 
 def _serialize_stripe_object(obj):
@@ -121,6 +168,164 @@ def _log_payment_event(payment, event_type, event_data):
         event_type=event_type,
         event_data=event_data,
     )
+
+
+def create_offline_pending_payment(order, request, *, reason="online_payment_unavailable"):
+    """Create a fallback payment record that must be paid in shop/by phone."""
+    hold_minutes = payment_fallback_hold_minutes()
+    expires_at = timezone.now() + timezone.timedelta(minutes=hold_minutes)
+    payment_id = f"offline_{uuid.uuid4().hex[:12]}"
+    checkout_url = request.build_absolute_uri(
+        reverse("payments:return", args=[order.order_number])
+    )
+    payment = Payment.objects.create(
+        order=order,
+        provider=Payment.Provider.OFFLINE_PENDING,
+        external_payment_id=payment_id,
+        amount=order.total_amount,
+        currency=getattr(settings, "CURRENCY", "GBP"),
+        status=Payment.Status.PENDING,
+        checkout_url=checkout_url,
+        expires_at=expires_at,
+        metadata={
+            "provider": Payment.Provider.OFFLINE_PENDING,
+            "reason": reason,
+            "hold_minutes": hold_minutes,
+            "instructions": "Customer must call or visit the shop to pay before preparation starts.",
+        },
+    )
+    _log_payment_event(
+        payment,
+        "offline_pending_created",
+        {
+            "provider": Payment.Provider.OFFLINE_PENDING,
+            "reason": reason,
+            "expires_at": expires_at.isoformat(),
+        },
+    )
+    return payment
+
+
+def record_manual_payment(
+    payment,
+    *,
+    actor=None,
+    method="",
+    amount_received=None,
+    reference_code="",
+    notes="",
+    request=None,
+):
+    """Record manual payment evidence, then release the order to the kitchen."""
+    payment = Payment.objects.select_for_update().select_related("order").get(pk=payment.pk)
+    method = (method or "").strip()
+    valid_methods = {choice for choice, _ in ManualPaymentReceipt.Method.choices}
+    if method not in valid_methods:
+        raise ValueError("Select how the payment was taken.")
+    if payment.provider != Payment.Provider.OFFLINE_PENDING:
+        raise ValueError("This order is not awaiting shop payment.")
+    if payment.status != Payment.Status.PENDING:
+        raise ValueError("This payment is not pending.")
+    if ManualPaymentReceipt.objects.filter(payment=payment).exists():
+        raise ValueError("This payment has already been recorded.")
+
+    amount_due = _money(payment.amount)
+    amount_received = _money(amount_received)
+    if amount_received < amount_due:
+        raise ValueError("Amount received must be at least the order total.")
+
+    if method in {ManualPaymentReceipt.Method.CARD_TERMINAL, ManualPaymentReceipt.Method.PHONE_CARD}:
+        if amount_received != amount_due:
+            raise ValueError("Card and phone payments must match the order total exactly.")
+        change_given = Decimal("0.00")
+    else:
+        change_given = amount_received - amount_due
+
+    reference_code = (reference_code or "").strip()
+    notes = (notes or "").strip()
+    if not reference_code:
+        raise ValueError("Receipt or auth reference is required.")
+    _reject_full_card_number(reference_code)
+    _reject_full_card_number(notes)
+
+    receipt = ManualPaymentReceipt.objects.create(
+        payment=payment,
+        method=method,
+        amount_due=amount_due,
+        amount_received=amount_received,
+        change_given=change_given,
+        reference_code=reference_code,
+        notes=notes,
+        recorded_by=actor if getattr(actor, "is_authenticated", False) else None,
+        request_ip=_request_ip(request),
+        user_agent=_user_agent(request),
+    )
+
+    payment.status = Payment.Status.PAID
+    payment.paid_at = payment.paid_at or timezone.now()
+    payment.external_payment_method = method
+    metadata = payment.metadata or {}
+    metadata.update(
+        {
+            "marked_paid_by": getattr(actor, "email", "") or getattr(actor, "pk", None),
+            "marked_paid_at": timezone.now().isoformat(),
+            "manual_receipt_id": receipt.pk,
+            "manual_payment_method": method,
+            "manual_amount_received": str(amount_received),
+            "manual_change_given": str(change_given),
+            "manual_reference_code": reference_code,
+        }
+    )
+    payment.metadata = metadata
+    payment.save(update_fields=["status", "paid_at", "external_payment_method", "metadata", "updated_at"])
+    payment.order.mark_as_paid(changed_by=actor if getattr(actor, "is_authenticated", False) else None)
+    _log_payment_event(
+        payment,
+        "offline_payment_marked_paid",
+        {
+            "actor_id": getattr(actor, "pk", None),
+            "actor_email": getattr(actor, "email", ""),
+            "manual_receipt_id": receipt.pk,
+            "method": method,
+            "amount_due": str(amount_due),
+            "amount_received": str(amount_received),
+            "change_given": str(change_given),
+            "reference_code": reference_code,
+            "request_ip": receipt.request_ip,
+            "user_agent": receipt.user_agent,
+        },
+    )
+    return payment
+
+
+def mark_offline_payment_paid(payment, *, actor=None, **payment_evidence):
+    """Compatibility wrapper requiring manual payment evidence."""
+    if not payment_evidence:
+        raise ValueError("Payment evidence is required before marking this order paid.")
+    return record_manual_payment(payment, actor=actor, **payment_evidence)
+
+
+def expire_offline_pending_payment(payment, *, reason="Payment not received within the hold window."):
+    """Expire an unpaid fallback payment and cancel the related order."""
+    payment.status = Payment.Status.EXPIRED
+    payment.save(update_fields=["status", "updated_at"])
+
+    order = payment.order
+    order.payment_status = Order.PaymentStatus.FAILED
+    if reason and reason != order.cancel_reason:
+        order.cancel_reason = reason
+        order.save(update_fields=["payment_status", "cancel_reason", "updated_at"])
+    else:
+        order.save(update_fields=["payment_status", "updated_at"])
+    if order.status == Order.OrderStatus.PENDING:
+        order.update_status(Order.OrderStatus.CANCELLED)
+
+    _log_payment_event(
+        payment,
+        "offline_payment_expired",
+        {"reason": reason},
+    )
+    return payment
 
 
 def _apply_local_payment_state(

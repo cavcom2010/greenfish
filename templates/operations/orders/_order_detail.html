@@ -18,6 +18,13 @@
         {% if order.requested_service_time %}<div><strong>{{ order.service_time_label }}:</strong> {{ order.requested_service_time|date:"D j M H:i" }}</div>{% endif %}
         {% if order.is_delivery and order.delivery_address_display %}<div><strong>Address:</strong> {{ order.delivery_address_display }}</div>{% endif %}
         <div><strong>Payment:</strong> {{ order.get_payment_status_display }}</div>
+        {% if order.payment.provider == 'offline_pending' %}
+        <div><strong>Payment instruction:</strong> Customer must call or visit the shop before preparation starts.</div>
+        {% if order.payment.expires_at %}<div><strong>Payment deadline:</strong> {{ order.payment.expires_at|date:"D j M H:i" }}</div>{% endif %}
+        {% if order.payment.manual_receipt %}
+        <div><strong>Manual receipt:</strong> {{ order.payment.manual_receipt.get_method_display }} · £{{ order.payment.manual_receipt.amount_received|floatformat:2 }} · Ref {{ order.payment.manual_receipt.reference_code }}</div>
+        {% endif %}
+        {% endif %}
     </div>
 
     <div style="background: var(--bg); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
@@ -54,6 +61,27 @@
 
     <form id="orderDetailForm-{{ order.id }}" onsubmit="saveOrderNotes(event, {{ order.id }})" style="display: grid; gap: 14px;">
         <input type="hidden" name="expected_status" value="{{ order.status }}">
+        {% if order.payment.provider == 'offline_pending' and order.payment.status == 'pending' %}
+        <div style="border: 1px solid #F59E0B; background: #FFFBEB; border-radius: 12px; padding: 14px; display: grid; gap: 10px;">
+            <div style="font-weight: 800; color: #92400E;">Record payment evidence before marking paid</div>
+            <div style="font-size: 13px; color: #92400E;">
+                Enter the receipt/auth details from the till, card terminal, or phone payment. Do not enter full card numbers.
+            </div>
+            <label for="paymentMethod{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700;">Payment Method</label>
+            <select id="paymentMethod{{ order.id }}" name="payment_method" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+                <option value="">Select method</option>
+                <option value="cash">Cash</option>
+                <option value="card_terminal">Card Terminal</option>
+                <option value="phone_card">Phone Card</option>
+            </select>
+            <label for="paymentAmount{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700;">Amount Received</label>
+            <input id="paymentAmount{{ order.id }}" name="payment_amount_received" inputmode="decimal" value="{{ order.total_amount|floatformat:2 }}" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+            <label for="paymentReference{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700;">Receipt/Auth Reference</label>
+            <input id="paymentReference{{ order.id }}" name="payment_reference_code" maxlength="100" autocomplete="off" placeholder="Till receipt or terminal auth code" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+            <label for="paymentNotes{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700;">Payment Notes</label>
+            <textarea id="paymentNotes{{ order.id }}" name="payment_notes" rows="2" placeholder="Optional. Never enter full card numbers." style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: vertical;"></textarea>
+        </div>
+        {% endif %}
         <div>
             <label for="staffNotes{{ order.id }}" style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Kitchen Notes</label>
             <textarea id="staffNotes{{ order.id }}" name="staff_notes" rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: vertical;">{{ order.staff_notes }}</textarea>

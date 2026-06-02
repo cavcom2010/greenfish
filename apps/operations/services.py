@@ -6,6 +6,7 @@ import logging
 from django.db.models import Prefetch
 
 from apps.orders.models import Order, OrderItem
+from apps.payments.models import Payment
 from .permissions import can_perform_action
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ ACTION_MARK_DISPATCHED = "mark_dispatched"
 ACTION_MARK_COLLECTED = "mark_collected"
 ACTION_MARK_DELIVERED = "mark_delivered"
 ACTION_CANCEL_ORDER = "cancel_order"
+ACTION_MARK_PAID = "mark_paid"
 ACTION_SAVE_NOTES = "save_notes"
 
 
@@ -43,6 +45,20 @@ def board_queryset():
         Order.objects.select_related("user")
         .prefetch_related(Prefetch("items", queryset=OrderItem.objects.order_by("id")))
         .filter(payment_status=Order.PaymentStatus.PAID)
+        .order_by("created_at")
+    )
+
+
+def awaiting_payment_queryset():
+    return (
+        Order.objects.select_related("user", "payment")
+        .prefetch_related(Prefetch("items", queryset=OrderItem.objects.order_by("id")))
+        .filter(
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PENDING,
+            payment__provider=Payment.Provider.OFFLINE_PENDING,
+            payment__status=Payment.Status.PENDING,
+        )
         .order_by("created_at")
     )
 
@@ -57,22 +73,32 @@ def collection_board_queryset():
 
 def get_board_counts():
     paid_orders = Order.objects.filter(payment_status=Order.PaymentStatus.PAID)
+    awaiting_payment_count = awaiting_payment_queryset().count()
     return {
         "pending_count": paid_orders.filter(status=Order.OrderStatus.PENDING).count(),
         "confirmed_count": paid_orders.filter(status=Order.OrderStatus.CONFIRMED).count(),
         "preparing_count": paid_orders.filter(status=Order.OrderStatus.PREPARING).count(),
         "ready_count": paid_orders.filter(status=Order.OrderStatus.READY).count(),
         "out_for_delivery_count": paid_orders.filter(status=Order.OrderStatus.OUT_FOR_DELIVERY).count(),
-        "collection_count": paid_orders.filter(status__in=COLLECTION_BOARD_STATUSES).count(),
+        "awaiting_payment_count": awaiting_payment_count,
+        "collection_count": paid_orders.filter(status__in=COLLECTION_BOARD_STATUSES).count() + awaiting_payment_count,
         "kanban_confirmed_count": paid_orders.filter(status__in=KANBAN_COLUMNS["confirmed"]).count(),
     }
 
 
 def get_collection_orders(status_filter="", user=None):
+    if status_filter == "awaiting_payment":
+        return attach_available_actions(awaiting_payment_queryset()[:50], user=user)
+
     queryset = collection_board_queryset()
     if status_filter in {Order.OrderStatus.READY, Order.OrderStatus.OUT_FOR_DELIVERY}:
         queryset = queryset.filter(status=status_filter)
-    return attach_available_actions(queryset[:50], user=user)
+        return attach_available_actions(queryset[:50], user=user)
+
+    paid_orders = list(queryset[:50])
+    awaiting_orders = list(awaiting_payment_queryset()[:50])
+    orders = sorted(awaiting_orders + paid_orders, key=lambda order: order.created_at)[:50]
+    return attach_available_actions(orders, user=user)
 
 
 def get_kanban_orders(column_status, user=None):
@@ -96,6 +122,8 @@ def available_actions(order, user=None):
     if order.status == Order.OrderStatus.PENDING:
         if order.payment_status == Order.PaymentStatus.PAID:
             available.append(_action(ACTION_ACCEPT_ORDER, "Accept Order", "btn-confirm"))
+        elif getattr(order, "payment", None) and order.payment.provider == Payment.Provider.OFFLINE_PENDING:
+            available.append(_action(ACTION_MARK_PAID, "Mark Paid", "btn-confirm"))
 
     elif order.status == Order.OrderStatus.CONFIRMED:
         available.append(_action(ACTION_START_PREPARING, "Start Preparing", "btn-preparing"))
@@ -139,12 +167,26 @@ def action_from_legacy_status(order, raw_status):
     return mapping.get(status)
 
 
-def perform_order_action(order, action, actor, *, staff_notes="", handover_notes="", cancel_reason=""):
+def perform_order_action(
+    order,
+    action,
+    actor,
+    *,
+    staff_notes="",
+    handover_notes="",
+    cancel_reason="",
+    payment_method="",
+    payment_amount_received="",
+    payment_reference_code="",
+    payment_notes="",
+    request=None,
+):
     if not can_perform_action(actor, action):
         raise ValueError("You do not have permission to perform this action.")
 
-    if order.payment_status != Order.PaymentStatus.PAID and action != ACTION_SAVE_NOTES:
-        raise ValueError("Only paid orders can be actioned on the operations boards.")
+    unpaid_allowed_actions = {ACTION_MARK_PAID, ACTION_CANCEL_ORDER, ACTION_SAVE_NOTES}
+    if order.payment_status != Order.PaymentStatus.PAID and action not in unpaid_allowed_actions:
+        raise ValueError("Only paid orders can be prepared on the operations boards.")
 
     allowed = {item["name"] for item in available_actions(order, user=actor)}
     if action == ACTION_CANCEL_ORDER and order.status not in {
@@ -180,6 +222,26 @@ def perform_order_action(order, action, actor, *, staff_notes="", handover_notes
         order.save(update_fields=list(dict.fromkeys(note_fields + ["updated_at"])))
 
     if action == ACTION_SAVE_NOTES:
+        return order
+
+    if action == ACTION_MARK_PAID:
+        payment = getattr(order, "payment", None)
+        if not payment or payment.provider != Payment.Provider.OFFLINE_PENDING:
+            raise ValueError("This order is not awaiting shop payment.")
+        if payment.status != Payment.Status.PENDING:
+            raise ValueError("This payment is not pending.")
+        from apps.payments.services import record_manual_payment
+
+        record_manual_payment(
+            payment,
+            actor=actor,
+            method=payment_method,
+            amount_received=payment_amount_received,
+            reference_code=payment_reference_code,
+            notes=payment_notes,
+            request=request,
+        )
+        order.refresh_from_db()
         return order
 
     target_status = {

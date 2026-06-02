@@ -4,11 +4,20 @@ Order models for Tinashe Takeaway.
 import uuid
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 
 from apps.menu.models import MenuItem
+
+
+def default_preparation_time_minutes():
+    """Return the safe default prep time used when an item snapshot is missing."""
+    try:
+        return max(1, int(getattr(settings, "DEFAULT_PREP_TIME", 15)))
+    except (TypeError, ValueError):
+        return 15
 
 
 class Order(models.Model):
@@ -214,7 +223,7 @@ class Order(models.Model):
         self.total_amount = max(Decimal("0.00"), subtotal - self.discount_amount)
         self.save(update_fields=["subtotal", "total_amount", "updated_at"])
     
-    def mark_as_paid(self):
+    def mark_as_paid(self, changed_by=None):
         """Mark order as paid."""
         self.payment_status = self.PaymentStatus.PAID
         self.paid_at = timezone.now()
@@ -223,7 +232,23 @@ class Order(models.Model):
 
         # Auto-confirm if pending
         if self.status == self.OrderStatus.PENDING:
-            self.update_status(self.OrderStatus.CONFIRMED)
+            self.update_status(self.OrderStatus.CONFIRMED, changed_by=changed_by)
+
+    def preparation_time_minutes(self):
+        """Return the order prep estimate using the slowest line item."""
+        prep_times = []
+        for item in self.items.all():
+            prep_time = item.preparation_time_minutes
+            if not prep_time and item.menu_item_id:
+                prep_time = item.menu_item.preparation_time
+            if prep_time:
+                prep_times.append(max(1, int(prep_time)))
+        return max(prep_times, default=default_preparation_time_minutes())
+
+    def calculate_estimated_ready_time(self, base_time=None):
+        """Return when this order should be ready based on item prep snapshots."""
+        base_time = base_time or timezone.now()
+        return base_time + timezone.timedelta(minutes=self.preparation_time_minutes())
     
     def update_status(self, new_status, changed_by=None):
         """Update order status and log the change."""
@@ -237,11 +262,7 @@ class Order(models.Model):
         
         # Set estimated ready time when confirmed
         if new_status == self.OrderStatus.CONFIRMED and not self.estimated_ready_time:
-            max_prep_time = max(
-                (item.menu_item.preparation_time for item in self.items.all() if item.menu_item),
-                default=15
-            )
-            self.estimated_ready_time = now + timezone.timedelta(minutes=max_prep_time)
+            self.estimated_ready_time = self.calculate_estimated_ready_time(now)
             update_fields.append("estimated_ready_time")
         if new_status == self.OrderStatus.CONFIRMED and not self.accepted_at:
             self.accepted_at = now
@@ -336,6 +357,11 @@ class OrderItem(models.Model):
     # Snapshot of item details at time of order
     item_name = models.CharField(max_length=150)
     item_price = models.DecimalField(max_digits=6, decimal_places=2)
+    preparation_time_minutes = models.PositiveIntegerField(
+        default=default_preparation_time_minutes,
+        validators=[MinValueValidator(1)],
+        help_text="Snapshot of this item's prep time when the order was placed.",
+    )
     
     quantity = models.PositiveIntegerField(
         default=1,
@@ -382,6 +408,8 @@ class OrderItem(models.Model):
         if not self.item_name and self.menu_item:
             self.item_name = self.menu_item.name
             self.item_price = self.menu_item.price
+        if self._state.adding and self.menu_item:
+            self.preparation_time_minutes = self.menu_item.preparation_time
         super().save(*args, **kwargs)
 
 

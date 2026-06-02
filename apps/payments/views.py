@@ -24,6 +24,8 @@ from apps.orders.services import (
     extract_delivery_details,
     get_cart_summary,
     online_payment_available,
+    payment_fallback_available,
+    payment_fallback_hold_minutes,
     save_customer_profile,
     selected_offer_id,
     selected_service_type,
@@ -36,7 +38,9 @@ from .models import Payment, PaymentLog
 from .services import (
     StripePaymentService,
     active_payment_provider,
+    create_offline_pending_payment,
     normalize_payment_provider,
+    payment_provider_configured,
     payment_service_for_provider,
     refresh_payment_status,
     stripe,
@@ -44,6 +48,53 @@ from .services import (
 )
 
 logger = logging.getLogger(__name__)
+
+PAYMENT_FALLBACK_FORM_SESSION_KEY = "payment_fallback_form"
+PAYMENT_FALLBACK_PROMPT_SESSION_KEY = "payment_fallback_prompt"
+
+
+def _checkout_post_snapshot(request):
+    fields = [
+        "customer_name",
+        "customer_phone",
+        "customer_email",
+        "special_instructions",
+        "pickup_time",
+        "service_type",
+        "delivery_address_line1",
+        "delivery_address_line2",
+        "delivery_city",
+        "delivery_postcode",
+    ]
+    return {field: (request.POST.get(field, "") or "").strip() for field in fields}
+
+
+def _store_payment_fallback_prompt(request, *, reason, message):
+    request.session[PAYMENT_FALLBACK_FORM_SESSION_KEY] = _checkout_post_snapshot(request)
+    request.session[PAYMENT_FALLBACK_PROMPT_SESSION_KEY] = {
+        "reason": reason,
+        "message": message,
+    }
+    request.session.modified = True
+
+
+def _clear_payment_fallback_prompt(request):
+    request.session.pop(PAYMENT_FALLBACK_FORM_SESSION_KEY, None)
+    request.session.pop(PAYMENT_FALLBACK_PROMPT_SESSION_KEY, None)
+    request.session.modified = True
+
+
+def _fallback_acknowledged(request):
+    return request.POST.get("payment_fallback_acknowledged") == "1"
+
+
+def _fallback_prompt_active(request):
+    return bool(request.session.get(PAYMENT_FALLBACK_PROMPT_SESSION_KEY))
+
+
+def _fallback_reason(request, default="online_payment_unavailable"):
+    prompt = request.session.get(PAYMENT_FALLBACK_PROMPT_SESSION_KEY) or {}
+    return prompt.get("reason") or default
 
 
 def _expects_json(request):
@@ -108,15 +159,30 @@ def _create_demo_payment(order, request):
 
 @require_POST
 def create_payment(request):
-    """Create a payment for checkout."""
+    """Create a payment for checkout, or a customer-approved fallback hold."""
     service_type = selected_service_type(request)
     store_service_type(request, service_type)
-    if not online_payment_available():
-        return _payment_error_response(
-            request,
-            "Online payments are unavailable right now. Please try again later.",
-            status=503,
+
+    provider = active_payment_provider()
+    provider_ready = payment_provider_configured(provider)
+    fallback_ready = payment_fallback_available()
+    fallback_acknowledged = _fallback_acknowledged(request)
+    fallback_allowed_now = fallback_ready and fallback_acknowledged and (
+        not provider_ready or _fallback_prompt_active(request)
+    )
+
+    if not online_payment_available() and not fallback_allowed_now:
+        message = (
+            f"Online card payments are unavailable right now. You can still place your order, "
+            f"but you must call or visit the shop to pay within {payment_fallback_hold_minutes()} minutes. "
+            "The kitchen will not start until payment is received."
         )
+        _store_payment_fallback_prompt(
+            request,
+            reason="online_payment_unavailable",
+            message=message,
+        )
+        return _payment_error_response(request, message, status=503)
 
     active_offer_id = selected_offer_id(request)
     summary = get_cart_summary(
@@ -175,10 +241,16 @@ def create_payment(request):
                 payment_status=Order.PaymentStatus.PENDING,
             )
 
-            if demo_payment_enabled():
+            if fallback_allowed_now and not demo_payment_enabled():
+                payment = create_offline_pending_payment(
+                    order,
+                    request,
+                    reason=_fallback_reason(request),
+                )
+            elif demo_payment_enabled():
                 payment = _create_demo_payment(order, request)
             else:
-                service = payment_service_for_provider()
+                service = payment_service_for_provider(provider)
                 if not service:
                     raise RuntimeError("No payment provider is configured.")
                 payment = service.create_payment(order, request)
@@ -187,6 +259,18 @@ def create_payment(request):
             "Error creating payment for order %s",
             getattr(order, "order_number", "pending"),
         )
+        if fallback_ready and not demo_payment_enabled():
+            message = (
+                f"We could not connect to the card payment provider. You can still place your order, "
+                f"but you must call or visit the shop to pay within {payment_fallback_hold_minutes()} minutes. "
+                "The kitchen will not start until payment is received."
+            )
+            _store_payment_fallback_prompt(
+                request,
+                reason="provider_error",
+                message=message,
+            )
+            return _payment_error_response(request, message, status=503)
         return _payment_error_response(
             request,
             "We could not start the payment. Your basket is still available, so please try again.",
@@ -194,6 +278,7 @@ def create_payment(request):
         )
 
     clear_checkout_session(request)
+    _clear_payment_fallback_prompt(request)
     return redirect(payment.checkout_url)
 
 
@@ -212,6 +297,8 @@ def payment_return(request, order_number):
         {
             "order": order,
             "status": order.payment_status,
+            "payment": getattr(order, "payment", None),
+            "payment_fallback_hold_minutes": payment_fallback_hold_minutes(),
         },
     )
 

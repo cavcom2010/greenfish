@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from decimal import Decimal
 
 from django.contrib.auth.models import Group
 from django.test import TestCase
@@ -11,6 +12,7 @@ from apps.operations.permissions import (
     OPERATIONS_MANAGER_GROUP,
 )
 from apps.orders.models import Order
+from apps.payments.models import ManualPaymentReceipt, Payment, PaymentLog
 
 
 class OperationsBoardTests(TestCase):
@@ -230,6 +232,154 @@ class OperationsBoardTests(TestCase):
         self.assertNotContains(collection_response, unpaid_ready.order_number)
         self.assertNotContains(collection_response, "Unpaid Ready")
 
+    def test_cashier_must_record_payment_evidence_before_marking_paid(self):
+        order = create_order(
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PENDING,
+            customer_name="Awaiting Payment",
+        )
+        Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_ops",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+        )
+
+        self.client.force_login(self.kitchen_user)
+        kitchen_response = self.client.get(reverse("operations:kanban_column", args=["confirmed"]))
+        self.assertNotContains(kitchen_response, order.order_number)
+
+        self.client.force_login(self.cashier_user)
+        collection_response = self.client.get(reverse("operations:collection_list_fragment") + "?status=awaiting_payment")
+        self.assertContains(collection_response, order.order_number)
+        self.assertContains(collection_response, "Record Payment")
+
+        missing_evidence = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {"action": "mark_paid", "expected_status": Order.OrderStatus.PENDING},
+        )
+        self.assertEqual(missing_evidence.status_code, 400)
+        self.assertIn("Select how the payment was taken", missing_evidence.json()["error"])
+
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {
+                "action": "mark_paid",
+                "expected_status": Order.OrderStatus.PENDING,
+                "payment_method": ManualPaymentReceipt.Method.CARD_TERMINAL,
+                "payment_amount_received": str(order.total_amount),
+                "payment_reference_code": "AUTH123",
+                "payment_notes": "Terminal receipt checked",
+            },
+            HTTP_USER_AGENT="Ops Tablet",
+            REMOTE_ADDR="127.0.0.9",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        order.refresh_from_db()
+        payment = order.payment
+        self.assertEqual(payment.status, Payment.Status.PAID)
+        self.assertEqual(payment.external_payment_method, ManualPaymentReceipt.Method.CARD_TERMINAL)
+        self.assertEqual(order.payment_status, Order.PaymentStatus.PAID)
+        self.assertEqual(order.status, Order.OrderStatus.CONFIRMED)
+        receipt = payment.manual_receipt
+        self.assertEqual(receipt.method, ManualPaymentReceipt.Method.CARD_TERMINAL)
+        self.assertEqual(receipt.amount_due, order.total_amount)
+        self.assertEqual(receipt.amount_received, order.total_amount)
+        self.assertEqual(receipt.change_given, Decimal("0.00"))
+        self.assertEqual(receipt.reference_code, "AUTH123")
+        self.assertEqual(receipt.recorded_by, self.cashier_user)
+        self.assertEqual(receipt.request_ip, "127.0.0.9")
+        log = PaymentLog.objects.filter(payment=payment, event_type="offline_payment_marked_paid").latest("created_at")
+        self.assertEqual(log.event_data["reference_code"], "AUTH123")
+        self.assertEqual(log.event_data["actor_email"], self.cashier_user.email)
+
+        self.client.force_login(self.kitchen_user)
+        kitchen_response = self.client.get(reverse("operations:kanban_column", args=["confirmed"]))
+        self.assertContains(kitchen_response, order.order_number)
+
+    def test_cash_overpayment_records_change_given(self):
+        order = create_order(status=Order.OrderStatus.PENDING, payment_status=Order.PaymentStatus.PENDING)
+        Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_cash",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+        )
+        self.client.force_login(self.cashier_user)
+
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {
+                "action": "mark_paid",
+                "expected_status": Order.OrderStatus.PENDING,
+                "payment_method": ManualPaymentReceipt.Method.CASH,
+                "payment_amount_received": str(order.total_amount + Decimal("5.00")),
+                "payment_reference_code": "TILL-1001",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        receipt = ManualPaymentReceipt.objects.get(payment__order=order)
+        self.assertEqual(receipt.change_given, Decimal("5.00"))
+
+    def test_card_manual_payment_amount_must_match_order_total(self):
+        order = create_order(status=Order.OrderStatus.PENDING, payment_status=Order.PaymentStatus.PENDING)
+        Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_card_mismatch",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+        )
+        self.client.force_login(self.cashier_user)
+
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {
+                "action": "mark_paid",
+                "expected_status": Order.OrderStatus.PENDING,
+                "payment_method": ManualPaymentReceipt.Method.PHONE_CARD,
+                "payment_amount_received": str(order.total_amount + Decimal("1.00")),
+                "payment_reference_code": "PHONEAUTH",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("must match the order total exactly", response.json()["error"])
+        self.assertFalse(ManualPaymentReceipt.objects.filter(payment__order=order).exists())
+
+    def test_full_card_number_is_rejected_in_manual_payment_evidence(self):
+        order = create_order(status=Order.OrderStatus.PENDING, payment_status=Order.PaymentStatus.PENDING)
+        Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_pan",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+        )
+        self.client.force_login(self.cashier_user)
+
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {
+                "action": "mark_paid",
+                "expected_status": Order.OrderStatus.PENDING,
+                "payment_method": ManualPaymentReceipt.Method.CARD_TERMINAL,
+                "payment_amount_received": str(order.total_amount),
+                "payment_reference_code": "4111 1111 1111 1111",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Do not store full card numbers", response.json()["error"])
+
     def test_stale_expected_status_is_rejected(self):
         order = create_order(status=Order.OrderStatus.PREPARING, payment_status=Order.PaymentStatus.PAID)
         self.client.force_login(self.kitchen_user)
@@ -256,7 +406,7 @@ class OperationsBoardTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()["error"],
-            "Only paid orders can be actioned on the operations boards.",
+            "Only paid orders can be prepared on the operations boards.",
         )
         order.refresh_from_db()
         self.assertEqual(order.status, Order.OrderStatus.CONFIRMED)

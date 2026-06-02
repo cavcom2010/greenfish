@@ -33,7 +33,7 @@ Use this checklist before deploying to production.
 - [ ] Webhook secret set and matches
 - [ ] Tested payment flow end-to-end
 - [ ] Tested webhook reception
-- [ ] Confirmed customer checkout is online-payment-only and no pay-in-store option appears
+- [ ] Confirmed checkout prefers online payment and fallback pay-shop copy is clear when provider is unavailable
 
 ## Email
 
@@ -89,7 +89,7 @@ Use this checklist before deploying to production.
 
 - [ ] Place test order successfully
 - [ ] Payment processed correctly
-- [ ] Checkout is blocked when online payment provider credentials are unavailable
+- [ ] Fallback setting is reviewed: either provider credentials work, or `PAYMENT_FALLBACK_ENABLED=True` with `expire_unpaid_orders` scheduled
 - [ ] Order appears on order board
 - [ ] Order status updates work
 - [ ] Email notifications received

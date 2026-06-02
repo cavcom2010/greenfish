@@ -1,6 +1,8 @@
 """
 Payment models for Tinashe Takeaway.
 """
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -11,6 +13,7 @@ class Payment(models.Model):
         STRIPE = "stripe", "Stripe"
         MOLLIE = "mollie", "Mollie"
         DEMO = "demo", "Demo"
+        OFFLINE_PENDING = "offline_pending", "Offline Pending"
     
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -62,6 +65,7 @@ class Payment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     paid_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         verbose_name = "Payment"
@@ -83,6 +87,10 @@ class Payment(models.Model):
     def is_demo(self):
         return self.provider == self.Provider.DEMO or self.payment_reference.startswith("demo_")
 
+    @property
+    def is_offline_pending(self):
+        return self.provider == self.Provider.OFFLINE_PENDING
+
     def save(self, *args, **kwargs):
         if not self.external_payment_id and self.mollie_payment_id:
             self.external_payment_id = self.mollie_payment_id
@@ -95,6 +103,50 @@ class Payment(models.Model):
             if self.external_payment_method and not self.mollie_payment_method:
                 self.mollie_payment_method = self.external_payment_method
 
+        super().save(*args, **kwargs)
+
+
+class ManualPaymentReceipt(models.Model):
+    """Immutable evidence for a manually recorded in-shop/phone payment."""
+
+    class Method(models.TextChoices):
+        CASH = "cash", "Cash"
+        CARD_TERMINAL = "card_terminal", "Card Terminal"
+        PHONE_CARD = "phone_card", "Phone Card"
+
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.PROTECT,
+        related_name="manual_receipt",
+    )
+    method = models.CharField(max_length=20, choices=Method.choices, db_index=True)
+    amount_due = models.DecimalField(max_digits=8, decimal_places=2)
+    amount_received = models.DecimalField(max_digits=8, decimal_places=2)
+    change_given = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    reference_code = models.CharField(max_length=100)
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="manual_payment_receipts",
+    )
+    request_ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Manual Payment Receipt"
+        verbose_name_plural = "Manual Payment Receipts"
+        ordering = ["-recorded_at"]
+
+    def __str__(self):
+        return f"{self.payment.payment_reference} - {self.get_method_display()} - £{self.amount_received}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and ManualPaymentReceipt.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Manual payment receipts are immutable.")
         super().save(*args, **kwargs)
 
 

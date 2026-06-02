@@ -243,11 +243,11 @@ class ProductionSettingsEmailTests(TestCase):
         env_lines = [
             line for line in self._required_production_env()
             if not line.startswith("STRIPE_WEBHOOK_SECRET=")
-        ]
+        ] + ["PAYMENT_FALLBACK_ENABLED=False"]
         result = self._run_production_settings_probe(env_lines)
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("STRIPE_WEBHOOK_SECRET", result.stderr)
+        self.assertIn("Valid Stripe credentials are required", result.stderr)
 
 
 class MediaHardeningTests(TestCase):

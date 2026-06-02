@@ -36,6 +36,7 @@ def _counts_context():
         "ready_count": counts["ready_count"],
         "out_for_delivery_count": counts["out_for_delivery_count"],
         "collection_count": counts["collection_count"],
+        "awaiting_payment_count": counts["awaiting_payment_count"],
         "kanban_confirmed_count": counts["kanban_confirmed_count"],
     }
 
@@ -84,7 +85,7 @@ def order_list_fragment(request):
 @operations_staff_required(json_response=True)
 def order_detail_modal(request, order_id):
     order = get_object_or_404(
-        Order.objects.select_related("user").prefetch_related("items"),
+        Order.objects.select_related("user", "payment", "payment__manual_receipt").prefetch_related("items"),
         pk=order_id,
     )
     order.available_actions = available_actions(order, user=request.user)
@@ -104,7 +105,7 @@ def order_action(request, order_id):
     try:
         with transaction.atomic():
             order = get_object_or_404(
-                Order.objects.select_for_update(of=("self",)).select_related("user").prefetch_related("items"),
+                Order.objects.select_for_update(of=("self",)).select_related("user", "payment").prefetch_related("items"),
                 pk=order_id,
             )
             if expected_status and order.status != expected_status:
@@ -125,6 +126,11 @@ def order_action(request, order_id):
                 staff_notes=request.POST.get("staff_notes", ""),
                 handover_notes=request.POST.get("handover_notes", ""),
                 cancel_reason=request.POST.get("cancel_reason", ""),
+                payment_method=request.POST.get("payment_method", ""),
+                payment_amount_received=request.POST.get("payment_amount_received", ""),
+                payment_reference_code=request.POST.get("payment_reference_code", ""),
+                payment_notes=request.POST.get("payment_notes", ""),
+                request=request,
             )
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)

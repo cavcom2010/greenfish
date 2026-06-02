@@ -32,6 +32,8 @@ Complete reference for all configuration options in Tinashe Takeaway.
 | `STRIPE_WEBHOOK_SECRET` | None | **Required when `PAYMENT_PROVIDER=stripe`.** Stripe webhook signing secret. |
 | `MOLLIE_API_KEY` | Empty | Optional alternate provider key when `PAYMENT_PROVIDER=mollie`. |
 | `MOLLIE_WEBHOOK_SECRET` | Empty | Optional alternate provider webhook secret when `PAYMENT_PROVIDER=mollie`. |
+| `PAYMENT_FALLBACK_ENABLED` | `True` | Allow held unpaid orders when online payment is unavailable. |
+| `PAYMENT_FALLBACK_HOLD_MINUTES` | `15` | Minutes before unpaid fallback orders are cancelled by `expire_unpaid_orders`. |
 
 **Stripe setup:**
 1. Create a Stripe account and get your API keys from Developers → API keys.
@@ -43,7 +45,7 @@ Complete reference for all configuration options in Tinashe Takeaway.
 1. Keep your Mollie keys in `.env`, but leave `PAYMENT_PROVIDER=stripe` while Stripe is active.
 2. Switch `PAYMENT_PROVIDER=mollie` only when you want to route checkout through Mollie again.
 
-Customer checkout is online-payment-only. If the configured provider is unavailable, customers cannot place new orders until payments are restored.
+Customer checkout prefers online payment. If Stripe/Mollie is unavailable and `PAYMENT_FALLBACK_ENABLED=True`, customers can explicitly place an unpaid held order and must call or visit the shop to pay within `PAYMENT_FALLBACK_HOLD_MINUTES`; the kitchen must not prepare it until staff mark it paid.
 
 ### Email Settings
 
@@ -90,7 +92,7 @@ DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
 | `DEFAULT_PREP_TIME` | 15 | Default preparation time in minutes. |
 | `DELIVERY_ENABLED` | True | Deployment-level delivery switch. Set to `False` to force pickup only, regardless of the admin setting. |
 
-Delivery also has an admin toggle at Admin Panel → Core → Site Settings → Settings. Delivery is available only when both `DELIVERY_ENABLED=True` and the admin checkbox is enabled.
+Delivery also has an admin toggle at Admin Panel → Core → Site Settings → Settings. Delivery is available only when both `DELIVERY_ENABLED=True` and the admin checkbox is enabled. When either switch is off, customer-facing order screens become pickup-only and delivery labels/address fields are removed from the public UI; existing delivery-order history and staff workflows remain available.
 
 ### Security Settings (Production)
 
@@ -217,3 +219,14 @@ View logs:
 ```bash
 tail -f .home_nginx/logs/gunicorn-error.log
 ```
+
+
+### Expiring unpaid fallback orders
+
+When `PAYMENT_FALLBACK_ENABLED=True`, schedule this command every minute in production so unpaid held orders are cancelled after the hold window:
+
+```bash
+python manage.py expire_unpaid_orders
+```
+
+Use `python manage.py expire_unpaid_orders --dry-run` to check how many orders would expire without changing data.

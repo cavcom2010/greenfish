@@ -2,10 +2,12 @@ from decimal import Decimal
 from unittest.mock import Mock, patch
 
 from django.core.cache import cache
+from django.core.management import call_command
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth.models import Group
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.core.context_processors import cart_context
 from apps.core.test_support import (
@@ -19,7 +21,7 @@ from apps.core.test_support import (
 )
 from apps.offers.models import Offer, VoucherUsage
 from apps.operations.permissions import OPERATIONS_MANAGER_GROUP
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderItem
 from apps.orders.services import get_cart_summary
 from apps.payments.models import Payment
 
@@ -347,6 +349,37 @@ class OrderFlowTests(TestCase):
         self.assertEqual(checkout_response.context["service_type"], Order.ServiceType.PICKUP)
         self.assertFalse(checkout_response.context["delivery_enabled"])
         self.assertNotContains(checkout_response, 'data-service="delivery"')
+        self.assertNotContains(checkout_response, "Delivery Address")
+        self.assertNotContains(checkout_response, "Delivered to your address")
+        self.assertNotContains(checkout_response, "Delivery Time")
+
+        self.client.cookies["view_mode"] = "desktop"
+        checkout_session = self.client.session
+        checkout_session["service_type"] = Order.ServiceType.DELIVERY
+        checkout_session.save()
+        desktop_checkout_response = self.client.get(reverse("orders:checkout"))
+        self.assertEqual(desktop_checkout_response.status_code, 200)
+        self.assertEqual(desktop_checkout_response.context["service_type"], Order.ServiceType.PICKUP)
+        self.assertNotContains(desktop_checkout_response, 'data-desktop-service="delivery"')
+        self.assertNotContains(desktop_checkout_response, "Delivery Address")
+        self.assertNotContains(desktop_checkout_response, "Delivered to your address")
+        self.assertNotContains(desktop_checkout_response, "Delivery Time")
+
+    @override_settings(DELIVERY_ENABLED=False)
+    def test_delivery_env_switch_hides_public_home_delivery_copy(self):
+        response = self.client.get(reverse("core:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["delivery_enabled"])
+        self.assertNotContains(response, 'data-service="delivery"')
+        self.assertNotContains(response, '>Delivery</button>')
+
+        self.client.cookies["view_mode"] = "desktop"
+        desktop_response = self.client.get(reverse("core:home"))
+        self.assertEqual(desktop_response.status_code, 200)
+        self.assertFalse(desktop_response.context["delivery_enabled"])
+        self.assertNotContains(desktop_response, 'data-desktop-service="delivery"')
+        self.assertNotContains(desktop_response, "delivered fresh to your door")
+        self.assertNotContains(desktop_response, "Fast delivery")
 
     def test_delivery_admin_switch_forces_pickup(self):
         ensure_site_settings(delivery_enabled=False)
@@ -357,6 +390,96 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["service_type"], Order.ServiceType.PICKUP)
         self.assertFalse(response.json()["delivery_enabled"])
+
+    def test_confirmed_order_eta_uses_slowest_item_prep_snapshot(self):
+        short_item = create_menu_item(name="Quick Side", price=Decimal("2.50"), preparation_time=10)
+        slow_item = create_menu_item(name="Slow Stew", price=Decimal("7.50"), preparation_time=25)
+        medium_item = create_menu_item(name="Medium Main", price=Decimal("5.50"), preparation_time=15)
+        order = Order.objects.create(
+            customer_name="Prep Customer",
+            customer_phone="07747055935",
+            subtotal=Decimal("15.50"),
+            total_amount=Decimal("15.50"),
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PAID,
+            requested_pickup_time=timezone.now() + timezone.timedelta(minutes=15),
+        )
+        for item in (short_item, slow_item, medium_item):
+            OrderItem.objects.create(
+                order=order,
+                menu_item=item,
+                item_name=item.name,
+                item_price=item.price,
+                quantity=1,
+                modifiers=[],
+            )
+
+        before = timezone.now()
+        order.update_status(Order.OrderStatus.CONFIRMED)
+        after = timezone.now()
+
+        order.refresh_from_db()
+        self.assertGreaterEqual(order.estimated_ready_time, before + timezone.timedelta(minutes=25))
+        self.assertLessEqual(order.estimated_ready_time, after + timezone.timedelta(minutes=25, seconds=1))
+
+    def test_order_eta_uses_snapshot_after_menu_prep_time_changes(self):
+        item = create_menu_item(name="Stew", price=Decimal("7.50"), preparation_time=20)
+        order = Order.objects.create(
+            customer_name="Snapshot Customer",
+            customer_phone="07747055935",
+            subtotal=Decimal("7.50"),
+            total_amount=Decimal("7.50"),
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PAID,
+            requested_pickup_time=timezone.now() + timezone.timedelta(minutes=15),
+        )
+        OrderItem.objects.create(
+            order=order,
+            menu_item=item,
+            item_name=item.name,
+            item_price=item.price,
+            quantity=1,
+            modifiers=[],
+        )
+        item.preparation_time = 60
+        item.save(update_fields=["preparation_time"])
+
+        before = timezone.now()
+        order.update_status(Order.OrderStatus.CONFIRMED)
+        after = timezone.now()
+
+        order.refresh_from_db()
+        self.assertGreaterEqual(order.estimated_ready_time, before + timezone.timedelta(minutes=20))
+        self.assertLessEqual(order.estimated_ready_time, after + timezone.timedelta(minutes=20, seconds=1))
+
+    def test_order_eta_survives_deleted_menu_item_link(self):
+        item = create_menu_item(name="Archived Item", price=Decimal("7.50"), preparation_time=30)
+        order = Order.objects.create(
+            customer_name="Deleted Link Customer",
+            customer_phone="07747055935",
+            subtotal=Decimal("7.50"),
+            total_amount=Decimal("7.50"),
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PAID,
+            requested_pickup_time=timezone.now() + timezone.timedelta(minutes=15),
+        )
+        OrderItem.objects.create(
+            order=order,
+            menu_item=item,
+            item_name=item.name,
+            item_price=item.price,
+            quantity=1,
+            modifiers=[],
+        )
+        item.delete()
+
+        before = timezone.now()
+        order.update_status(Order.OrderStatus.CONFIRMED)
+        after = timezone.now()
+
+        order.refresh_from_db()
+        self.assertGreaterEqual(order.estimated_ready_time, before + timezone.timedelta(minutes=30))
+        self.assertLessEqual(order.estimated_ready_time, after + timezone.timedelta(minutes=30, seconds=1))
 
     def test_pay_instore_is_blocked_for_customer_checkout(self):
         self.client.force_login(self.user)
@@ -416,7 +539,8 @@ class OrderFlowTests(TestCase):
         desktop_response = self.client.get(reverse("orders:checkout"))
         self.assertEqual(desktop_response.status_code, 200)
         self.assertContains(desktop_response, "Pay Online")
-        self.assertContains(desktop_response, "Pay £")
+        desktop_content = desktop_response.content.decode()
+        self.assertTrue("Pay £" in desktop_content or "Place Order - Pay Shop" in desktop_content)
         self.assertNotContains(desktop_response, "Pay in Store")
         self.assertNotContains(desktop_response, "Pay when you collect")
         self.assertNotContains(desktop_response, 'orders:pay_instore')
@@ -425,9 +549,34 @@ class OrderFlowTests(TestCase):
         mobile_response = self.client.get(reverse("orders:checkout"))
         self.assertEqual(mobile_response.status_code, 200)
         self.assertContains(mobile_response, "Pay Online")
-        self.assertContains(mobile_response, "Pay £")
+        mobile_content = mobile_response.content.decode()
+        self.assertTrue("Pay £" in mobile_content or "Place Order - Pay Shop" in mobile_content)
         self.assertNotContains(mobile_response, "Pay in Store")
         self.assertNotContains(mobile_response, "Pay when you collect")
+
+    @override_settings(
+        DEBUG=False,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+        PAYMENT_FALLBACK_ENABLED=True,
+        PAYMENT_FALLBACK_HOLD_MINUTES=15,
+    )
+    def test_mobile_checkout_keeps_fallback_acknowledgement_checkbox(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.client.cookies["view_mode"] = "mobile"
+
+        response = self.client.get(reverse("orders:checkout"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="paymentAvailabilityMessage"')
+        self.assertContains(response, 'name="payment_fallback_acknowledged"')
+        self.assertContains(response, "I understand I must pay the shop within 15 minutes")
+        self.assertNotContains(response, "paymentAlert.textContent")
 
     def test_staff_boards_and_tracking_render(self):
         order = create_order(
@@ -656,6 +805,124 @@ class PaymentFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Order.objects.count(), 0)
+
+    @override_settings(
+        DEBUG=False,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+        PAYMENT_FALLBACK_ENABLED=True,
+        PAYMENT_FALLBACK_HOLD_MINUTES=15,
+    )
+    def test_unavailable_online_payment_prompts_for_fallback_acknowledgement(self):
+        self._seed_cart()
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Fallback User",
+                "customer_phone": "07747055935",
+                "customer_email": "fallback@example.com",
+                "pickup_time": "15",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertIn("payment_fallback_prompt", self.client.session)
+
+    @override_settings(
+        DEBUG=False,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+        PAYMENT_FALLBACK_ENABLED=True,
+        PAYMENT_FALLBACK_HOLD_MINUTES=15,
+    )
+    def test_acknowledged_payment_fallback_creates_held_unpaid_order(self):
+        self._seed_cart()
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Fallback User",
+                "customer_phone": "07747055935",
+                "customer_email": "fallback@example.com",
+                "pickup_time": "15",
+                "payment_fallback_acknowledged": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.latest("id")
+        payment = order.payment
+        self.assertEqual(order.status, Order.OrderStatus.PENDING)
+        self.assertEqual(order.payment_status, Order.PaymentStatus.PENDING)
+        self.assertEqual(payment.provider, Payment.Provider.OFFLINE_PENDING)
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+        self.assertIsNotNone(payment.expires_at)
+        self.assertIn(reverse("payments:return", args=[order.order_number]), response.url)
+
+    @override_settings(
+        DEBUG=False,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_test_valid_123",
+        STRIPE_WEBHOOK_SECRET="whsec_valid_123",
+        PAYMENT_FALLBACK_ENABLED=True,
+        PAYMENT_FALLBACK_HOLD_MINUTES=15,
+    )
+    @patch("apps.payments.views.payment_service_for_provider")
+    def test_provider_failure_prompts_then_allows_fallback_order(self, mocked_provider_factory):
+        self._seed_cart()
+        service = Mock()
+        service.create_payment.side_effect = RuntimeError("stripe down")
+        mocked_provider_factory.return_value = service
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Provider Error",
+                "customer_phone": "07747055935",
+                "customer_email": "provider@example.com",
+                "pickup_time": "15",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertEqual(self.client.session["payment_fallback_prompt"]["reason"], "provider_error")
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Provider Error",
+                "customer_phone": "07747055935",
+                "customer_email": "provider@example.com",
+                "pickup_time": "15",
+                "payment_fallback_acknowledged": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.latest("id")
+        self.assertEqual(order.payment.provider, Payment.Provider.OFFLINE_PENDING)
+
+    def test_expire_unpaid_orders_cancels_expired_fallback_payment(self):
+        order = create_order(status=Order.OrderStatus.PENDING, payment_status=Order.PaymentStatus.PENDING)
+        payment = Payment.objects.create(
+            order=order,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            external_payment_id="offline_expired",
+            amount=order.total_amount,
+            currency="GBP",
+            status=Payment.Status.PENDING,
+            expires_at=timezone.now() - timezone.timedelta(minutes=1),
+        )
+
+        call_command("expire_unpaid_orders", verbosity=0)
+
+        payment.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.EXPIRED)
+        self.assertEqual(order.status, Order.OrderStatus.CANCELLED)
+        self.assertEqual(order.payment_status, Order.PaymentStatus.FAILED)
 
     @override_settings(
         DEBUG=False,

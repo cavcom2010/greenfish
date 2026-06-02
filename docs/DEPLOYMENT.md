@@ -80,7 +80,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
 # Optional alternate provider:
 # MOLLIE_API_KEY=
 # MOLLIE_WEBHOOK_SECRET=
-# Customer checkout is online-payment-only; keep Stripe or Mollie working in production.
+# Customer checkout prefers online payment. If fallback is enabled, schedule expire_unpaid_orders and train staff to mark paid before preparation.
 # ... other settings
 ```
 

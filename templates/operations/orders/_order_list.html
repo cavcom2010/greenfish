@@ -1,5 +1,5 @@
 {% for order in orders %}
-<div class="order-card status-{{ order.status }}">
+<div class="order-card status-{{ order.status }}" data-order-id="{{ order.id }}" data-status="{{ order.status }}">
     <div class="order-header">
         <span class="order-number">#{{ order.order_number }}</span>
         <span class="order-time">{{ order.created_at|time:"H:i" }}</span>
@@ -21,6 +21,12 @@
     </div>
     
     <div class="order-total">£{{ order.total_amount }}</div>
+    {% if order.payment_status != 'paid' %}
+    <div class="alert alert-warning" style="margin-bottom: 12px; font-size: 13px;">
+        <strong>Awaiting payment.</strong> Do not prepare until the shop has taken payment.
+        {% if order.payment.expires_at %}<br>Hold expires {{ order.payment.expires_at|time:"H:i" }}.{% endif %}
+    </div>
+    {% endif %}
 
     {% if order.staff_notes or order.handover_notes %}
     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
@@ -39,9 +45,15 @@
         </button>
         {% if order.available_actions %}
         {% for action in order.available_actions %}
-        <button class="action-btn {{ action.css_class }}" onclick="runOrderAction({{ order.id }}, '{{ action.name }}')">
+        {% if action.name == 'mark_paid' %}
+        <button class="action-btn {{ action.css_class }}" type="button" onclick="showOrderDetail({{ order.id }})">
+            Record Payment
+        </button>
+        {% else %}
+        <button class="action-btn {{ action.css_class }}" onclick="runOrderAction({{ order.id }}, '{{ action.name }}', '{{ order.status }}')">
             {{ action.label }}
         </button>
+        {% endif %}
         {% endfor %}
         {% endif %}
     </div>

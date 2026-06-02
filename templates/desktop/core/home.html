@@ -98,7 +98,7 @@
         <div class="service-info">
             <i class="ph-fill ph-check-circle"></i>
             <span id="serviceInfoText">
-                {% if service_type == 'delivery' %}
+                {% if delivery_enabled and service_type == 'delivery' %}
                 Delivered to your door
                 {% else %}
                 Collect from the shop
@@ -420,7 +420,7 @@ document.querySelectorAll('[data-desktop-service]').forEach(btn => {
     btn.addEventListener('click', function() {
         const info = document.getElementById('serviceInfoText');
         if (info) {
-            info.textContent = this.dataset.desktopService === 'delivery'
+            info.textContent = this.dataset.desktopService === 'delivery' && {{ delivery_enabled|yesno:"true,false" }}
                 ? 'Delivered to your door'
                 : 'Collect from the shop';
         }

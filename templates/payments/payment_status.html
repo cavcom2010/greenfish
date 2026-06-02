@@ -16,6 +16,14 @@
     <p style="color: var(--text-secondary); margin-bottom: 24px;">
         Order {{ order.order_number }} for £{{ order.total_amount|floatformat:2 }}
     </p>
+    {% if payment and payment.provider == 'offline_pending' and status == 'pending' %}
+    <div class="alert alert-warning" style="text-align: left; margin-bottom: 20px;">
+        <strong>Your order is being held for payment.</strong><br>
+        Please call or visit the shop to pay within {{ payment_fallback_hold_minutes }} minutes. The kitchen will not start preparing your order until payment is received.
+        {% if payment.expires_at %}<br><strong>Payment deadline:</strong> {{ payment.expires_at|date:"H:i" }}{% endif %}
+        {% if site_settings.shop_phone %}<br><strong>Shop phone:</strong> {{ site_settings.shop_phone }}{% endif %}
+    </div>
+    {% endif %}
 
     <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; text-align: left;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
@@ -32,7 +40,7 @@
         {% if status == 'paid' %}
         <a href="{% url 'orders:confirmation' order.order_number %}" class="btn btn-brand">View confirmation</a>
         {% else %}
-        {% if order.payment.checkout_url and status == 'pending' %}
+        {% if order.payment.checkout_url and status == 'pending' and order.payment.provider != 'offline_pending' %}
         <a href="{{ order.payment.checkout_url }}" class="btn btn-brand">Continue payment</a>
         {% endif %}
         <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-brand">Track order</a>

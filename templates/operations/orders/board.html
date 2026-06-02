@@ -24,6 +24,9 @@
             <span style="background: #2563EB; padding: 4px 12px; border-radius: 12px;">
                 Out for Delivery: {{ out_for_delivery_count }}
             </span>
+            <span style="background: #F59E0B; padding: 4px 12px; border-radius: 12px;">
+                Awaiting Payment: {{ awaiting_payment_count }}
+            </span>
         </div>
     </div>
 </div>
@@ -181,7 +184,8 @@
 
 <div class="order-board">
     <div class="status-tabs">
-        <button class="status-tab active" onclick="filterOrders(event, 'all')">All Handover</button>
+        <button class="status-tab active" onclick="filterOrders(event, 'all')">All Front Counter</button>
+        <button class="status-tab" onclick="filterOrders(event, 'awaiting_payment')">Awaiting Payment</button>
         <button class="status-tab" onclick="filterOrders(event, 'ready')">Ready</button>
         <button class="status-tab" onclick="filterOrders(event, 'out_for_delivery')">Out for Delivery</button>
     </div>

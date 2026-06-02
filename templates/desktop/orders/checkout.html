@@ -30,7 +30,7 @@
                             {% endif %}
                         </div>
                         <p id="serviceSummary" style="margin-top:1rem;font-size:0.9rem;color:var(--text-secondary);">
-                            {% if service_type == 'delivery' %}
+                            {% if delivery_enabled and service_type == 'delivery' %}
                             Delivered to your address after the kitchen confirms your order.
                             {% else %}
                             Collect from the shop when your order is ready.
@@ -44,52 +44,54 @@
 
                         <div class="form-group-desktop">
                             <label for="customerName">Full Name *</label>
-                            <input type="text" id="customerName" name="customer_name" required value="{{ request.user.get_full_name|default:'' }}">
+                            <input type="text" id="customerName" name="customer_name" required value="{{ default_customer_name }}">
                         </div>
 
                         <div class="form-row">
                             <div class="form-group-desktop">
                                 <label for="customerPhone">Phone Number *</label>
-                                <input type="tel" id="customerPhone" name="customer_phone" required value="{{ request.user.phone_number|default:'' }}">
+                                <input type="tel" id="customerPhone" name="customer_phone" required value="{{ default_customer_phone }}">
                             </div>
                             <div class="form-group-desktop">
                                 <label for="customerEmail">Email (optional)</label>
-                                <input type="email" id="customerEmail" name="customer_email" value="{{ request.user.email|default:'' }}">
+                                <input type="email" id="customerEmail" name="customer_email" value="{{ default_customer_email }}">
                             </div>
                         </div>
                     </div>
 
+                    {% if delivery_enabled %}
                     <!-- Delivery Address -->
                     <div class="checkout-form-section" id="deliveryAddressCard" style="margin-bottom:1.5rem;{% if service_type != 'delivery' %}display:none;{% endif %}">
                         <h3><i class="ph ph-map-pin"></i> Delivery Address</h3>
 
                         <div class="form-group-desktop">
                             <label for="addressLine1">Address Line 1 *</label>
-                            <input type="text" id="addressLine1" name="delivery_address_line1" value="{{ delivery_address_line1 }}">
+                            <input type="text" id="addressLine1" name="delivery_address_line1" value="{{ checkout_form.delivery_address_line1|default:delivery_address_line1 }}">
                         </div>
 
                         <div class="form-group-desktop">
                             <label for="addressLine2">Address Line 2</label>
-                            <input type="text" id="addressLine2" name="delivery_address_line2" value="{{ delivery_address_line2 }}">
+                            <input type="text" id="addressLine2" name="delivery_address_line2" value="{{ checkout_form.delivery_address_line2|default:delivery_address_line2 }}">
                         </div>
 
                         <div class="form-row">
                             <div class="form-group-desktop">
                                 <label for="deliveryCity">City / Town *</label>
-                                <input type="text" id="deliveryCity" name="delivery_city" value="{{ delivery_city }}">
+                                <input type="text" id="deliveryCity" name="delivery_city" value="{{ checkout_form.delivery_city|default:delivery_city }}">
                             </div>
                             <div class="form-group-desktop">
                                 <label for="deliveryPostcode">Postcode *</label>
-                                <input type="text" id="deliveryPostcode" name="delivery_postcode" value="{{ delivery_postcode }}" style="text-transform:uppercase;">
+                                <input type="text" id="deliveryPostcode" name="delivery_postcode" value="{{ checkout_form.delivery_postcode|default:delivery_postcode }}" style="text-transform:uppercase;">
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <!-- Service Time -->
                     <div class="checkout-form-section" style="margin-bottom:1.5rem;">
-                        <h3><i class="ph ph-clock"></i> {% if service_type == 'delivery' %}Delivery{% else %}Pickup{% endif %} Time</h3>
-                        <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1rem;">
-                            {% if service_type == 'delivery' %}
+                        <h3 id="serviceTimeHeading"><i class="ph ph-clock"></i> {% if delivery_enabled and service_type == 'delivery' %}Delivery{% else %}Pickup{% endif %} Time</h3>
+                        <p id="serviceTimeDescription" style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1rem;">
+                            {% if delivery_enabled and service_type == 'delivery' %}
                             When should we aim to arrive with your order?
                             {% else %}
                             When would you like to collect your order?
@@ -124,7 +126,7 @@
                     <div class="checkout-form-section" style="margin-bottom:1.5rem;">
                         <h3><i class="ph ph-notepad"></i> Special Instructions</h3>
                         <div class="form-group-desktop" style="margin-bottom:0;">
-                            <textarea name="special_instructions" rows="3" placeholder="Any allergies, access notes, or special requests?"></textarea>
+                            <textarea name="special_instructions" rows="3" placeholder="Any allergies, access notes, or special requests?">{{ checkout_form.special_instructions|default:'' }}</textarea>
                         </div>
                     </div>
 
@@ -143,10 +145,20 @@
                             </label>
                         </div>
 
-                        {% if not online_payment_available %}
+                        {% if not online_payment_available or payment_fallback_prompt %}
                         <div class="alert-desktop alert-error-desktop" style="margin-top:1rem;">
                             <i class="ph-fill ph-warning-circle"></i>
-                            Online card payments are unavailable right now. Please try again later.
+                            {% if payment_fallback_prompt %}
+                            {{ payment_fallback_prompt.message }}
+                            {% else %}
+                            Online card payments are unavailable right now. You can still place the order, but you must call or visit the shop to pay within {{ payment_fallback_hold_minutes }} minutes. The kitchen will not start until payment is received.
+                            {% endif %}
+                            {% if payment_fallback_available %}
+                            <label style="display:flex;gap:0.65rem;align-items:flex-start;margin-top:0.85rem;font-weight:700;line-height:1.4;">
+                                <input type="checkbox" name="payment_fallback_acknowledged" value="1" {% if not online_payment_available %}required{% endif %} style="margin-top:0.2rem;width:18px;height:18px;">
+                                <span>I understand I must pay the shop within {{ payment_fallback_hold_minutes }} minutes or the order will be cancelled.</span>
+                            </label>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -225,9 +237,11 @@
                     <span>£{{ total|floatformat:2 }}</span>
                 </div>
 
-                <button type="submit" id="submitBtn" form="checkoutForm" class="cart-checkout-btn" style="margin-top:1.25rem;" {% if not online_payment_available %}disabled{% endif %}>
+                <button type="submit" id="submitBtn" form="checkoutForm" class="cart-checkout-btn" style="margin-top:1.25rem;" {% if not online_payment_available and not payment_fallback_available %}disabled{% endif %}>
                     {% if online_payment_available %}
                     Pay £{{ total|floatformat:2 }}
+                    {% elif payment_fallback_available %}
+                    Place Order - Pay Shop
                     {% else %}
                     Online Payment Unavailable
                     {% endif %}
@@ -236,8 +250,10 @@
                 <p id="paymentNote" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem;">
                     {% if online_payment_available %}
                     <i class="ph ph-lock-key"></i> Secure payment
+                    {% elif payment_fallback_available %}
+                    <i class="ph ph-warning-circle"></i> Pay the shop within {{ payment_fallback_hold_minutes }} minutes. Preparation starts after payment.
                     {% else %}
-                    <i class="ph ph-warning-circle"></i> Online payment is required for every order.
+                    <i class="ph ph-warning-circle"></i> Online payment is unavailable right now.
                     {% endif %}
                 </p>
             </div>
@@ -250,6 +266,8 @@
 {% block extra_js %}
 <script>
 const onlinePaymentAvailable = {{ online_payment_available|yesno:"true,false" }};
+const paymentFallbackAvailable = {{ payment_fallback_available|yesno:"true,false" }};
+const paymentFallbackHoldMinutes = {{ payment_fallback_hold_minutes }};
 
 function setVoucherFeedback(message, isError) {
     const feedback = document.getElementById('voucherFeedback');

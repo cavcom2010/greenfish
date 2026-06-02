@@ -4,6 +4,7 @@ Production settings for Tinashe Takeaway.
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *
+from .payment_credentials import mollie_credentials_configured, stripe_credentials_configured
 
 DEBUG = False
 
@@ -33,15 +34,11 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3" and not ALLOW_
 if PAYMENT_PROVIDER not in {"stripe", "mollie"}:
     raise ImproperlyConfigured("PAYMENT_PROVIDER must be either 'stripe' or 'mollie'.")
 if PAYMENT_PROVIDER == "stripe":
-    if not STRIPE_SECRET_KEY:
-        raise ImproperlyConfigured("STRIPE_SECRET_KEY must be set when Stripe payments are enabled.")
-    if not STRIPE_WEBHOOK_SECRET:
-        raise ImproperlyConfigured("STRIPE_WEBHOOK_SECRET must be set when Stripe payments are enabled.")
+    if not stripe_credentials_configured(STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) and not PAYMENT_FALLBACK_ENABLED:
+        raise ImproperlyConfigured("Valid Stripe credentials are required when payment fallback is disabled.")
 elif PAYMENT_PROVIDER == "mollie":
-    if not MOLLIE_API_KEY:
-        raise ImproperlyConfigured("MOLLIE_API_KEY must be set when Mollie payments are enabled.")
-    if not MOLLIE_WEBHOOK_SECRET:
-        raise ImproperlyConfigured("MOLLIE_WEBHOOK_SECRET must be set when Mollie payments are enabled.")
+    if not mollie_credentials_configured(MOLLIE_API_KEY, MOLLIE_WEBHOOK_SECRET) and not PAYMENT_FALLBACK_ENABLED:
+        raise ImproperlyConfigured("Valid Mollie credentials are required when payment fallback is disabled.")
 
 # Security settings
 SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT", default=True, cast=bool)

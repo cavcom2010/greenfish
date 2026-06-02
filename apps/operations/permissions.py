@@ -65,7 +65,7 @@ def can_perform_action(user, action):
         return True
 
     kitchen_actions = {"accept_order", "start_preparing", "mark_ready", "save_notes"}
-    cashier_actions = {"mark_dispatched", "mark_collected", "mark_delivered", "save_notes"}
+    cashier_actions = {"mark_paid", "mark_dispatched", "mark_collected", "mark_delivered", "save_notes"}
 
     if ROLE_KITCHEN in roles and action in kitchen_actions:
         return True

@@ -53,6 +53,19 @@ def demo_payment_enabled():
     return settings.DEBUG and not payment_provider_configured(active_payment_provider())
 
 
+def payment_fallback_available():
+    """Return whether customers may place a held order when online payment is unavailable."""
+    return bool(getattr(settings, "PAYMENT_FALLBACK_ENABLED", True))
+
+
+def payment_fallback_hold_minutes():
+    """Return the displayed unpaid fallback hold window in minutes."""
+    try:
+        return max(1, int(getattr(settings, "PAYMENT_FALLBACK_HOLD_MINUTES", 15)))
+    except (TypeError, ValueError):
+        return 15
+
+
 def normalize_phone_number(phone):
     """Normalise user-entered phone numbers for storage and validation."""
     return (phone or "").strip().replace(" ", "")
@@ -554,6 +567,11 @@ def create_order_from_summary(
             menu_item=menu_item,
             item_name=item["name"],
             item_price=item["price"],
+            preparation_time_minutes=(
+                menu_item.preparation_time
+                if menu_item
+                else OrderItem._meta.get_field("preparation_time_minutes").get_default()
+            ),
             quantity=item["quantity"],
             modifiers=item["modifiers"],
         )

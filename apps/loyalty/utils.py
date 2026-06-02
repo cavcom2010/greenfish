@@ -24,7 +24,7 @@ def get_loyalty_tier(total_points_earned_lifetime):
             "color": "#FFD700",
             "emoji": "👑",
             "multiplier": 1.5,
-            "benefits": ["1.5x points on all orders", "Priority delivery", "Exclusive offers"]
+            "benefits": ["1.5x points on all orders", "Priority service", "Exclusive offers"]
         }
     elif total_points_earned_lifetime >= 1000:
         return {

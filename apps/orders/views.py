@@ -24,12 +24,18 @@ from .services import (
     delivery_enabled,
     get_cart_summary,
     online_payment_available,
+    payment_fallback_available,
+    payment_fallback_hold_minutes,
     remove_session_cart_item,
     selected_offer_id,
     selected_service_type,
     store_service_type,
     update_session_cart_item,
 )
+
+PAYMENT_FALLBACK_FORM_SESSION_KEY = "payment_fallback_form"
+PAYMENT_FALLBACK_PROMPT_SESSION_KEY = "payment_fallback_prompt"
+
 
 VOUCHER_ATTEMPT_LIMITS = (
     ("session", 8, 300),
@@ -399,6 +405,15 @@ def checkout(request):
             messages.error(request, summary["offer_error"])
         summary["selected_offer"] = None
 
+    checkout_form = request.session.get(PAYMENT_FALLBACK_FORM_SESSION_KEY, {})
+    default_customer_name = checkout_form.get("customer_name", "")
+    default_customer_phone = checkout_form.get("customer_phone", "")
+    default_customer_email = checkout_form.get("customer_email", "")
+    if getattr(request.user, "is_authenticated", False):
+        default_customer_name = default_customer_name or getattr(request.user, "full_name", "") or request.user.get_full_name()
+        default_customer_phone = default_customer_phone or getattr(request.user, "phone_number", "")
+        default_customer_email = default_customer_email or getattr(request.user, "email", "")
+
     context = {
         "cart_items": summary["items"],
         "subtotal": summary["subtotal"],
@@ -410,6 +425,13 @@ def checkout(request):
         "active_offer": summary["selected_offer"],
         "offer_error": summary["offer_error"],
         "online_payment_available": online_payment_available(),
+        "payment_fallback_available": payment_fallback_available(),
+        "payment_fallback_hold_minutes": payment_fallback_hold_minutes(),
+        "payment_fallback_prompt": request.session.get(PAYMENT_FALLBACK_PROMPT_SESSION_KEY),
+        "checkout_form": checkout_form,
+        "default_customer_name": default_customer_name,
+        "default_customer_phone": default_customer_phone,
+        "default_customer_email": default_customer_email,
         "delivery_enabled": delivery_enabled(),
         **_default_delivery_address(request.user),
     }

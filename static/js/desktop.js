@@ -209,6 +209,31 @@
             deliveryCard.style.display = service === 'delivery' ? 'block' : 'none';
         }
 
+        const isDelivery = service === 'delivery';
+        const serviceSummary = document.getElementById('serviceSummary');
+        if (serviceSummary) {
+            serviceSummary.textContent = isDelivery
+                ? 'Delivered to your address after the kitchen confirms your order.'
+                : 'Collect from the shop when your order is ready.';
+        }
+
+        const serviceInfoText = document.getElementById('serviceInfoText');
+        if (serviceInfoText) {
+            serviceInfoText.textContent = isDelivery ? 'Delivered to your door' : 'Collect from the shop';
+        }
+
+        const serviceTimeHeading = document.getElementById('serviceTimeHeading');
+        if (serviceTimeHeading) {
+            serviceTimeHeading.innerHTML = `<i class="ph ph-clock"></i> ${isDelivery ? 'Delivery' : 'Pickup'} Time`;
+        }
+
+        const serviceTimeDescription = document.getElementById('serviceTimeDescription');
+        if (serviceTimeDescription) {
+            serviceTimeDescription.textContent = isDelivery
+                ? 'When should we aim to arrive with your order?'
+                : 'When would you like to collect your order?';
+        }
+
         // Persist to server
         persistServiceType(service);
     }

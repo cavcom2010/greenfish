@@ -71,7 +71,7 @@ Items are individual products customers can order.
    - **Image**: Product photo (400x300px recommended)
    - **Is Available**: Uncheck to temporarily hide
    - **Is Popular**: Highlights on homepage
-   - **Preparation Time**: Estimated minutes
+   - **Preparation Time**: Estimated kitchen minutes; the slowest ordered item drives the order ready-time estimate
    - **Dietary Tags**: Format as JSON list: `["vegetarian", "spicy"]`
    - **Modifiers**: Select applicable add-ons
    - **Sort Order**: Ordering within category

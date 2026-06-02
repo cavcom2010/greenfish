@@ -68,7 +68,11 @@
                 <div style="font-weight: 800; margin-bottom: 4px;">What is happening now</div>
                 <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
                     {% if order.status == 'pending' %}
+                    {% if order.payment.provider == 'offline_pending' %}
+                    We are holding this order while waiting for shop payment. Please call or visit the shop to pay{% if order.payment.expires_at %} before {{ order.payment.expires_at|time:"H:i" }}{% endif %}. The kitchen will not start until payment is received.
+                    {% else %}
                     We are waiting for payment before the kitchen starts this order.
+                    {% endif %}
                     {% elif order.status == 'confirmed' %}
                     The kitchen has your order and will start preparing it shortly.
                     {% elif order.status == 'preparing' %}
@@ -80,7 +84,7 @@
                     {% elif order.status == 'completed' %}
                     This order is complete. Thanks for ordering with us.
                     {% elif order.status == 'cancelled' %}
-                    This order has been cancelled. Contact the shop if you need help.
+                    {% if order.cancel_reason %}{{ order.cancel_reason }}{% else %}This order has been cancelled. Contact the shop if you need help.{% endif %}
                     {% endif %}
                 </div>
             </div>

@@ -111,7 +111,7 @@ STRIPE_SECRET_KEY=sk_live_your_live_key_here
 STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_signing_secret
 
-# Customer checkout is online-payment-only; keep a live provider configured.
+# Customer checkout prefers online payment. If fallback is enabled, schedule expire_unpaid_orders and train staff to mark paid before preparation.
 
 # Mollie Payments (optional alternate provider)
 MOLLIE_API_KEY=

@@ -43,7 +43,7 @@ class MenuItemAdmin(admin.ModelAdmin):
         "preparation_time",
         "sort_order"
     ]
-    list_editable = ["price", "is_available", "is_popular", "sort_order"]
+    list_editable = ["price", "is_available", "is_popular", "preparation_time", "sort_order"]
     list_filter = ["category", "is_available", "is_popular", "dietary_tags"]
     search_fields = ["name", "description"]
     filter_horizontal = ["modifiers"]
