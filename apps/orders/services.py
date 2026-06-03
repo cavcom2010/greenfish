@@ -3,10 +3,12 @@ Checkout and cart helpers shared by order and payment views.
 """
 import hashlib
 import json
+import logging
 import math
 import re
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -25,6 +27,8 @@ SERVICE_TYPE_SESSION_KEY = "service_type"
 ACTIVE_OFFER_SESSION_KEY = "active_offer_id"
 DEFAULT_SERVICE_TYPE = Order.ServiceType.PICKUP
 VALID_SERVICE_TYPES = {choice for choice, _ in Order.ServiceType.choices}
+GOOGLE_ADDRESS_VALIDATION_URL = "https://addressvalidation.googleapis.com/v1:validateAddress"
+logger = logging.getLogger(__name__)
 
 
 def delivery_enabled():
@@ -93,6 +97,71 @@ def delivery_map_settings():
         "shop_lng": shop_longitude,
         "radius_miles": site_settings.delivery_radius_value,
     }
+
+
+def google_address_validation_enabled():
+    """Return whether server-side Google Address Validation should run."""
+    return bool(
+        getattr(settings, "GOOGLE_ADDRESS_VALIDATION_ENABLED", False)
+        and getattr(settings, "GOOGLE_MAPS_SERVER_API_KEY", "")
+    )
+
+
+def validate_google_delivery_address(delivery_details):
+    """Validate and geocode a delivery address with Google's Address Validation API.
+
+    API/network failures intentionally fall back to the existing local coordinate
+    radius check, because checkout should not be blocked by a transient provider
+    outage after the customer selected a mapped address.
+    """
+    if not google_address_validation_enabled():
+        return False
+
+    address_lines = [
+        delivery_details.get("line1", ""),
+        delivery_details.get("line2", ""),
+        delivery_details.get("city", ""),
+        delivery_details.get("postcode", ""),
+    ]
+    payload = {
+        "address": {
+            "regionCode": "GB",
+            "addressLines": [line for line in address_lines if line],
+        },
+        "enableUspsCass": False,
+    }
+    timeout = max(1, int(getattr(settings, "GOOGLE_ADDRESS_VALIDATION_TIMEOUT_SECONDS", 4)))
+    try:
+        response = requests.post(
+            GOOGLE_ADDRESS_VALIDATION_URL,
+            params={"key": settings.GOOGLE_MAPS_SERVER_API_KEY},
+            json=payload,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("Google Address Validation failed; falling back to local map validation: %s", exc)
+        return False
+
+    result = data.get("result", {})
+    verdict = result.get("verdict", {})
+    if verdict.get("addressComplete") is False:
+        raise ValidationError("Please choose a complete delivery address.")
+
+    geocode = result.get("geocode", {})
+    location = geocode.get("location", {})
+    latitude = _decimal_from_value(location.get("latitude"))
+    longitude = _decimal_from_value(location.get("longitude"))
+    if latitude is not None and longitude is not None:
+        delivery_details["latitude"] = latitude
+        delivery_details["longitude"] = longitude
+
+    formatted_address = result.get("address", {}).get("formattedAddress", "")
+    if formatted_address:
+        delivery_details["formatted_address"] = formatted_address
+
+    return True
 
 
 def online_payment_available():
@@ -227,6 +296,8 @@ def validate_service_details(service_type, delivery_details):
     map_settings = delivery_map_settings()
     if not map_settings["configured"]:
         return
+
+    validate_google_delivery_address(delivery_details)
 
     latitude = delivery_details.get("latitude")
     longitude = delivery_details.get("longitude")

@@ -91,15 +91,20 @@ DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
 | `ORDER_PREFIX` | TN | Prefix for order numbers (e.g., TN-12345). |
 | `DEFAULT_PREP_TIME` | 15 | Default preparation time in minutes. |
 | `DELIVERY_ENABLED` | True | Deployment-level delivery switch. Set to `False` to force pickup only, regardless of the admin setting. |
-| `GOOGLE_MAPS_API_KEY` | Empty | Enables Google Maps address search and delivery-zone validation when shop coordinates are configured. |
-| `GOOGLE_MAPS_MAP_ID` | Empty | Optional Google Maps styled map ID. |
+| `GOOGLE_MAPS_API_KEY` | Empty | Browser-restricted Google Maps key for checkout map loading and Places address search. |
+| `GOOGLE_MAPS_MAP_ID` | Empty | Optional Google Maps cloud-styled/vector map ID for a polished checkout map. |
+| `GOOGLE_MAPS_SERVER_API_KEY` | Empty | Optional server-restricted Google key for Address Validation API. Do not expose this key in templates. |
+| `GOOGLE_ADDRESS_VALIDATION_ENABLED` | False | Set to `True` to run server-side Google Address Validation before local delivery-radius validation. |
+| `GOOGLE_ADDRESS_VALIDATION_TIMEOUT_SECONDS` | 4 | Timeout for the optional server-side Address Validation request. |
 | `SHOP_LATITUDE` | Empty | Shop latitude fallback when Admin → Site Settings does not define coordinates. |
 | `SHOP_LONGITUDE` | Empty | Shop longitude fallback when Admin → Site Settings does not define coordinates. |
 | `DELIVERY_RADIUS_MILES` | 3 | Delivery radius fallback when Admin → Site Settings does not define a radius. |
 
 Delivery also has an admin toggle at Admin Panel → Core → Site Settings → Settings. Delivery is available only when both `DELIVERY_ENABLED=True` and the admin checkbox is enabled. When either switch is off, customer-facing order screens become pickup-only and delivery labels/address fields are removed from the public UI; existing delivery-order history and staff workflows remain available.
 
-Google Maps delivery checks are enabled only when delivery is enabled, Admin → Site Settings → Delivery Map is enabled, `GOOGLE_MAPS_API_KEY` is present, and shop coordinates are configured either in admin or `.env`. When Maps is not configured, checkout falls back to manual address entry and staff confirm delivery details before preparation.
+Google Maps delivery checks are enabled only when delivery is enabled, Admin → Site Settings → Delivery Map is enabled, `GOOGLE_MAPS_API_KEY` is present, and shop coordinates are configured either in admin or `.env`. When Maps is not configured, checkout shows a professional manual address panel and staff confirm delivery details before preparation.
+
+For production Google setup, create two keys in Google Cloud. Restrict `GOOGLE_MAPS_API_KEY` to the public site domains and only the browser APIs needed by checkout, including Maps JavaScript API and Places API. Restrict `GOOGLE_MAPS_SERVER_API_KEY` to the server/IP and Address Validation API, then set `GOOGLE_ADDRESS_VALIDATION_ENABLED=True` if you want Google's server-side address quality check before the existing local radius check.
 
 ### Security Settings (Production)
 

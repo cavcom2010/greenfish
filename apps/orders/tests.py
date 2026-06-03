@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
+import requests
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
@@ -406,6 +407,7 @@ class OrderFlowTests(TestCase):
     @override_settings(
         DELIVERY_ENABLED=True,
         GOOGLE_MAPS_API_KEY="test-google-key",
+        GOOGLE_MAPS_MAP_ID="test-map-id",
         SHOP_LATITUDE="",
         SHOP_LONGITUDE="",
         DELIVERY_RADIUS_MILES=3,
@@ -424,7 +426,62 @@ class OrderFlowTests(TestCase):
         self.assertTrue(settings_obj.is_delivery_map_configured)
         self.assertTrue(config["configured"])
         self.assertEqual(config["api_key"], "test-google-key")
+        self.assertEqual(config["map_id"], "test-map-id")
         self.assertEqual(config["radius_miles"], Decimal("3.00"))
+
+    def test_checkout_uses_polished_manual_delivery_panel_when_map_unconfigured(self):
+        ensure_site_settings(delivery_enabled=True, delivery_map_enabled=True)
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 1,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.get(reverse("orders:checkout"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Live delivery check")
+        self.assertContains(response, "delivery-precision-card")
+        self.assertContains(response, "Live map verification is not configured yet")
+        self.assertContains(response, "checkout-delivery-map.js")
+        self.assertNotContains(response, "Map lookup is not configured yet")
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+    )
+    def test_desktop_checkout_uses_live_delivery_map_panel_when_configured(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 1,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        self.client.cookies["view_mode"] = "desktop"
+
+        response = self.client.get(reverse("orders:checkout"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "delivery-map-shell")
+        self.assertContains(response, "checkout-delivery-map.js")
+        self.assertContains(response, "Start typing your address and choose the exact result")
+        self.assertNotContains(response, "maps.googleapis.com/maps/api/js?key=")
 
     @override_settings(
         DELIVERY_ENABLED=True,
@@ -460,6 +517,115 @@ class OrderFlowTests(TestCase):
         }
         with self.assertRaisesMessage(ValidationError, "outside our 3 mile delivery area"):
             validate_service_details(Order.ServiceType.DELIVERY, outside_details)
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        GOOGLE_MAPS_SERVER_API_KEY="test-server-key",
+        GOOGLE_ADDRESS_VALIDATION_ENABLED=True,
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+    )
+    @patch("apps.orders.services.requests.post")
+    def test_google_address_validation_updates_delivery_address_metadata(self, mock_post):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "result": {
+                "verdict": {"addressComplete": True},
+                "address": {"formattedAddress": "12 Test Street, Leeds LS1 1AA, UK"},
+                "geocode": {"location": {"latitude": 53.801, "longitude": -1.548}},
+            }
+        }
+        mock_post.return_value = mock_response
+        delivery_details = {
+            "line1": "12 Test Street",
+            "line2": "",
+            "city": "Leeds",
+            "postcode": "LS1 1AA",
+            "formatted_address": "",
+            "place_id": "inside-place",
+            "latitude": Decimal("53.801000"),
+            "longitude": Decimal("-1.548000"),
+            "distance_miles": None,
+        }
+
+        validate_service_details(Order.ServiceType.DELIVERY, delivery_details)
+
+        mock_post.assert_called_once()
+        self.assertEqual(delivery_details["formatted_address"], "12 Test Street, Leeds LS1 1AA, UK")
+        self.assertEqual(delivery_details["latitude"], Decimal("53.801"))
+        self.assertEqual(delivery_details["longitude"], Decimal("-1.548"))
+        self.assertIsNotNone(delivery_details["distance_miles"])
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        GOOGLE_MAPS_SERVER_API_KEY="test-server-key",
+        GOOGLE_ADDRESS_VALIDATION_ENABLED=True,
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+    )
+    @patch("apps.orders.services.requests.post")
+    def test_google_address_validation_rejects_incomplete_addresses(self, mock_post):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        mock_response = Mock()
+        mock_response.json.return_value = {"result": {"verdict": {"addressComplete": False}}}
+        mock_post.return_value = mock_response
+        delivery_details = {
+            "line1": "12 Test Street",
+            "line2": "",
+            "city": "Leeds",
+            "postcode": "LS1 1AA",
+            "formatted_address": "",
+            "place_id": "inside-place",
+            "latitude": Decimal("53.801000"),
+            "longitude": Decimal("-1.548000"),
+            "distance_miles": None,
+        }
+
+        with self.assertRaisesMessage(ValidationError, "complete delivery address"):
+            validate_service_details(Order.ServiceType.DELIVERY, delivery_details)
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        GOOGLE_MAPS_SERVER_API_KEY="test-server-key",
+        GOOGLE_ADDRESS_VALIDATION_ENABLED=True,
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+    )
+    @patch("apps.orders.services.requests.post")
+    def test_google_address_validation_api_failure_falls_back_to_local_radius_check(self, mock_post):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        mock_post.side_effect = requests.RequestException("timeout")
+        delivery_details = {
+            "line1": "12 Test Street",
+            "line2": "",
+            "city": "Leeds",
+            "postcode": "LS1 1AA",
+            "formatted_address": "12 Test Street, Leeds LS1 1AA, UK",
+            "place_id": "inside-place",
+            "latitude": Decimal("53.801000"),
+            "longitude": Decimal("-1.548000"),
+            "distance_miles": None,
+        }
+
+        validate_service_details(Order.ServiceType.DELIVERY, delivery_details)
+
+        self.assertIsNotNone(delivery_details["distance_miles"])
 
     @override_settings(
         DEBUG=True,

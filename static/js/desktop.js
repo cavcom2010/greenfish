@@ -206,7 +206,8 @@
         // Update delivery address visibility on checkout
         const deliveryCard = document.getElementById('deliveryAddressCard');
         if (deliveryCard) {
-            deliveryCard.style.display = service === 'delivery' ? 'block' : 'none';
+            deliveryCard.hidden = service !== 'delivery';
+            window.checkoutDeliveryController?.setServiceSelected(service === 'delivery');
         }
 
         const isDelivery = service === 'delivery';
