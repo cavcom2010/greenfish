@@ -30,6 +30,7 @@ from apps.orders.services import (
     selected_offer_id,
     selected_service_type,
     store_service_type,
+    validate_delivery_minimum,
     validate_customer_details,
     validate_service_details,
 )
@@ -201,6 +202,7 @@ def create_payment(request):
     delivery_details = extract_delivery_details(request.POST)
 
     try:
+        validate_delivery_minimum(service_type, summary["subtotal"])
         validate_customer_details(customer_name, customer_phone)
         validate_service_details(service_type, delivery_details)
     except ValidationError as exc:

@@ -26,8 +26,10 @@ from apps.operations.permissions import OPERATIONS_MANAGER_GROUP
 from apps.orders.models import Order, OrderItem
 from apps.orders.services import (
     delivery_map_settings,
+    delivery_minimum_order_amount,
     get_cart_summary,
     haversine_miles,
+    validate_delivery_minimum,
     validate_service_details,
 )
 from apps.payments.models import Payment
@@ -429,6 +431,25 @@ class OrderFlowTests(TestCase):
         self.assertEqual(config["map_id"], "test-map-id")
         self.assertEqual(config["radius_miles"], Decimal("3.00"))
 
+    @override_settings(DELIVERY_MINIMUM_ORDER_AMOUNT="18.50")
+    def test_delivery_minimum_uses_admin_value_or_env_fallback(self):
+        settings_obj = ensure_site_settings(delivery_minimum_order_amount=Decimal("15.00"))
+        self.assertEqual(settings_obj.delivery_minimum_order_amount_value, Decimal("15.00"))
+        self.assertEqual(delivery_minimum_order_amount(), Decimal("15.00"))
+
+        settings_obj.delivery_minimum_order_amount = None
+        settings_obj.save(update_fields=["delivery_minimum_order_amount"])
+
+        self.assertEqual(settings_obj.delivery_minimum_order_amount_value, Decimal("18.50"))
+        self.assertEqual(delivery_minimum_order_amount(), Decimal("18.50"))
+
+    def test_delivery_minimum_validation_uses_subtotal_before_discounts(self):
+        validate_delivery_minimum(Order.ServiceType.DELIVERY, Decimal("15.00"))
+        validate_delivery_minimum(Order.ServiceType.PICKUP, Decimal("1.00"))
+
+        with self.assertRaisesMessage(ValidationError, "Add £2.50 more"):
+            validate_delivery_minimum(Order.ServiceType.DELIVERY, Decimal("12.50"))
+
     def test_checkout_uses_polished_manual_delivery_panel_when_map_unconfigured(self):
         ensure_site_settings(delivery_enabled=True, delivery_map_enabled=True)
         self.client.post(
@@ -447,6 +468,8 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Live delivery check")
         self.assertContains(response, "delivery-precision-card")
+        self.assertContains(response, "Delivery minimum is £15.00 before discounts")
+        self.assertContains(response, "Add £2.50 more or choose pickup")
         self.assertContains(response, "Live map verification is not configured yet")
         self.assertContains(response, "checkout-delivery-map.js")
         self.assertNotContains(response, "Map lookup is not configured yet")
@@ -467,7 +490,7 @@ class OrderFlowTests(TestCase):
             reverse("orders:add_to_cart"),
             {
                 "menu_item_id": self.menu_item.pk,
-                "quantity": 1,
+                "quantity": 2,
                 "modifiers": "[]",
                 "service_type": Order.ServiceType.DELIVERY,
             },
@@ -647,7 +670,7 @@ class OrderFlowTests(TestCase):
             reverse("orders:add_to_cart"),
             {
                 "menu_item_id": self.menu_item.pk,
-                "quantity": 1,
+                "quantity": 2,
                 "modifiers": "[]",
                 "service_type": Order.ServiceType.DELIVERY,
             },
@@ -727,6 +750,89 @@ class OrderFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Order.objects.count(), 0)
+
+    @override_settings(
+        DEBUG=True,
+        DELIVERY_ENABLED=True,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_delivery_checkout_below_minimum_does_not_create_order(self):
+        ensure_site_settings(delivery_enabled=True, delivery_minimum_order_amount=Decimal("15.00"))
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 1,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "customer_name": "Delivery Customer",
+                "customer_phone": "07747055935",
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "Leeds",
+                "delivery_postcode": "LS1 1AA",
+                "pickup_time": "30",
+                "payment_method": "online",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("orders:checkout"))
+        self.assertEqual(Order.objects.count(), 0)
+
+    @override_settings(
+        DEBUG=True,
+        DELIVERY_ENABLED=True,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_delivery_checkout_at_minimum_allows_discounted_final_total(self):
+        ensure_site_settings(delivery_enabled=True, delivery_minimum_order_amount=Decimal("15.00"))
+        offer = create_offer(name="Minimum Discount", value=Decimal("10.00"))
+        voucher = create_voucher(code="MINOK", offer=offer)
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 2,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        session = self.client.session
+        session["voucher_code"] = voucher.code
+        session.save()
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "customer_name": "Delivery Customer",
+                "customer_phone": "07747055935",
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "Leeds",
+                "delivery_postcode": "LS1 1AA",
+                "pickup_time": "30",
+                "payment_method": "online",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.latest("id")
+        self.assertEqual(order.subtotal, Decimal("25.00"))
+        self.assertLess(order.total_amount, Decimal("25.00"))
+        self.assertEqual(order.service_type, Order.ServiceType.DELIVERY)
 
     def test_confirmed_order_eta_uses_slowest_item_prep_snapshot(self):
         short_item = create_menu_item(name="Quick Side", price=Decimal("2.50"), preparation_time=10)
@@ -1048,6 +1154,7 @@ class PaymentFlowTests(TestCase):
         STRIPE_WEBHOOK_SECRET="",
     )
     def test_create_payment_persists_delivery_details(self):
+        ensure_site_settings(delivery_minimum_order_amount=Decimal("0.00"))
         self._seed_cart()
         session = self.client.session
         session["service_type"] = Order.ServiceType.DELIVERY

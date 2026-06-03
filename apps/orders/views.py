@@ -2,6 +2,7 @@
 Views for the orders app.
 """
 import json
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -23,6 +24,7 @@ from .services import (
     clear_checkout_session,
     delivery_enabled,
     delivery_map_settings,
+    delivery_minimum_order_amount,
     get_cart_summary,
     online_payment_available,
     payment_fallback_available,
@@ -419,6 +421,9 @@ def checkout(request):
         default_customer_phone = default_customer_phone or getattr(request.user, "phone_number", "")
         default_customer_email = default_customer_email or getattr(request.user, "email", "")
 
+    delivery_minimum = delivery_minimum_order_amount()
+    delivery_minimum_remaining = max(Decimal("0.00"), delivery_minimum - summary["subtotal"]).quantize(Decimal("0.01"))
+
     context = {
         "cart_items": summary["items"],
         "subtotal": summary["subtotal"],
@@ -439,6 +444,9 @@ def checkout(request):
         "default_customer_email": default_customer_email,
         "delivery_enabled": delivery_enabled(),
         "delivery_map": delivery_map_settings(),
+        "delivery_minimum_order_amount": delivery_minimum,
+        "delivery_minimum_met": delivery_minimum_remaining == Decimal("0.00"),
+        "delivery_minimum_remaining": delivery_minimum_remaining,
         **_default_delivery_address(request.user),
     }
     template = "desktop/orders/checkout.html" if getattr(request, "is_desktop", True) else "orders/checkout.html"

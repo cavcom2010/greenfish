@@ -87,6 +87,18 @@
                             <span class="delivery-radius-pill"><i class="ph ph-map-pin-area"></i> {{ delivery_map.radius_miles|floatformat:1 }} mile zone</span>
                         </div>
 
+                        <div id="deliveryMinimumNotice" class="delivery-minimum-panel {% if delivery_minimum_met %}is-met{% else %}is-short{% endif %}">
+                            <i class="ph ph-basket"></i>
+                            <span>
+                                Delivery minimum is £{{ delivery_minimum_order_amount|floatformat:2 }} before discounts.
+                                {% if delivery_minimum_met %}
+                                Your basket qualifies for delivery.
+                                {% else %}
+                                Add £{{ delivery_minimum_remaining|floatformat:2 }} more or choose pickup.
+                                {% endif %}
+                            </span>
+                        </div>
+
                         {% if delivery_map.configured %}
                         <div class="delivery-map-grid">
                             <div class="delivery-search-panel">
@@ -341,6 +353,10 @@ const serviceTypeInput = document.getElementById('desktopServiceType');
 const submitBtn = document.getElementById('submitBtn');
 const paymentNote = document.getElementById('paymentNote');
 const baseSubmitDisabled = submitBtn?.disabled || (!onlinePaymentAvailable && !paymentFallbackAvailable);
+const basePaymentNoteHTML = paymentNote?.innerHTML || '';
+const deliveryMinimumAmount = {{ delivery_minimum_order_amount|floatformat:2 }};
+const deliveryMinimumRemaining = {{ delivery_minimum_remaining|floatformat:2 }};
+const deliveryMinimumMet = {{ delivery_minimum_met|yesno:"true,false" }};
 let deliveryPlaceIsValid = !checkoutDeliveryConfig.configured || Boolean(document.getElementById('deliveryLatitude')?.value && document.getElementById('deliveryLongitude')?.value);
 
 function deliveryIsSelected() {
@@ -348,12 +364,26 @@ function deliveryIsSelected() {
 }
 
 function updateDeliveryGate() {
-    if (!submitBtn || !checkoutDeliveryConfig.configured || !deliveryIsSelected()) {
+    if (!submitBtn || !deliveryIsSelected()) {
         if (submitBtn) submitBtn.disabled = baseSubmitDisabled;
+        if (paymentNote) paymentNote.innerHTML = basePaymentNoteHTML;
+        return;
+    }
+    if (!deliveryMinimumMet) {
+        submitBtn.disabled = true;
+        if (paymentNote) {
+            paymentNote.innerHTML = `<i class="ph ph-basket"></i> Delivery starts at £${deliveryMinimumAmount.toFixed(2)} before discounts. Add £${deliveryMinimumRemaining.toFixed(2)} more or choose pickup.`;
+        }
+        return;
+    }
+    if (!checkoutDeliveryConfig.configured) {
+        submitBtn.disabled = baseSubmitDisabled;
+        if (paymentNote) paymentNote.innerHTML = basePaymentNoteHTML;
         return;
     }
     if (deliveryPlaceIsValid) {
         submitBtn.disabled = baseSubmitDisabled;
+        if (paymentNote) paymentNote.innerHTML = basePaymentNoteHTML;
         return;
     }
     submitBtn.disabled = true;
@@ -426,6 +456,11 @@ document.querySelectorAll('[data-desktop-service]').forEach(button => {
             updateDeliveryGate();
         }, 150);
     });
+});
+
+document.addEventListener('checkout-service:changed', event => {
+    window.checkoutDeliveryController?.setServiceSelected(Boolean(event.detail.isDelivery));
+    updateDeliveryGate();
 });
 
 document.addEventListener('checkout-delivery:validity', event => {

@@ -41,6 +41,16 @@ def delivery_enabled():
     return SiteSettings.get().delivery_enabled
 
 
+def delivery_minimum_order_amount():
+    """Return the minimum food subtotal required for delivery orders."""
+    from apps.core.models import SiteSettings
+
+    minimum = SiteSettings.get().delivery_minimum_order_amount_value
+    if minimum < Decimal("0.00"):
+        return Decimal("15.00")
+    return minimum.quantize(Decimal("0.01"))
+
+
 def _decimal_from_value(value):
     try:
         if value in (None, ""):
@@ -321,6 +331,26 @@ def validate_service_details(service_type, delivery_details):
     delivery_details["distance_miles"] = Decimal(str(distance)).quantize(
         Decimal("0.01"),
         rounding=ROUND_HALF_UP,
+    )
+
+
+def validate_delivery_minimum(service_type, subtotal):
+    """Validate that delivery orders meet the configured food subtotal minimum."""
+    if service_type != Order.ServiceType.DELIVERY:
+        return
+
+    minimum = delivery_minimum_order_amount()
+    if minimum <= Decimal("0.00"):
+        return
+
+    subtotal = (_decimal_from_value(subtotal) or Decimal("0.00")).quantize(Decimal("0.01"))
+    if subtotal >= minimum:
+        return
+
+    remaining = (minimum - subtotal).quantize(Decimal("0.01"))
+    raise ValidationError(
+        f"Delivery orders need a food subtotal of at least £{minimum:.2f}. "
+        f"Add £{remaining:.2f} more or choose pickup."
     )
 
 

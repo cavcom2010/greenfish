@@ -72,6 +72,18 @@
                 <span class="delivery-radius-pill"><i class="ph ph-map-pin-area"></i> {{ delivery_map.radius_miles|floatformat:1 }} mile zone</span>
             </div>
 
+            <div id="deliveryMinimumNotice" class="delivery-minimum-panel {% if delivery_minimum_met %}is-met{% else %}is-short{% endif %}">
+                <i class="ph ph-basket"></i>
+                <span>
+                    Delivery minimum is £{{ delivery_minimum_order_amount|floatformat:2 }} before discounts.
+                    {% if delivery_minimum_met %}
+                    Your basket qualifies for delivery.
+                    {% else %}
+                    Add £{{ delivery_minimum_remaining|floatformat:2 }} more or choose pickup.
+                    {% endif %}
+                </span>
+            </div>
+
             {% if delivery_map.configured %}
             <div class="delivery-map-grid">
                 <div class="delivery-search-panel">
@@ -332,6 +344,9 @@ const paymentAlert = document.getElementById('paymentAvailabilityAlert');
 const paymentAlertMessage = document.getElementById('paymentAvailabilityMessage');
 const onlineRadio = document.querySelector('input[name="payment_method"][value="online"]');
 const totalLabel = '£{{ total|floatformat:2 }}';
+const deliveryMinimumAmount = {{ delivery_minimum_order_amount|floatformat:2 }};
+const deliveryMinimumRemaining = {{ delivery_minimum_remaining|floatformat:2 }};
+const deliveryMinimumMet = {{ delivery_minimum_met|yesno:"true,false" }};
 const checkoutDeliveryConfig = {
     configured: {{ delivery_map.configured|yesno:"true,false" }},
     apiKey: '{{ delivery_map.api_key|escapejs }}',
@@ -364,8 +379,20 @@ function applyDeliveryLocationGate() {
     paymentNote.innerHTML = '<i class="ph ph-map-pin" style="vertical-align: middle;"></i> Select an address from the suggestions before placing a delivery order.';
 }
 
+function applyDeliveryMinimumGate() {
+    if (!deliveryIsSelected() || deliveryMinimumMet) {
+        return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.6';
+    submitBtn.style.cursor = 'not-allowed';
+    btnText.textContent = 'Add More for Delivery';
+    paymentNote.innerHTML = `<i class="ph ph-basket" style="vertical-align: middle;"></i> Delivery starts at £${deliveryMinimumAmount.toFixed(2)} before discounts. Add £${deliveryMinimumRemaining.toFixed(2)} more or choose pickup.`;
+}
+
 function syncCheckoutSubmitState() {
     applySelectedPaymentMethod();
+    applyDeliveryMinimumGate();
     applyDeliveryLocationGate();
 }
 

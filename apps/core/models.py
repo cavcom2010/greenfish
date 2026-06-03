@@ -43,6 +43,15 @@ class SiteSettings(models.Model):
         default=True,
         help_text="Use Google Maps address search and delivery-zone validation when API keys and shop coordinates are configured.",
     )
+    delivery_minimum_order_amount = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=Decimal("15.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Minimum food subtotal for delivery orders. Leave blank to use DELIVERY_MINIMUM_ORDER_AMOUNT from .env. Use 0 to disable.",
+    )
     shop_latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
@@ -118,6 +127,16 @@ class SiteSettings(models.Model):
         if self.delivery_radius_miles:
             return self.delivery_radius_miles
         return self._decimal_from_setting(getattr(django_settings, "DELIVERY_RADIUS_MILES", 3)) or Decimal("3.00")
+
+    @property
+    def delivery_minimum_order_amount_value(self):
+        """Return delivery minimum spend from admin settings with env fallback."""
+        if self.delivery_minimum_order_amount is not None:
+            return self.delivery_minimum_order_amount
+        return (
+            self._decimal_from_setting(getattr(django_settings, "DELIVERY_MINIMUM_ORDER_AMOUNT", "15.00"))
+            or Decimal("15.00")
+        )
 
     @property
     def is_delivery_map_configured(self):

@@ -235,6 +235,10 @@
                 : 'When would you like to collect your order?';
         }
 
+        document.dispatchEvent(new CustomEvent('checkout-service:changed', {
+            detail: { service, isDelivery }
+        }));
+
         // Persist to server
         persistServiceType(service);
     }

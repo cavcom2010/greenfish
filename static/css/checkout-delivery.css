@@ -146,6 +146,36 @@
     font-weight: 700;
 }
 
+.delivery-minimum-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 14px 0;
+    padding: 13px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.38;
+}
+
+.delivery-minimum-panel i {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    font-size: 17px;
+}
+
+.delivery-minimum-panel.is-met {
+    color: #166534;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+}
+
+.delivery-minimum-panel.is-short {
+    color: #991b1b;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+}
+
 .delivery-address-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
