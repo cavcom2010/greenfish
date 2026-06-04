@@ -1,7 +1,7 @@
 import json
 
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from apps.core.test_support import create_user, ensure_site_settings
@@ -25,14 +25,21 @@ class PwaViewTests(TestCase):
         self.assertIn("/accounts/app/", shortcut_urls)
 
     def test_push_subscription_endpoints_validate_and_persist(self):
-        invalid_response = self.client.post(
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.get(reverse("account_login"))
+        anonymous_csrf_token = csrf_client.cookies["csrftoken"].value
+
+        invalid_response = csrf_client.post(
             reverse("pwa:subscribe_push"),
             data="{bad json",
             content_type="application/json",
+            HTTP_X_CSRFTOKEN=anonymous_csrf_token,
         )
         self.assertEqual(invalid_response.status_code, 400)
 
-        self.client.force_login(self.user)
+        csrf_client.force_login(self.user)
+        csrf_client.get(reverse("accounts:profile"))
+        csrf_token = csrf_client.cookies["csrftoken"].value
         payload = {
             "subscription": {
                 "endpoint": "https://example.com/push/1",
@@ -40,24 +47,46 @@ class PwaViewTests(TestCase):
             },
             "device_name": "Test phone",
         }
-        response = self.client.post(
+        response = csrf_client.post(
             reverse("pwa:subscribe_push"),
             data=json.dumps(payload),
             content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(PushSubscription.objects.filter(endpoint=payload["subscription"]["endpoint"]).exists())
 
-        unsubscribe = self.client.post(
+        unsubscribe = csrf_client.post(
             reverse("pwa:unsubscribe_push"),
             data=json.dumps({"endpoint": payload["subscription"]["endpoint"]}),
             content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
         )
         self.assertEqual(unsubscribe.status_code, 200)
         self.assertFalse(PushSubscription.objects.get(endpoint=payload["subscription"]["endpoint"]).is_active)
 
+    def test_push_subscription_endpoints_require_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        payload = {
+            "subscription": {
+                "endpoint": "https://example.com/push/csrf",
+                "keys": {"p256dh": "abc", "auth": "def"},
+            }
+        }
+
+        response = csrf_client.post(
+            reverse("pwa:subscribe_push"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_push_subscription_endpoint_is_rate_limited(self):
-        self.client.force_login(self.user)
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        csrf_client.get(reverse("accounts:profile"))
+        csrf_token = csrf_client.cookies["csrftoken"].value
 
         for attempt in range(10):
             payload = {
@@ -66,14 +95,15 @@ class PwaViewTests(TestCase):
                     "keys": {"p256dh": "abc", "auth": "def"},
                 }
             }
-            response = self.client.post(
+            response = csrf_client.post(
                 reverse("pwa:subscribe_push"),
                 data=json.dumps(payload),
                 content_type="application/json",
+                HTTP_X_CSRFTOKEN=csrf_token,
             )
             self.assertEqual(response.status_code, 200)
 
-        blocked = self.client.post(
+        blocked = csrf_client.post(
             reverse("pwa:subscribe_push"),
             data=json.dumps(
                 {
@@ -84,6 +114,7 @@ class PwaViewTests(TestCase):
                 }
             ),
             content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
         )
         self.assertEqual(blocked.status_code, 429)
         self.assertIn("Retry-After", blocked.headers)

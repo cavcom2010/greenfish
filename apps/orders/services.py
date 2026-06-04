@@ -32,6 +32,20 @@ GOOGLE_ADDRESS_VALIDATION_URL = "https://addressvalidation.googleapis.com/v1:val
 logger = logging.getLogger(__name__)
 
 
+def max_cart_item_quantity():
+    try:
+        return max(1, int(getattr(settings, "MAX_CART_ITEM_QUANTITY", 20)))
+    except (TypeError, ValueError):
+        return 20
+
+
+def normalize_cart_quantity(quantity, *, allow_zero=False):
+    quantity = int(quantity)
+    if allow_zero and quantity <= 0:
+        return 0
+    return max(1, min(quantity, max_cart_item_quantity()))
+
+
 def delivery_enabled():
     """Return whether delivery can currently be selected by customers."""
     if not getattr(settings, "DELIVERY_ENABLED", True):
@@ -471,13 +485,15 @@ def add_custom_item_to_cart(
     menu_item_id=None,
 ):
     """Add an arbitrary purchasable item to the session cart."""
-    quantity = max(1, int(quantity))
+    quantity = normalize_cart_quantity(quantity)
     modifiers = normalize_modifiers(modifiers or [])
     cart_item_id = build_cart_item_id(item_id, modifiers)
     cart = request.session.get("cart", {})
 
     if cart_item_id in cart:
-        cart[cart_item_id]["quantity"] += quantity
+        cart[cart_item_id]["quantity"] = normalize_cart_quantity(
+            int(cart[cart_item_id].get("quantity", 0)) + quantity
+        )
     else:
         cart[cart_item_id] = {
             "menu_item_id": menu_item_id,
@@ -511,7 +527,7 @@ def add_menu_item_to_cart(request, menu_item, quantity=1, modifiers=None):
 def update_session_cart_item(request, item_id, quantity):
     """Update or remove a cart item in the session."""
     cart = request.session.get("cart", {})
-    quantity = int(quantity)
+    quantity = normalize_cart_quantity(quantity, allow_zero=True)
 
     if item_id in cart:
         if quantity > 0:
@@ -776,9 +792,7 @@ def save_customer_profile(user, customer_name, customer_phone, customer_email):
     user.first_name = first_name
     user.last_name = last_name
     user.phone_number = normalize_phone_number(customer_phone)
-    if customer_email:
-        user.email = customer_email.strip().lower()
-    user.save(update_fields=["first_name", "last_name", "phone_number", "email"])
+    user.save(update_fields=["first_name", "last_name", "phone_number"])
 
 
 def create_order_from_summary(

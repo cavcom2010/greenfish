@@ -271,6 +271,41 @@ class ProductionSettingsEmailTests(TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Valid Stripe credentials are required", result.stderr)
 
+    def test_runtime_entrypoints_default_to_production_settings(self):
+        for module_name in ["config.wsgi", "config.asgi", "config.celery"]:
+            with self.subTest(module=module_name):
+                with tempfile.NamedTemporaryFile("w", delete=False) as env_file:
+                    env_file.write("\n".join(self._required_production_env()))
+                    env_file.write("\n")
+                    env_path = env_file.name
+
+                probe_env = os.environ.copy()
+                probe_env["ENV_FILE"] = env_path
+                probe_env.pop("DJANGO_SETTINGS_MODULE", None)
+
+                try:
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import os, importlib; "
+                                f"importlib.import_module('{module_name}'); "
+                                "print(os.environ.get('DJANGO_SETTINGS_MODULE'))"
+                            ),
+                        ],
+                        cwd=Path(__file__).resolve().parents[2],
+                        env=probe_env,
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                finally:
+                    Path(env_path).unlink(missing_ok=True)
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("config.settings.production", result.stdout)
+
 
 class MediaHardeningTests(TestCase):
     def setUp(self):

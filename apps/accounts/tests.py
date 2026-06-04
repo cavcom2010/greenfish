@@ -30,6 +30,24 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertFalse(response.json()["is_favorite"])
         self.assertFalse(self.profile.favorite_items.filter(pk=self.item.pk).exists())
 
+    def test_favorite_next_redirect_rejects_external_urls(self):
+        response = self.client.post(
+            reverse("accounts:toggle_favorite", args=[self.item.pk]),
+            {"next": "https://evil.example/phish"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("accounts:profile"))
+
+    def test_favorite_next_redirect_allows_local_urls(self):
+        response = self.client.post(
+            reverse("accounts:toggle_favorite", args=[self.item.pk]),
+            {"next": reverse("accounts:app_home")},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("accounts:app_home"))
+
     def test_customer_can_add_saved_favorite_to_cart(self):
         self.profile.favorite_items.add(self.item)
 
@@ -101,6 +119,31 @@ class RepeatOrderExperienceTests(TestCase):
         stored_item = next(iter(self.client.session["cart"].values()))
         self.assertEqual(stored_item["quantity"], 2)
         self.assertEqual(stored_item["modifiers"][0]["name"], "Extra Gravy")
+
+    def test_save_meal_next_redirect_rejects_external_urls(self):
+        order = create_order(user=self.user)
+        order_item = order.items.first()
+        order_item.menu_item = self.item
+        order_item.save()
+
+        response = self.client.post(
+            reverse("accounts:save_order_item_meal", args=[order_item.pk]),
+            {"next": "https://evil.example/phish"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("accounts:app_home"))
+
+    def test_logout_requires_post_to_end_session(self):
+        response = self.client.get(reverse("account_logout"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("_auth_user_id", self.client.session)
+
+        response = self.client.post(reverse("account_logout"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_app_home_renders_rewards_and_saved_meals(self):
         SavedMeal.objects.create(

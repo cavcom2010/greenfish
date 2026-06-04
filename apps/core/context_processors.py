@@ -1,16 +1,19 @@
 """
 Core context processors - Cart and common utilities.
 """
-from apps.cart.services import CartService
+from apps.orders.services import get_cart_summary
 
 
 def cart_context(request):
-    """Add cart information to template context using CartService."""
-    cart = CartService(request)
+    """Add active session-cart information to template context."""
+    summary = get_cart_summary(
+        request.session.get("cart", {}),
+        user=getattr(request, "user", None),
+    )
 
     return {
-        "cart_items": cart.get_items(),
-        "cart_total": float(cart.get_total()),
-        "cart_count": cart.get_count(),
+        "cart_items": summary["items"],
+        "cart_total": float(summary["total"]),
+        "cart_count": sum(item["quantity"] for item in summary["items"]),
         "is_desktop": getattr(request, "is_desktop", True),
     }

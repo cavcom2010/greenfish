@@ -58,25 +58,12 @@ Quick repo signals from this review:
 
 ### Priority 1: architecture simplification
 
-1. Consolidate duplicated customer profile models.
-   `apps.accounts.CustomerProfile` and `apps.customers.CustomerProfile` both
-   exist and both describe the same business concept. Pick one authoritative
-   model and remove the duplicate path.
-
-2. Consolidate duplicated cart logic.
-   The app currently has both:
-   - `apps.cart.services.CartService`
-   - session/cart helpers in `apps.orders.services`
-
-   They both manipulate the same cart idea from different abstractions. Keep
-   one implementation and make the other disappear.
-
-3. Reduce the desktop/mobile template split.
+1. Reduce the desktop/mobile template split.
    There are 24 desktop-only templates plus repeated per-view template
    switching across the codebase. Move toward one responsive template system,
    or at least centralize template resolution in a shared helper.
 
-4. Remove compatibility passthrough views from `apps.orders`.
+2. Remove compatibility passthrough views from `apps.orders`.
    Several orders routes just forward to `apps.operations.views`. Point URLs to
    the real operations views directly and trim the alias layer.
 
@@ -176,8 +163,7 @@ Quick repo signals from this review:
   - visible hero offers
   - available menu items
   - recent orders for operations
-- Remove or merge underused app boundaries where the split no longer helps.
-  `apps.cart` and `apps.customers` are the clearest candidates for review.
+- Continue removing underused app boundaries where the split no longer helps.
 
 ### 5. Data model and persistence
 

@@ -6,7 +6,6 @@ import logging
 
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.core.models import SiteSettings
@@ -118,7 +117,6 @@ def offline(request):
     return render(request, template)
 
 
-@csrf_exempt
 @require_POST
 @rate_limit("push-subscribe", limit=10, window_seconds=600)
 def subscribe_push(request):
@@ -166,7 +164,6 @@ def subscribe_push(request):
         return JsonResponse({"error": "Could not save subscription"}, status=500)
 
 
-@csrf_exempt
 @require_POST
 @rate_limit("push-unsubscribe", limit=10, window_seconds=600)
 def unsubscribe_push(request):

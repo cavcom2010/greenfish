@@ -28,11 +28,9 @@ This Django project follows a **modular app architecture** where each app has a 
 
 **accounts**: Combines authentication (User model) with business logic (CustomerProfile).
 
-*Note: In a clean architecture, these would be separate:*
-- `authentication`: User, login, registration
-- `customers`: CustomerProfile, Address, preferences
-
-*Kept combined for database compatibility.*
+*Customer profile data is intentionally kept in `apps.accounts.CustomerProfile`
+for database compatibility. There is no separate `customers` app in runtime
+wiring.*
 
 ---
 
@@ -41,15 +39,13 @@ This Django project follows a **modular app architecture** where each app has a 
 | App | Purpose | Reusable | Dependencies |
 |-----|---------|----------|--------------|
 | `menu` | Product catalog (categories, items, modifiers) | ✅ Yes | None |
-| `cart` | Shopping cart (session-based) | ✅ Yes | None |
 | `orders` | Order management, checkout, kitchen display | ⚠️ Partial | accounts, menu |
 | `payments` | Payment processing (Mollie) | ✅ Yes | orders |
 
 **menu**: Generic product catalog. Can be used for any restaurant/shop.
 
-**cart**: Session-based cart. No database models. Works with any product catalog.
-
-**orders**: Order lifecycle management. Depends on specific business flow.
+**orders**: Order lifecycle management and the active session-cart
+implementation. Depends on specific business flow.
 
 **payments**: Payment gateway abstraction. Currently Mollie. Can add Stripe, etc.
 
@@ -122,34 +118,11 @@ Lower layers don't depend on upper layers:
 - ❌ Would be wrong: `menu` importing `orders.Order`
 
 ### 4. Session-Based Cart
-The cart app uses sessions (no database) making it:
-- Fast (no DB queries for cart operations)
-- Simple (no migrations needed)
-- Reusable (works with any product model)
+Cart state is stored in the session and handled through `apps.orders.services`.
+This keeps checkout totals, modifiers, discounts, and cart rendering on one
+implementation path.
 
 ## Using Apps in Other Projects
-
-### Example: Reusing the Cart App
-
-```python
-# In another project's settings.py
-INSTALLED_APPS = [
-    # ...
-    'apps.cart',
-]
-
-# In views
-from apps.cart.services import CartService
-
-def add_to_cart(request):
-    cart = CartService(request)
-    cart.add_item(
-        item_id=product.id,
-        name=product.name,
-        price=product.price,
-        quantity=1
-    )
-```
 
 ### Example: Reusing the Menu App
 
@@ -173,7 +146,7 @@ INSTALLED_APPS = [
 
 ### Short Term
 1. ✅ Add docstrings to all apps (Done)
-2. ✅ Create cart service (Done)
+2. ✅ Centralize session-cart behavior in orders services (Done)
 3. ⬜ Move SiteSettings to config app (Requires migration)
 4. ⬜ Split accounts into authentication + customers (Requires migration)
 
@@ -188,9 +161,6 @@ INSTALLED_APPS = [
 Each app should be testable independently:
 
 ```bash
-# Test only the cart app
-python manage.py test apps.cart
-
 # Test only the menu app
 python manage.py test apps.menu
 ```

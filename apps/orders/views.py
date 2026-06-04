@@ -27,6 +27,7 @@ from .services import (
     delivery_map_settings,
     delivery_minimum_order_amount,
     get_cart_summary,
+    normalize_cart_quantity,
     online_payment_available,
     payment_fallback_available,
     payment_fallback_hold_minutes,
@@ -305,7 +306,7 @@ def add_to_cart(request):
         store_service_type(request, request.POST.get("service_type"))
     quantity_raw = request.POST.get("quantity", 1)
     try:
-        quantity = max(1, int(quantity_raw))
+        quantity = normalize_cart_quantity(quantity_raw)
     except (TypeError, ValueError):
         return _checkout_error_response(request, "Please choose a valid quantity.")
 
@@ -351,7 +352,7 @@ def add_to_cart(request):
 def update_cart_item(request, item_id):
     """Update cart item quantity."""
     try:
-        quantity = int(request.POST.get("quantity", 1))
+        quantity = normalize_cart_quantity(request.POST.get("quantity", 1), allow_zero=True)
     except (TypeError, ValueError):
         return _checkout_error_response(request, "Please choose a valid quantity.")
 

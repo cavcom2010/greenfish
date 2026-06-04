@@ -5,8 +5,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
-from allauth.account.views import LoginView, SignupView, LogoutView, PasswordResetView
 
 from apps.orders.models import Order, OrderItem
 from apps.orders.services import add_menu_item_to_cart
@@ -25,6 +26,17 @@ def _desktop_template(template_name, request):
         if len(parts) >= 2:
             return f"desktop/{parts[0]}/{parts[1]}"
     return template_name
+
+
+def _safe_next_redirect(request, fallback_url_name):
+    next_url = request.POST.get("next") or request.GET.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return reverse(fallback_url_name)
 
 
 # ── Desktop-aware allauth wrappers ──────────────────────────────────────
@@ -219,7 +231,7 @@ def toggle_favorite(request, item_id):
         return JsonResponse({"success": True, "is_favorite": is_favorite, "message": message})
 
     messages.success(request, message)
-    return redirect(request.POST.get("next") or "accounts:profile")
+    return redirect(_safe_next_redirect(request, "accounts:profile"))
 
 
 @login_required
@@ -266,7 +278,7 @@ def save_order_item_meal(request, order_item_id):
         },
     )
     messages.success(request, f"{saved_meal.name} {'saved' if created else 'updated'} in your favourites.")
-    return redirect(request.POST.get("next") or "accounts:app_home")
+    return redirect(_safe_next_redirect(request, "accounts:app_home"))
 
 
 @login_required

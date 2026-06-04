@@ -34,9 +34,12 @@
                     <a href="{% url 'menu:menu' %}">
                         <i class="ph ph-fork-knife"></i> Browse Menu
                     </a>
-                    <a href="{% url 'account_logout' %}" style="color:var(--error);">
-                        <i class="ph ph-sign-out"></i> Sign Out
-                    </a>
+                    <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
+                        {% csrf_token %}
+                        <button type="submit" style="border:0;background:transparent;color:var(--error);padding:0;font:inherit;cursor:pointer;text-align:left;">
+                            <i class="ph ph-sign-out"></i> Sign Out
+                        </button>
+                    </form>
                 </nav>
             </div>
 

@@ -94,6 +94,30 @@ class OrderFlowTests(TestCase):
         self.assertEqual(update_response.json()["cart_count"], 3)
         self.assertEqual(update_response.json()["cart_total"], "37.50")
 
+    @override_settings(MAX_CART_ITEM_QUANTITY=5)
+    def test_cart_quantity_is_capped_server_side(self):
+        add_response = self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 500, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(add_response.status_code, 200)
+        self.assertEqual(add_response.json()["cart_count"], 5)
+        cart = self.client.session["cart"]
+        item_id = next(iter(cart.keys()))
+        self.assertEqual(cart[item_id]["quantity"], 5)
+
+        update_response = self.client.post(
+            reverse("orders:update_cart_item", args=[item_id]),
+            {"quantity": 500},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.json()["cart_count"], 5)
+        self.assertEqual(self.client.session["cart"][item_id]["quantity"], 5)
+
     def test_htmx_remove_from_cart_refreshes_drawer_and_triggers_cart_state(self):
         self.client.post(
             reverse("orders:add_to_cart"),
@@ -1175,6 +1199,32 @@ class PaymentFlowTests(TestCase):
         self.assertEqual(order.delivery_address_line1, "12 Test Street")
         self.assertEqual(order.delivery_city, "Leeds")
         self.assertEqual(order.delivery_postcode, "LS1 1AA")
+
+    @override_settings(
+        DEBUG=True,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_create_payment_does_not_change_logged_in_user_email(self):
+        create_user(email="alternate@example.com")
+        self._seed_cart()
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Checkout User",
+                "customer_phone": "07747055935",
+                "customer_email": "alternate@example.com",
+                "pickup_time": "15",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.latest("id")
+        self.assertEqual(order.customer_email, "alternate@example.com")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "user@example.com")
 
     @override_settings(
         DEBUG=True,

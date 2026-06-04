@@ -197,7 +197,10 @@
                 <a href="{% url 'accounts:profile' %}">My Profile</a>
                 <a href="{% url 'accounts:order_history' %}">Order History</a>
                 <a href="{% url 'loyalty:dashboard' %}">Rewards</a>
-                <a href="{% url 'account_logout' %}">Sign Out</a>
+                <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" style="border:0;background:transparent;color:inherit;padding:0;font:inherit;cursor:pointer;text-align:left;">Sign Out</button>
+                </form>
                 {% else %}
                 <a href="{% url 'account_login' %}">Sign In</a>
                 <a href="{% url 'account_signup' %}">Create Account</a>

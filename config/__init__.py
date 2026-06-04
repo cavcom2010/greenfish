@@ -1,7 +1,6 @@
 import os
 
-# Set default settings module
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
 
 from .celery import app as celery_app
 

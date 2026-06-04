@@ -65,7 +65,6 @@ LOCAL_APPS = [
     
     # Commerce
     "apps.menu",           # Product catalog
-    "apps.cart",           # Shopping cart (session-based)
     "apps.orders",         # Order management
     "apps.operations",     # Staff operations boards
     "apps.payments",       # Payment processing
@@ -199,7 +198,7 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
-ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_LOGOUT_ON_GET = False
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -219,6 +218,7 @@ SHOP_EMAIL = env("SHOP_EMAIL", default="")
 CURRENCY = env("CURRENCY", default="GBP")
 ORDER_PREFIX = env("ORDER_PREFIX", default="TN")
 DEFAULT_PREP_TIME = env("DEFAULT_PREP_TIME", default=15, cast=int)
+MAX_CART_ITEM_QUANTITY = env("MAX_CART_ITEM_QUANTITY", default=20, cast=int)
 DELIVERY_ENABLED = env("DELIVERY_ENABLED", default=True, cast=bool)
 DELIVERY_MINIMUM_ORDER_AMOUNT = env("DELIVERY_MINIMUM_ORDER_AMOUNT", default="15.00")
 GOOGLE_MAPS_API_KEY = env("GOOGLE_MAPS_API_KEY", default="")
