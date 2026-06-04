@@ -17,6 +17,27 @@ class RepeatOrderExperienceTests(TestCase):
         self.item = create_menu_item(name="Saved Sadza", price=Decimal("6.50"))
         self.profile, _ = CustomerProfile.objects.get_or_create(user=self.user)
 
+    def _reorderable_pickup_order(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "status": Order.OrderStatus.COMPLETED,
+            "payment_status": Order.PaymentStatus.PAID,
+            "service_type": Order.ServiceType.PICKUP,
+            "collected_at": timezone.now(),
+        }
+        defaults.update(overrides)
+        return create_order(**defaults)
+
+    def _point_order_at_item(self, order, quantity=2):
+        order_item = order.items.first()
+        order_item.menu_item = self.item
+        order_item.item_name = self.item.name
+        order_item.item_price = self.item.price
+        order_item.quantity = quantity
+        order_item.modifiers = [{"id": 1, "name": "Extra Gravy", "price": "0.50"}]
+        order_item.save()
+        return order_item
+
     def test_customer_can_save_and_remove_favorite_item(self):
         response = self.client.post(reverse("accounts:toggle_favorite", args=[self.item.pk]))
 
@@ -63,14 +84,8 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(stored_item["quantity"], 1)
 
     def test_customer_can_reorder_available_items_from_previous_order(self):
-        order = create_order(user=self.user)
-        order_item = order.items.first()
-        order_item.menu_item = self.item
-        order_item.item_name = self.item.name
-        order_item.item_price = self.item.price
-        order_item.quantity = 2
-        order_item.modifiers = [{"id": 1, "name": "Extra Gravy", "price": "0.50"}]
-        order_item.save()
+        order = self._reorderable_pickup_order()
+        self._point_order_at_item(order)
 
         response = self.client.post(reverse("accounts:reorder", args=[order.pk]))
 
@@ -81,6 +96,78 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(stored_item["menu_item_id"], self.item.pk)
         self.assertEqual(stored_item["quantity"], 2)
         self.assertEqual(stored_item["modifiers"][0]["name"], "Extra Gravy")
+
+    def test_customer_can_reorder_completed_paid_delivery_order(self):
+        order = create_order(
+            user=self.user,
+            status=Order.OrderStatus.COMPLETED,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivered_at=timezone.now(),
+        )
+        self._point_order_at_item(order, quantity=1)
+
+        response = self.client.post(reverse("accounts:reorder", args=[order.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("orders:cart"))
+        stored_item = next(iter(self.client.session["cart"].values()))
+        self.assertEqual(stored_item["menu_item_id"], self.item.pk)
+
+    def test_customer_cannot_reorder_orders_without_successful_handover(self):
+        cases = [
+            {
+                "label": "pending unpaid",
+                "status": Order.OrderStatus.PENDING,
+                "payment_status": Order.PaymentStatus.PENDING,
+            },
+            {
+                "label": "confirmed paid",
+                "status": Order.OrderStatus.CONFIRMED,
+                "payment_status": Order.PaymentStatus.PAID,
+            },
+            {
+                "label": "cancelled paid",
+                "status": Order.OrderStatus.CANCELLED,
+                "payment_status": Order.PaymentStatus.PAID,
+                "collected_at": timezone.now(),
+            },
+            {
+                "label": "completed unpaid",
+                "status": Order.OrderStatus.COMPLETED,
+                "payment_status": Order.PaymentStatus.PENDING,
+                "collected_at": timezone.now(),
+            },
+            {
+                "label": "completed refunded",
+                "status": Order.OrderStatus.COMPLETED,
+                "payment_status": Order.PaymentStatus.REFUNDED,
+                "collected_at": timezone.now(),
+            },
+            {
+                "label": "completed paid without collection",
+                "status": Order.OrderStatus.COMPLETED,
+                "payment_status": Order.PaymentStatus.PAID,
+            },
+            {
+                "label": "completed paid delivery without delivery",
+                "status": Order.OrderStatus.COMPLETED,
+                "payment_status": Order.PaymentStatus.PAID,
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+        ]
+
+        for index, case in enumerate(cases):
+            with self.subTest(case=case["label"]):
+                order = create_order(user=self.user, customer_email=f"blocked-{index}@example.com", **{
+                    key: value for key, value in case.items() if key != "label"
+                })
+
+                response = self.client.post(reverse("accounts:reorder", args=[order.pk]))
+
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url, reverse("accounts:order_history"))
+                self.assertEqual(self.client.session.get("cart", {}), {})
 
     def test_order_history_links_to_order_tracking(self):
         order = create_order(user=self.user)
@@ -171,14 +258,8 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_customer_can_save_past_order_item_as_meal_and_add_it_again(self):
-        order = create_order(user=self.user)
-        order_item = order.items.first()
-        order_item.menu_item = self.item
-        order_item.item_name = self.item.name
-        order_item.item_price = self.item.price
-        order_item.quantity = 2
-        order_item.modifiers = [{"id": 1, "name": "Extra Gravy", "price": "0.50"}]
-        order_item.save()
+        order = self._reorderable_pickup_order()
+        order_item = self._point_order_at_item(order)
 
         response = self.client.post(reverse("accounts:save_order_item_meal", args=[order_item.pk]))
 
@@ -194,8 +275,18 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(stored_item["quantity"], 2)
         self.assertEqual(stored_item["modifiers"][0]["name"], "Extra Gravy")
 
+    def test_customer_cannot_save_meal_from_unfinished_order(self):
+        order = create_order(user=self.user, status=Order.OrderStatus.CONFIRMED, payment_status=Order.PaymentStatus.PAID)
+        order_item = self._point_order_at_item(order)
+
+        response = self.client.post(reverse("accounts:save_order_item_meal", args=[order_item.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("accounts:order_history"))
+        self.assertFalse(SavedMeal.objects.filter(user=self.user, menu_item=self.item).exists())
+
     def test_save_meal_next_redirect_rejects_external_urls(self):
-        order = create_order(user=self.user)
+        order = self._reorderable_pickup_order()
         order_item = order.items.first()
         order_item.menu_item = self.item
         order_item.save()
@@ -246,3 +337,35 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Rewards Hub")
         self.assertContains(response, "Lunch favourite")
+
+    def test_app_home_recent_orders_only_include_reorderable_orders(self):
+        eligible = self._reorderable_pickup_order(customer_email="eligible-app-home@example.com")
+        ineligible = create_order(
+            user=self.user,
+            status=Order.OrderStatus.CONFIRMED,
+            payment_status=Order.PaymentStatus.PAID,
+            customer_email="blocked-app-home@example.com",
+        )
+
+        response = self.client.get(reverse("accounts:app_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(eligible, response.context["recent_orders"])
+        self.assertNotIn(ineligible, response.context["recent_orders"])
+
+    def test_order_history_hides_reorder_actions_for_ineligible_orders(self):
+        eligible = self._reorderable_pickup_order(customer_email="eligible-history@example.com")
+        ineligible = create_order(
+            user=self.user,
+            status=Order.OrderStatus.CONFIRMED,
+            payment_status=Order.PaymentStatus.PAID,
+            customer_email="blocked-history@example.com",
+        )
+
+        response = self.client.get(reverse("accounts:order_history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("orders:tracking", args=[eligible.order_number]))
+        self.assertContains(response, reverse("orders:tracking", args=[ineligible.order_number]))
+        self.assertContains(response, reverse("accounts:reorder", args=[eligible.pk]), count=1)
+        self.assertNotContains(response, reverse("accounts:reorder", args=[ineligible.pk]))

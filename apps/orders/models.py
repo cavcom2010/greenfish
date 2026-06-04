@@ -237,6 +237,13 @@ class Order(models.Model):
             self.delivery_postcode,
         ]
         return ", ".join(part for part in parts if part)
+
+    @property
+    def is_reorderable(self):
+        """Return whether this order is eligible for customer repeat ordering."""
+        from .reorder import is_reorderable_order
+
+        return is_reorderable_order(self)
     
     def save(self, *args, **kwargs):
         if not self.order_number:

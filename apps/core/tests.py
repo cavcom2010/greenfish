@@ -11,12 +11,14 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from apps.core.media import build_variant_name, get_image_variant_url
 from apps.core.models import LargeOrderRequest
-from apps.core.test_support import create_meal_deal, create_menu_item, create_offer, create_user, ensure_site_settings
+from apps.core.test_support import create_meal_deal, create_menu_item, create_offer, create_order, create_user, ensure_site_settings
 from apps.menu.models import MenuCategory, MenuItem
+from apps.orders.models import Order
 
 
 class PublicRouteTests(TestCase):
@@ -188,6 +190,29 @@ class PublicRouteTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["items"]), [vegetarian_item])
         self.assertNotIn(non_matching_item, response.context["items"])
+
+    def test_home_order_again_only_includes_reorderable_orders(self):
+        user = create_user(email="home-repeat@example.com")
+        eligible = create_order(
+            user=user,
+            status=Order.OrderStatus.COMPLETED,
+            payment_status=Order.PaymentStatus.PAID,
+            collected_at=timezone.now(),
+            customer_email="eligible-home@example.com",
+        )
+        ineligible = create_order(
+            user=user,
+            status=Order.OrderStatus.CONFIRMED,
+            payment_status=Order.PaymentStatus.PAID,
+            customer_email="blocked-home@example.com",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("core:home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(eligible, response.context["recent_orders"])
+        self.assertNotIn(ineligible, response.context["recent_orders"])
 
     def test_account_pages_require_login_and_auth_pages_render(self):
         self.assertEqual(self.client.get(reverse("accounts:profile")).status_code, 302)

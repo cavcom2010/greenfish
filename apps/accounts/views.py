@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from apps.orders.access import order_customer_url, request_has_order_token
 from apps.orders.models import Order, OrderItem
+from apps.orders.reorder import is_reorderable_order, reorderable_orders
 from apps.orders.services import add_menu_item_to_cart
 
 from apps.loyalty.services import get_user_loyalty_summary
@@ -145,7 +146,7 @@ def app_home(request):
     """Account home designed as the installed-app start screen."""
     profile, _ = CustomerProfile.objects.get_or_create(user=request.user)
     recent_orders = (
-        Order.objects.filter(user=request.user)
+        reorderable_orders(Order.objects.filter(user=request.user))
         .prefetch_related("items__menu_item")
         .order_by("-created_at")[:5]
     )
@@ -264,6 +265,9 @@ def reorder(request, order_id):
         pk=order_id,
         user=request.user,
     )
+    if not is_reorderable_order(order):
+        messages.error(request, "Only completed paid orders can be ordered again.")
+        return redirect("accounts:order_history")
 
     added_count = 0
     skipped_count = 0
@@ -336,6 +340,10 @@ def save_order_item_meal(request, order_item_id):
         pk=order_item_id,
         order__user=request.user,
     )
+    if not is_reorderable_order(order_item.order):
+        messages.error(request, "Meals can only be saved from completed paid orders.")
+        return redirect("accounts:order_history")
+
     menu_item = order_item.menu_item
     image_url = ""
     if menu_item and getattr(menu_item, "image", None):

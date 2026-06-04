@@ -12,6 +12,7 @@ from apps.accounts.models import CustomerProfile
 from apps.core.forms import LargeOrderRequestForm
 from apps.menu.models import MenuCategory, MenuItem
 from apps.offers.models import Offer
+from apps.orders.reorder import reorderable_orders
 from apps.orders.services import get_cart_summary, selected_service_type
 
 
@@ -88,7 +89,7 @@ def home(request):
         if profile:
             favorite_items = profile.favorite_items.filter(is_available=True).select_related("category")[:6]
         recent_orders = (
-            request.user.orders.prefetch_related("items__menu_item")
+            reorderable_orders(request.user.orders.prefetch_related("items__menu_item"))
             .filter(items__menu_item__is_available=True)
             .distinct()
             .order_by("-created_at")[:3]
