@@ -10,13 +10,14 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.core.rate_limits import rate_limit
+from apps.orders.access import get_accessible_order_or_404, order_customer_url
 from apps.orders.models import Order
 from apps.orders.services import (
     clear_checkout_session,
@@ -154,7 +155,7 @@ def _create_demo_payment(order, request):
             "currency": getattr(settings, "CURRENCY", "GBP"),
             "status": Payment.Status.PENDING,
             "checkout_url": request.build_absolute_uri(
-                reverse("payments:demo_checkout", args=[order.order_number])
+                order_customer_url("payments:demo_checkout", order)
             ),
             "metadata": {"provider": Payment.Provider.DEMO},
         },
@@ -305,12 +306,12 @@ def create_payment(request):
 
 def payment_return(request, order_number):
     """Handle return from checkout."""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_accessible_order_or_404(request, order_number)
     _sync_order_payment(order, request=request)
     order.refresh_from_db()
 
     if order.payment_status == Order.PaymentStatus.PAID:
-        return redirect("orders:confirmation", order_number=order_number)
+        return redirect(order_customer_url("orders:confirmation", order))
 
     return render(
         request,
@@ -320,6 +321,8 @@ def payment_return(request, order_number):
             "status": order.payment_status,
             "payment": getattr(order, "payment", None),
             "payment_fallback_hold_minutes": payment_fallback_hold_minutes(),
+            "tracking_url": order_customer_url("orders:tracking", order),
+            "confirmation_url": order_customer_url("orders:confirmation", order),
         },
     )
 
@@ -423,7 +426,7 @@ def webhook(request):
 
 def payment_status_api(request, order_number):
     """API endpoint to check payment status."""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_accessible_order_or_404(request, order_number)
     _sync_order_payment(order)
     order.refresh_from_db()
 
@@ -442,7 +445,7 @@ def demo_checkout(request, order_number):
     if not demo_payment_enabled():
         raise Http404("Demo checkout is only available in debug mode.")
 
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_accessible_order_or_404(request, order_number)
     payment = _create_demo_payment(order, request)
 
     if request.method == "POST":
@@ -451,7 +454,7 @@ def demo_checkout(request, order_number):
             payment.status = Payment.Status.PAID
             payment.save(update_fields=["status", "updated_at"])
             order.mark_as_paid()
-            return redirect("orders:confirmation", order_number=order_number)
+            return redirect(order_customer_url("orders:confirmation", order))
 
         if action == "cancel":
             payment.status = Payment.Status.CANCELLED

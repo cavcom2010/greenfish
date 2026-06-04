@@ -30,10 +30,32 @@ class CustomerOrderIssueTests(TestCase):
         self.assertEqual(issue.user, self.user)
         self.assertEqual(issue.requested_refund_amount, Decimal("3.50"))
 
+    def test_guest_with_order_token_can_report_issue(self):
+        guest_order = create_order(user=None)
+        issue_url = f"{reverse('orders:create_issue', args=[guest_order.order_number])}?t={guest_order.public_access_token}"
+
+        response = self.client.post(
+            issue_url,
+            {
+                "issue_type": OrderIssue.IssueType.LATE_DELIVERY,
+                "description": "The delivery is much later than expected.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        issue = OrderIssue.objects.get(order=guest_order)
+        self.assertIsNone(issue.user)
+        self.assertIn(guest_order.public_access_token, response.url)
+
     def test_customer_cannot_report_issue_for_someone_elses_order(self):
         other_user = create_user(email="other-issue@example.com")
         self.client.force_login(other_user)
 
+        response = self.client.get(reverse("orders:create_issue", args=[self.order.order_number]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_anonymous_without_order_token_cannot_report_issue(self):
         response = self.client.get(reverse("orders:create_issue", args=[self.order.order_number]))
 
         self.assertEqual(response.status_code, 404)
@@ -45,3 +67,4 @@ class CustomerOrderIssueTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("orders:create_issue", args=[self.order.order_number]))
+        self.assertContains(response, f"t={self.order.public_access_token}")

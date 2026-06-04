@@ -38,7 +38,7 @@
 
     <div style="display: grid; gap: 12px;">
         {% if status == 'paid' %}
-        <a href="{% url 'orders:confirmation' order.order_number %}" class="btn btn-brand">View confirmation</a>
+        <a href="{{ confirmation_url }}" class="btn btn-brand">View confirmation</a>
         {% else %}
         {% if order.payment.checkout_url and status == 'pending' and order.payment.provider != 'offline_pending' %}
         <a href="{{ order.payment.checkout_url }}" class="btn btn-brand">Continue payment</a>
@@ -57,7 +57,7 @@
             </a>
             {% endif %}
         {% endif %}
-        <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-brand">Track order</a>
+        <a href="{{ tracking_url }}" class="btn btn-brand">Track order</a>
         <a href="{% url 'menu:menu' %}" class="btn btn-secondary">Back to menu</a>
         {% endif %}
     </div>

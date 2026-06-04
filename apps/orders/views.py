@@ -16,6 +16,7 @@ from apps.core.rate_limits import client_identity, consume_rate_limit, session_i
 from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuItem
 
+from .access import get_accessible_order_or_404, order_customer_url, request_can_access_order
 from .models import Order, OrderIssue
 from .services import (
     add_custom_item_to_cart,
@@ -536,9 +537,9 @@ def apply_voucher(request):
 
 def order_confirmation(request, order_number):
     """Order confirmation page."""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_accessible_order_or_404(request, order_number)
     template = "desktop/orders/confirmation.html" if getattr(request, "is_desktop", True) else "orders/confirmation.html"
-    return render(request, template, {"order": order})
+    return render(request, template, {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
 
 
 @login_required
@@ -582,26 +583,40 @@ def pay_instore(request):
 
 def confirmation_instore(request, order_number):
     """Order confirmation page for pay in store orders."""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_accessible_order_or_404(request, order_number)
     template = "desktop/orders/confirmation_instore.html" if getattr(request, "is_desktop", True) else "orders/confirmation_instore.html"
-    return render(request, template, {"order": order})
+    return render(request, template, {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
 
 
 def order_tracking(request, order_number):
     """Public order tracking page - no login required."""
-    order = get_object_or_404(Order.objects.prefetch_related("items", "issues"), order_number=order_number)
+    order = get_accessible_order_or_404(
+        request,
+        order_number,
+        queryset=Order.objects.prefetch_related("items", "issues"),
+    )
     template = "desktop/orders/tracking.html" if getattr(request, "is_desktop", True) else "orders/tracking.html"
-    return render(request, template, {"order": order})
+    return render(
+        request,
+        template,
+        {
+            "order": order,
+            "tracking_url": order_customer_url("orders:tracking", order),
+            "issue_url": order_customer_url("orders:create_issue", order),
+        },
+    )
 
 
-@login_required
 def create_order_issue(request, order_number):
     """Let a customer raise a structured issue for their own order."""
     order = get_object_or_404(
-        Order.objects.prefetch_related("items"),
+        Order.objects.prefetch_related("items", "issues"),
         order_number=order_number,
-        user=request.user,
     )
+    if not request_can_access_order(request, order):
+        from django.http import Http404
+
+        raise Http404("Order not found")
     if request.method == "POST":
         issue_type = request.POST.get("issue_type", "")
         description = request.POST.get("description", "").strip()
@@ -612,29 +627,30 @@ def create_order_issue(request, order_number):
                 refund_amount = Decimal(refund_amount_raw)
             except Exception:
                 messages.error(request, "Please enter a valid refund amount.")
-                return redirect("orders:create_issue", order_number=order.order_number)
+                return redirect(order_customer_url("orders:create_issue", order))
 
         valid_issue_types = {choice for choice, _ in OrderIssue.IssueType.choices}
         if issue_type not in valid_issue_types:
             messages.error(request, "Please choose the issue type.")
-            return redirect("orders:create_issue", order_number=order.order_number)
+            return redirect(order_customer_url("orders:create_issue", order))
         if len(description) < 10:
             messages.error(request, "Please describe what happened.")
-            return redirect("orders:create_issue", order_number=order.order_number)
+            return redirect(order_customer_url("orders:create_issue", order))
 
         OrderIssue.objects.create(
             order=order,
-            user=request.user,
+            user=request.user if getattr(request.user, "is_authenticated", False) else None,
             issue_type=issue_type,
             description=description,
             requested_refund_amount=refund_amount,
         )
         messages.success(request, "Your issue has been sent to the team.")
-        return redirect("orders:tracking", order_number=order.order_number)
+        return redirect(order_customer_url("orders:tracking", order))
 
     context = {
         "order": order,
         "issue_types": OrderIssue.IssueType.choices,
+        "tracking_url": order_customer_url("orders:tracking", order),
     }
     template = "desktop/orders/create_issue.html" if getattr(request, "is_desktop", True) else "orders/create_issue.html"
     return render(request, template, context)

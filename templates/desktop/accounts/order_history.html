@@ -84,7 +84,7 @@
                         </div>
                         {% endif %}
                         <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 1rem;">
-                            <a href="{% url 'orders:tracking' order.order_number %}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border);">
+                            <a href="{% url 'orders:tracking' order.order_number %}?t={{ order.public_access_token }}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border);">
                                 <i class="ph ph-map-trifold"></i>
                                 Track
                             </a>

@@ -20,7 +20,7 @@
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Last updated {{ order.updated_at|time:"H:i" }}. This page refreshes automatically.</div>
                 </div>
                 <span style="background: {% if order.status == 'completed' %}var(--success-bg);color:var(--success);{% elif order.status == 'cancelled' %}var(--error-bg);color:var(--error);{% else %}var(--warning-bg);color:var(--warning);{% endif %} padding: 0.5rem 1.25rem; border-radius: 50px; font-size: 0.85rem; font-weight: 700;">
-                    {{ order.get_status_display }}
+                    {{ order.service_status_display }}
                 </span>
             </div>
 
@@ -136,9 +136,9 @@
                 {% if order.issues.exists %}<div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem;">Support requests on this order: {{ order.issues.count }}</div>{% endif %}
             </div>
             {% if request.user.is_authenticated and order.user_id == request.user.id %}
-            <a href="{% url 'orders:create_issue' order.order_number %}" class="hero-btn-primary" style="text-decoration: none;"><i class="ph-bold ph-warning-circle"></i> Report an issue</a>
+            <a href="{{ issue_url }}" class="hero-btn-primary" style="text-decoration: none;"><i class="ph-bold ph-warning-circle"></i> Report an issue</a>
             {% else %}
-            <a href="{% url 'account_login' %}?next={% url 'orders:create_issue' order.order_number %}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border);"><i class="ph-bold ph-user"></i> Sign in to report</a>
+            <a href="{{ issue_url }}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border);"><i class="ph-bold ph-warning-circle"></i> Report an issue</a>
             {% endif %}
         </div>
 

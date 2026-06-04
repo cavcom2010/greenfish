@@ -30,7 +30,7 @@
             <p>{{ current_points }} points available. {{ tier.name }} status. Rewards, favourites, live orders and account shortcuts in one place.</p>
         </div>
         {% if active_order %}
-        <a class="app-button" href="{% url 'orders:tracking' active_order.order_number %}"><i class="ph ph-navigation-arrow"></i> Track live order</a>
+        <a class="app-button" href="{% url 'orders:tracking' active_order.order_number %}?t={{ active_order.public_access_token }}"><i class="ph ph-navigation-arrow"></i> Track live order</a>
         {% endif %}
     </section>
 

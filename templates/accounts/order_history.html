@@ -48,7 +48,7 @@
             </div>
             {% endif %}
             <div style="display: flex; gap: 8px; width: 100%; margin-top: 12px;">
-                <a href="{% url 'orders:tracking' order.order_number %}" class="btn btn-secondary" style="flex: 1; padding: 11px 14px;">
+                <a href="{% url 'orders:tracking' order.order_number %}?t={{ order.public_access_token }}" class="btn btn-secondary" style="flex: 1; padding: 11px 14px;">
                     <i class="ph ph-map-trifold" style="margin-right: 6px;"></i>
                     Track
                 </a>

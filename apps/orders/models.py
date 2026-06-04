@@ -3,6 +3,7 @@ Order models for Tinashe Takeaway.
 """
 import uuid
 from decimal import Decimal
+from secrets import token_urlsafe
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
@@ -18,6 +19,10 @@ def default_preparation_time_minutes():
         return max(1, int(getattr(settings, "DEFAULT_PREP_TIME", 15)))
     except (TypeError, ValueError):
         return 15
+
+
+def generate_public_access_token():
+    return token_urlsafe(24)
 
 
 class Order(models.Model):
@@ -44,6 +49,12 @@ class Order(models.Model):
     
     # Order identification
     order_number = models.CharField(max_length=20, unique=True, db_index=True)
+    public_access_token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=generate_public_access_token,
+        editable=False,
+    )
     
     # Customer information
     customer_name = models.CharField(max_length=150)
@@ -235,9 +246,12 @@ class Order(models.Model):
         """Generate unique order number."""
         from django.conf import settings
         prefix = getattr(settings, "ORDER_PREFIX", "TN")
-        # Use UUID for uniqueness, take first 8 chars
-        unique_id = str(uuid.uuid4().int)[:6]
-        return f"{prefix}-{unique_id}"
+        for _ in range(10):
+            unique_id = uuid.uuid4().hex[:8].upper()
+            candidate = f"{prefix}-{unique_id}"
+            if not Order.objects.filter(order_number=candidate).exists():
+                return candidate
+        return f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
     
     def calculate_totals(self):
         """Calculate order totals from items."""

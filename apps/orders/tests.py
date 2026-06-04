@@ -1065,7 +1065,9 @@ class OrderFlowTests(TestCase):
             status=Order.OrderStatus.PREPARING,
             payment_status=Order.PaymentStatus.PAID,
         )
-        tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+        tracking_response = self.client.get(
+            f"{reverse('orders:tracking', args=[order.order_number])}?t={order.public_access_token}"
+        )
         self.assertEqual(tracking_response.status_code, 200)
         self.assertContains(tracking_response, "This page refreshes automatically")
         self.assertContains(tracking_response, order.items.first().item_name)
@@ -1093,18 +1095,20 @@ class OrderFlowTests(TestCase):
 
     def test_confirmation_pages_link_to_tracking(self):
         order = create_order(user=self.user)
-        tracking_url = reverse("orders:tracking", args=[order.order_number])
+        tracking_url = f"{reverse('orders:tracking', args=[order.order_number])}?t={order.public_access_token}"
 
         for name in ["orders:confirmation", "orders:confirmation_instore"]:
             with self.subTest(template="desktop", route=name):
-                response = self.client.get(reverse(name, args=[order.order_number]))
+                response = self.client.get(
+                    f"{reverse(name, args=[order.order_number])}?t={order.public_access_token}"
+                )
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, tracking_url)
                 self.assertContains(response, "Track Order")
 
             with self.subTest(template="mobile", route=name):
                 response = self.client.get(
-                    reverse(name, args=[order.order_number]),
+                    f"{reverse(name, args=[order.order_number])}?t={order.public_access_token}",
                     HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
                 )
                 self.assertEqual(response.status_code, 200)
@@ -1120,9 +1124,18 @@ class OrderFlowTests(TestCase):
             delivery_city="Leeds",
             delivery_postcode="LS1 1AA",
         )
-        response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+        response = self.client.get(
+            f"{reverse('orders:tracking', args=[order.order_number])}?t={order.public_access_token}"
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Out for Delivery")
+
+    def test_anonymous_order_tracking_requires_access_token(self):
+        order = create_order(user=self.user)
+
+        response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+
+        self.assertEqual(response.status_code, 404)
 
 
 class PaymentFlowTests(TestCase):
@@ -1164,6 +1177,7 @@ class PaymentFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         order = Order.objects.latest("id")
         self.assertIn(reverse("payments:demo_checkout", args=[order.order_number]), response.url)
+        self.assertIn(f"t={order.public_access_token}", response.url)
         self.assertTrue(Payment.objects.filter(order=order).exists())
         self.assertTrue(VoucherUsage.objects.filter(order=order).exists())
 
@@ -1368,6 +1382,7 @@ class PaymentFlowTests(TestCase):
         self.assertEqual(payment.status, Payment.Status.PENDING)
         self.assertIsNotNone(payment.expires_at)
         self.assertIn(reverse("payments:return", args=[order.order_number]), response.url)
+        self.assertIn(f"t={order.public_access_token}", response.url)
 
     def test_offline_pending_payment_status_shows_call_and_directions_actions(self):
         ensure_site_settings(
@@ -1385,7 +1400,9 @@ class PaymentFlowTests(TestCase):
             expires_at=timezone.now() + timezone.timedelta(minutes=15),
         )
 
-        response = self.client.get(reverse("payments:return", args=[order.order_number]))
+        response = self.client.get(
+            f"{reverse('payments:return', args=[order.order_number])}?t={order.public_access_token}"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Your order is being held for payment.")
@@ -1400,7 +1417,9 @@ class PaymentFlowTests(TestCase):
         )
         self.assertContains(response, "Track order")
 
-        tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+        tracking_response = self.client.get(
+            f"{reverse('orders:tracking', args=[order.order_number])}?t={order.public_access_token}"
+        )
         self.assertEqual(tracking_response.status_code, 200)
         self.assertContains(tracking_response, 'href="tel:+441131234567"')
         self.assertContains(tracking_response, "Call store")
@@ -1411,7 +1430,9 @@ class PaymentFlowTests(TestCase):
         )
 
         self.client.cookies["view_mode"] = "desktop"
-        desktop_tracking_response = self.client.get(reverse("orders:tracking", args=[order.order_number]))
+        desktop_tracking_response = self.client.get(
+            f"{reverse('orders:tracking', args=[order.order_number])}?t={order.public_access_token}"
+        )
         self.assertEqual(desktop_tracking_response.status_code, 200)
         self.assertContains(desktop_tracking_response, 'href="tel:+441131234567"')
         self.assertContains(desktop_tracking_response, "Call store")
@@ -1430,7 +1451,9 @@ class PaymentFlowTests(TestCase):
             expires_at=timezone.now() + timezone.timedelta(minutes=15),
         )
 
-        response = self.client.get(reverse("payments:return", args=[order.order_number]))
+        response = self.client.get(
+            f"{reverse('payments:return', args=[order.order_number])}?t={order.public_access_token}"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Your order is being held for payment.")
@@ -1558,8 +1581,12 @@ class PaymentFlowTests(TestCase):
             currency="GBP",
             status=Payment.Status.PENDING,
         )
-        response = self.client.post(reverse("payments:demo_checkout", args=[order.order_number]), {"action": "pay"})
+        response = self.client.post(
+            f"{reverse('payments:demo_checkout', args=[order.order_number])}?t={order.public_access_token}",
+            {"action": "pay"},
+        )
         self.assertEqual(response.status_code, 302)
+        self.assertIn(f"t={order.public_access_token}", response.url)
         payment.refresh_from_db()
         order.refresh_from_db()
         self.assertEqual(payment.status, Payment.Status.PAID)
@@ -1576,10 +1603,19 @@ class PaymentFlowTests(TestCase):
             currency="GBP",
             status=Payment.Status.PAID,
         )
-        response = self.client.get(reverse("payments:status", args=[order.order_number]))
+        response = self.client.get(
+            f"{reverse('payments:status', args=[order.order_number])}?t={order.public_access_token}"
+        )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["paid"])
         mocked_refresh.assert_not_called()
+
+    def test_anonymous_payment_status_requires_access_token(self):
+        order = create_order(user=self.user, payment_status=Order.PaymentStatus.PENDING)
+
+        response = self.client.get(reverse("payments:status", args=[order.order_number]))
+
+        self.assertEqual(response.status_code, 404)
 
     @override_settings(
         PAYMENT_PROVIDER="stripe",

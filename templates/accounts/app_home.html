@@ -51,7 +51,7 @@
                     Pickup{% if active_order.estimated_ready_time %} around {{ active_order.estimated_ready_time|time:"H:i" }}{% endif %}
                 {% endif %}
             </div>
-            <a class="app-button secondary" href="{% url 'orders:tracking' active_order.order_number %}" style="margin-top:12px;"><i class="ph ph-navigation-arrow"></i> Track order</a>
+            <a class="app-button secondary" href="{% url 'orders:tracking' active_order.order_number %}?t={{ active_order.public_access_token }}" style="margin-top:12px;"><i class="ph ph-navigation-arrow"></i> Track order</a>
         </div>
     </section>
     {% endif %}

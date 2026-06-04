@@ -17,6 +17,7 @@ from mollie.api.client import Client
 from mollie.api.error import Error as MollieError
 
 from apps.orders.models import Order
+from apps.orders.access import order_customer_url
 from config.settings.payment_credentials import (
     mollie_credentials_configured,
     stripe_credentials_configured,
@@ -210,7 +211,7 @@ def create_offline_pending_payment(order, request, *, reason="online_payment_una
     expires_at = timezone.now() + timezone.timedelta(minutes=hold_minutes)
     payment_id = f"offline_{uuid.uuid4().hex[:12]}"
     checkout_url = request.build_absolute_uri(
-        reverse("payments:return", args=[order.order_number])
+        order_customer_url("payments:return", order)
     )
     payment = Payment.objects.create(
         order=order,
@@ -439,7 +440,7 @@ class StripePaymentService:
             raise ImproperlyConfigured("STRIPE_SECRET_KEY is not configured.")
 
         base_url = f"{request.scheme}://{request.get_host()}"
-        redirect_url = f"{base_url}{reverse('payments:return', args=[order.order_number])}"
+        redirect_url = f"{base_url}{order_customer_url('payments:return', order)}"
 
         line_item_description = (
             f"{order.items.count()} line item(s) • {'Delivery' if order.is_delivery else 'Pickup'}"
@@ -591,7 +592,7 @@ class MolliePaymentService:
         """Create a new Mollie payment for an order."""
         try:
             base_url = f"{request.scheme}://{request.get_host()}"
-            redirect_url = f"{base_url}{reverse('payments:return', args=[order.order_number])}"
+            redirect_url = f"{base_url}{order_customer_url('payments:return', order)}"
             webhook_url = f"{base_url}{reverse('payments:webhook')}"
             webhook_secret = getattr(settings, "MOLLIE_WEBHOOK_SECRET", "").strip()
             if webhook_secret:

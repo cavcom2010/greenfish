@@ -104,8 +104,8 @@
         {% if order.is_delivery %}
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
             <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status != 'pending' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status != 'pending' %}<i class="ph ph-check"></i>{% endif %}
+                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status != 'pending' and order.status != 'cancelled' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
+                    {% if order.status != 'pending' and order.status != 'cancelled' %}<i class="ph ph-check"></i>{% endif %}
                 </div>
                 <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">confirmed</div>
             </div>
@@ -136,13 +136,13 @@
         </div>
         <div style="height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;">
             <div style="height: 100%; background: var(--success); width: 
-                {% if order.status == 'pending' %}0%{% elif order.status == 'confirmed' %}20%{% elif order.status == 'preparing' %}40%{% elif order.status == 'ready' %}60%{% elif order.status == 'out_for_delivery' %}80%{% else %}100%{% endif %}; transition: width 0.3s;"></div>
+                {% if order.status == 'pending' or order.status == 'cancelled' %}0%{% elif order.status == 'confirmed' %}20%{% elif order.status == 'preparing' %}40%{% elif order.status == 'ready' %}60%{% elif order.status == 'out_for_delivery' %}80%{% else %}100%{% endif %}; transition: width 0.3s;"></div>
         </div>
         {% else %}
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
             <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status != 'pending' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status != 'pending' %}<i class="ph ph-check"></i>{% endif %}
+                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status != 'pending' and order.status != 'cancelled' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
+                    {% if order.status != 'pending' and order.status != 'cancelled' %}<i class="ph ph-check"></i>{% endif %}
                 </div>
                 <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">confirmed</div>
             </div>
@@ -167,7 +167,7 @@
         </div>
         <div style="height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;">
             <div style="height: 100%; background: var(--success); width: 
-                {% if order.status == 'pending' %}0%{% elif order.status == 'confirmed' %}25%{% elif order.status == 'preparing' %}50%{% elif order.status == 'ready' %}75%{% else %}100%{% endif %}; transition: width 0.3s;"></div>
+                {% if order.status == 'pending' or order.status == 'cancelled' %}0%{% elif order.status == 'confirmed' %}25%{% elif order.status == 'preparing' %}50%{% elif order.status == 'ready' %}75%{% else %}100%{% endif %}; transition: width 0.3s;"></div>
         </div>
         {% endif %}
     </div>
@@ -234,9 +234,9 @@
         <div style="font-weight: 800; margin-bottom: 6px;">Need help with this order?</div>
         <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Report missing items, late delivery, wrong items or payment issues without calling the shop.</div>
         {% if request.user.is_authenticated and order.user_id == request.user.id %}
-        <a href="{% url 'orders:create_issue' order.order_number %}" class="btn btn-brand" style="width: 100%;"><i class="ph ph-warning-circle"></i> Report an issue</a>
+        <a href="{{ issue_url }}" class="btn btn-brand" style="width: 100%;"><i class="ph ph-warning-circle"></i> Report an issue</a>
         {% else %}
-        <a href="{% url 'account_login' %}?next={% url 'orders:create_issue' order.order_number %}" class="btn btn-secondary" style="width: 100%;"><i class="ph ph-user"></i> Sign in to report</a>
+        <a href="{{ issue_url }}" class="btn btn-secondary" style="width: 100%;"><i class="ph ph-warning-circle"></i> Report an issue</a>
         {% endif %}
         {% if order.issues.exists %}
         <div style="font-size: 13px; color: var(--text-secondary); margin-top: 10px;">Support requests on this order: {{ order.issues.count }}</div>
