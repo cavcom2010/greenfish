@@ -40,6 +40,12 @@ class Offer(models.Model):
         FIXED = "fixed", "Fixed Amount Off"
         FREE_ITEM = "free_item", "Free Item"
         BUNDLE = "bundle", "Bundle Deal"
+
+    class Audience(models.TextChoices):
+        ALL = "all", "All Customers"
+        FIRST_ORDER = "first_order", "First Order"
+        BIRTHDAY = "birthday", "Birthday"
+        OFF_PEAK = "off_peak", "Off-Peak"
     
     name = models.CharField(max_length=100)
     description = models.TextField()
@@ -89,6 +95,14 @@ class Offer(models.Model):
         default=False,
         help_text="Show this offer on the homepage hero banner"
     )
+    app_exclusive = models.BooleanField(
+        default=False,
+        help_text="Show this as a signed-in app/account reward.",
+    )
+    audience = models.CharField(max_length=20, choices=Audience.choices, default=Audience.ALL)
+    badge = models.CharField(max_length=80, blank=True)
+    off_peak_start = models.TimeField(null=True, blank=True)
+    off_peak_end = models.TimeField(null=True, blank=True)
     display_order = models.PositiveIntegerField(default=0)
     
     # Tracking
@@ -126,6 +140,37 @@ class Offer(models.Model):
             self.OfferType.PERCENTAGE,
             self.OfferType.FIXED,
         }
+
+    def is_available_for_user(self, user=None, now=None):
+        """Check whether this offer is valid for the current customer context."""
+        now = now or timezone.localtime()
+        if not self.is_valid():
+            return False
+
+        if self.audience == self.Audience.ALL:
+            return True
+
+        if self.audience == self.Audience.OFF_PEAK:
+            if not self.off_peak_start or not self.off_peak_end:
+                return False
+            current_time = now.time()
+            if self.off_peak_start <= self.off_peak_end:
+                return self.off_peak_start <= current_time <= self.off_peak_end
+            return current_time >= self.off_peak_start or current_time <= self.off_peak_end
+
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+
+        if self.audience == self.Audience.FIRST_ORDER:
+            Order = apps.get_model("orders", "Order")
+            return not Order.objects.filter(user=user, payment_status="paid").exists()
+
+        if self.audience == self.Audience.BIRTHDAY:
+            profile = getattr(user, "profile", None)
+            birthday = getattr(profile, "date_of_birth", None)
+            return bool(birthday and birthday.month == now.month and birthday.day == now.day)
+
+        return True
     
     def calculate_discount(self, order_subtotal, *, discount_base=None):
         """Calculate discount amount for given subtotal."""

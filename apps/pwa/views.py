@@ -25,7 +25,7 @@ def manifest(request):
     manifest_data = {
         "name": db_settings.shop_name,
         "short_name": db_settings.shop_name[:12] if len(db_settings.shop_name) > 12 else db_settings.shop_name,
-        "start_url": "/",
+        "start_url": "/accounts/app/",
         "display": "standalone",
         "background_color": "#FFFFFF",
         "theme_color": db_settings.theme_color,
@@ -72,6 +72,32 @@ def manifest(request):
                 "sizes": "512x512",
                 "type": "image/png"
             }
+        ],
+        "shortcuts": [
+            {
+                "name": "Order now",
+                "short_name": "Order",
+                "url": "/menu/",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}],
+            },
+            {
+                "name": "Rewards Hub",
+                "short_name": "Rewards",
+                "url": "/rewards/",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}],
+            },
+            {
+                "name": "Offers",
+                "short_name": "Offers",
+                "url": "/offers/",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}],
+            },
+            {
+                "name": "Account",
+                "short_name": "Account",
+                "url": "/accounts/app/",
+                "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}],
+            },
         ],
         "gcm_sender_id": "103953800507"
     }

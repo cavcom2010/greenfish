@@ -476,6 +476,65 @@ class OrderStatusHistory(models.Model):
         return f"{self.order.order_number}: {self.old_status} → {self.new_status}"
 
 
+class OrderIssue(models.Model):
+    """Customer support issue raised against an order."""
+
+    class IssueType(models.TextChoices):
+        MISSING_ITEM = "missing_item", "Missing Item"
+        WRONG_ITEM = "wrong_item", "Wrong Item"
+        LATE_DELIVERY = "late_delivery", "Late Delivery"
+        QUALITY = "quality", "Food Quality"
+        PAYMENT = "payment", "Payment"
+        OTHER = "other", "Other"
+
+    class Status(models.TextChoices):
+        SUBMITTED = "submitted", "Submitted"
+        REVIEWING = "reviewing", "Reviewing"
+        RESOLVED = "resolved", "Resolved"
+        REJECTED = "rejected", "Rejected"
+        REFUND_REQUESTED = "refund_requested", "Refund Requested"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="issues")
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="order_issues",
+    )
+    issue_type = models.CharField(max_length=30, choices=IssueType.choices)
+    description = models.TextField()
+    requested_refund_amount = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.SUBMITTED, db_index=True)
+    staff_notes = models.TextField(blank=True)
+    refund_request = models.ForeignKey(
+        "payments.RefundRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="order_issues",
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["order", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.order.order_number} - {self.get_issue_type_display()}"
+
+
 class FulfilmentCapacityRule(models.Model):
     """Capacity rule for pickup or delivery ordering windows."""
 

@@ -16,11 +16,12 @@ from apps.core.rate_limits import client_identity, consume_rate_limit, session_i
 from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuItem
 
-from .models import Order
+from .models import Order, OrderIssue
 from .services import (
     add_custom_item_to_cart,
     add_menu_item_to_cart,
     clear_selected_offer,
+    clear_reward_wallet_item,
     clear_checkout_session,
     delivery_enabled,
     delivery_map_settings,
@@ -31,6 +32,7 @@ from .services import (
     payment_fallback_hold_minutes,
     remove_session_cart_item,
     selected_offer_id,
+    selected_reward_wallet_item_id,
     selected_service_type,
     store_service_type,
     update_session_cart_item,
@@ -234,17 +236,24 @@ def _selected_deal_modifiers(request, deal):
 def cart_view(request):
     """View cart contents."""
     active_offer_id = selected_offer_id(request)
+    active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
     summary = get_cart_summary(
         request.session.get("cart", {}),
         user=request.user,
         voucher_code=request.session.get("voucher_code", ""),
         offer_id=active_offer_id,
+        reward_wallet_item_id=active_reward_wallet_item_id,
     )
     if active_offer_id and summary["offer_invalid"]:
         clear_selected_offer(request)
         if summary["offer_error"]:
             messages.error(request, summary["offer_error"])
         summary["selected_offer"] = None
+    if active_reward_wallet_item_id and summary["reward_wallet_invalid"]:
+        clear_reward_wallet_item(request)
+        if summary["reward_wallet_error"]:
+            messages.error(request, summary["reward_wallet_error"])
+        summary["reward_wallet_item"] = None
     context = {
         "cart_items": summary["items"],
         "subtotal": summary["subtotal"],
@@ -255,6 +264,8 @@ def cart_view(request):
         "delivery_enabled": delivery_enabled(),
         "active_offer": summary["selected_offer"],
         "offer_error": summary["offer_error"],
+        "reward_wallet_item": summary["reward_wallet_item"],
+        "reward_wallet_error": summary["reward_wallet_error"],
         "voucher_code": summary["voucher_code"],
     }
     template = "desktop/orders/cart.html" if getattr(request, "is_desktop", True) else "orders/cart.html"
@@ -264,11 +275,13 @@ def cart_view(request):
 def cart_drawer(request):
     """Return cart drawer content via HTMX."""
     active_offer_id = selected_offer_id(request)
+    active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
     summary = get_cart_summary(
         request.session.get("cart", {}),
         user=request.user,
         voucher_code=request.session.get("voucher_code", ""),
         offer_id=active_offer_id,
+        reward_wallet_item_id=active_reward_wallet_item_id,
     )
     context = {
         "cart_items": summary["items"],
@@ -278,6 +291,8 @@ def cart_drawer(request):
         "cart_count": sum(item["quantity"] for item in summary["items"]),
         "active_offer": summary["selected_offer"],
         "offer_error": summary["offer_error"],
+        "reward_wallet_item": summary["reward_wallet_item"],
+        "reward_wallet_error": summary["reward_wallet_error"],
         "voucher_code": summary["voucher_code"],
     }
     return render(request, "orders/partials/cart_drawer.html", context)
@@ -356,11 +371,13 @@ def remove_from_cart(request, item_id):
 
     if request.headers.get("HX-Request"):
         active_offer_id = selected_offer_id(request)
+        active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
         summary = get_cart_summary(
             request.session.get("cart", {}),
             user=request.user,
             voucher_code=request.session.get("voucher_code", ""),
             offer_id=active_offer_id,
+            reward_wallet_item_id=active_reward_wallet_item_id,
         )
         cart_count = sum(item["quantity"] for item in summary["items"])
         response = render(
@@ -374,6 +391,8 @@ def remove_from_cart(request, item_id):
                 "cart_count": cart_count,
                 "active_offer": summary["selected_offer"],
                 "offer_error": summary["offer_error"],
+                "reward_wallet_item": summary["reward_wallet_item"],
+                "reward_wallet_error": summary["reward_wallet_error"],
                 "voucher_code": summary["voucher_code"],
             },
         )
@@ -390,11 +409,13 @@ def checkout(request):
     service_type = selected_service_type(request)
     store_service_type(request, service_type)
     active_offer_id = selected_offer_id(request)
+    active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
     summary = get_cart_summary(
         request.session.get("cart", {}),
         user=request.user,
         voucher_code=request.session.get("voucher_code", ""),
         offer_id=active_offer_id,
+        reward_wallet_item_id=active_reward_wallet_item_id,
     )
 
     if not summary["items"]:
@@ -411,6 +432,12 @@ def checkout(request):
         if summary["offer_error"]:
             messages.error(request, summary["offer_error"])
         summary["selected_offer"] = None
+
+    if active_reward_wallet_item_id and summary["reward_wallet_invalid"]:
+        clear_reward_wallet_item(request)
+        if summary["reward_wallet_error"]:
+            messages.error(request, summary["reward_wallet_error"])
+        summary["reward_wallet_item"] = None
 
     checkout_form = request.session.get(PAYMENT_FALLBACK_FORM_SESSION_KEY, {})
     default_customer_name = checkout_form.get("customer_name", "")
@@ -434,6 +461,8 @@ def checkout(request):
         "voucher_error": summary["voucher_error"],
         "active_offer": summary["selected_offer"],
         "offer_error": summary["offer_error"],
+        "reward_wallet_item": summary["reward_wallet_item"],
+        "reward_wallet_error": summary["reward_wallet_error"],
         "online_payment_available": online_payment_available(),
         "payment_fallback_available": payment_fallback_available(),
         "payment_fallback_hold_minutes": payment_fallback_hold_minutes(),
@@ -491,6 +520,7 @@ def apply_voucher(request):
     if summary["voucher"]:
         request.session["voucher_code"] = summary["voucher_code"]
         clear_selected_offer(request)
+        clear_reward_wallet_item(request)
         request.session.modified = True
         return _checkout_message_response(request, "Voucher applied successfully.")
 
@@ -558,6 +588,52 @@ def confirmation_instore(request, order_number):
 
 def order_tracking(request, order_number):
     """Public order tracking page - no login required."""
-    order = get_object_or_404(Order.objects.prefetch_related("items"), order_number=order_number)
+    order = get_object_or_404(Order.objects.prefetch_related("items", "issues"), order_number=order_number)
     template = "desktop/orders/tracking.html" if getattr(request, "is_desktop", True) else "orders/tracking.html"
     return render(request, template, {"order": order})
+
+
+@login_required
+def create_order_issue(request, order_number):
+    """Let a customer raise a structured issue for their own order."""
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items"),
+        order_number=order_number,
+        user=request.user,
+    )
+    if request.method == "POST":
+        issue_type = request.POST.get("issue_type", "")
+        description = request.POST.get("description", "").strip()
+        refund_amount_raw = request.POST.get("requested_refund_amount", "").strip()
+        refund_amount = None
+        if refund_amount_raw:
+            try:
+                refund_amount = Decimal(refund_amount_raw)
+            except Exception:
+                messages.error(request, "Please enter a valid refund amount.")
+                return redirect("orders:create_issue", order_number=order.order_number)
+
+        valid_issue_types = {choice for choice, _ in OrderIssue.IssueType.choices}
+        if issue_type not in valid_issue_types:
+            messages.error(request, "Please choose the issue type.")
+            return redirect("orders:create_issue", order_number=order.order_number)
+        if len(description) < 10:
+            messages.error(request, "Please describe what happened.")
+            return redirect("orders:create_issue", order_number=order.order_number)
+
+        OrderIssue.objects.create(
+            order=order,
+            user=request.user,
+            issue_type=issue_type,
+            description=description,
+            requested_refund_amount=refund_amount,
+        )
+        messages.success(request, "Your issue has been sent to the team.")
+        return redirect("orders:tracking", order_number=order.order_number)
+
+    context = {
+        "order": order,
+        "issue_types": OrderIssue.IssueType.choices,
+    }
+    template = "desktop/orders/create_issue.html" if getattr(request, "is_desktop", True) else "orders/create_issue.html"
+    return render(request, template, context)

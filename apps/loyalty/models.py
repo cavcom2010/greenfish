@@ -233,3 +233,93 @@ class LoyaltyReward(models.Model):
         validate_changed_image_fields(self, changed_images)
         super().save(*args, **kwargs)
         sync_instance_image_variants(self, LOYALTY_REWARD_IMAGE_VARIANTS, changed_images)
+
+
+class RewardWalletItem(models.Model):
+    """Customer-facing reward entitlement that can be activated for checkout."""
+
+    class Source(models.TextChoices):
+        WELCOME = "welcome", "Welcome"
+        BIRTHDAY = "birthday", "Birthday"
+        APP_EXCLUSIVE = "app_exclusive", "App Exclusive"
+        OFF_PEAK = "off_peak", "Off-Peak"
+        REFERRAL = "referral", "Referral"
+        GOODWILL = "goodwill", "Goodwill"
+        ADMIN = "admin", "Admin"
+
+    class Status(models.TextChoices):
+        AVAILABLE = "available", "Available"
+        USED = "used", "Used"
+        EXPIRED = "expired", "Expired"
+        CANCELLED = "cancelled", "Cancelled"
+
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="reward_wallet_items",
+    )
+    title = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    source = models.CharField(max_length=30, choices=Source.choices, default=Source.APP_EXCLUSIVE)
+    offer = models.ForeignKey(
+        "offers.Offer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="wallet_items",
+    )
+    loyalty_reward = models.ForeignKey(
+        LoyaltyReward,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="wallet_items",
+    )
+    points_value = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE, db_index=True)
+    valid_from = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    used_order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reward_wallet_items",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["status", "expires_at", "-created_at"]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["source", "created_at"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "offer", "source"],
+                name="unique_reward_wallet_offer_source_per_user",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.title} - {self.user.email}"
+
+    def is_available(self, now=None):
+        now = now or timezone.now()
+        if self.status != self.Status.AVAILABLE:
+            return False
+        if self.valid_from and self.valid_from > now:
+            return False
+        if self.expires_at and self.expires_at < now:
+            return False
+        if self.offer and not self.offer.is_available_for_user(self.user, now=timezone.localtime(now)):
+            return False
+        return True
+
+    def mark_used(self, order=None):
+        self.status = self.Status.USED
+        self.used_at = timezone.now()
+        self.used_order = order
+        self.save(update_fields=["status", "used_at", "used_order", "updated_at"])

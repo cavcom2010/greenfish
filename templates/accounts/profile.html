@@ -34,9 +34,43 @@
             <label class="form-label">Phone Number</label>
             <input type="tel" name="phone_number" class="form-input" value="{{ request.user.phone_number }}">
         </div>
+
+        <div class="form-group">
+            <label class="form-label">Birthday</label>
+            <input type="date" name="date_of_birth" class="form-input" value="{{ profile.date_of_birth|date:'Y-m-d' }}">
+        </div>
+
+        <label style="display: flex; gap: 10px; align-items: center; margin: 14px 0; font-weight: 600;">
+            <input type="checkbox" name="notifications_enabled" {% if profile.notifications_enabled %}checked{% endif %}>
+            Order and reward notifications
+        </label>
+
+        <label style="display: flex; gap: 10px; align-items: center; margin: 14px 0; font-weight: 600;">
+            <input type="checkbox" name="marketing_consent" {% if profile.marketing_consent %}checked{% endif %}>
+            App-exclusive offers and treats
+        </label>
         
         <button type="submit" class="btn btn-brand">Save Changes</button>
     </form>
+
+    {% if saved_meals %}
+    <div style="margin-top: 32px; text-align: left;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; padding: 0 4px;">Saved Meals</h3>
+        {% for meal in saved_meals %}
+        <div class="list-item" style="margin-bottom: 8px;">
+            <i class="ph ph-bookmark-simple" style="font-size: 24px; margin-right: 16px; color: var(--brand);"></i>
+            <div class="list-content">
+                <div class="list-title">{{ meal.name }}</div>
+                <div class="list-desc">{{ meal.quantity }} x {{ meal.item_name }}</div>
+            </div>
+            <form method="post" action="{% url 'accounts:add_saved_meal_to_cart' meal.id %}">
+                {% csrf_token %}
+                <button class="btn btn-brand" type="submit" style="padding: 8px 10px; width: auto;">Add</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     {% if favorite_items %}
     <div style="margin-top: 32px; text-align: left;">

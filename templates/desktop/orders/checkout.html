@@ -257,7 +257,26 @@
 
                 <!-- Voucher -->
                 <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-light);">
-                    {% if active_offer %}
+                    {% if reward_wallet_item %}
+                    <div style="margin-bottom:0.9rem;padding:0.85rem 1rem;border:1px solid var(--border-light);border-left:4px solid var(--brand);border-radius:var(--radius);background:var(--bg);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-weight:700;font-size:0.92rem;">Active Reward</div>
+                                <div style="font-size:0.86rem;color:var(--text-secondary);">{{ reward_wallet_item.title }}</div>
+                            </div>
+                            <form method="post" action="{% url 'loyalty:clear_wallet_item' %}" style="margin:0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" style="padding:0.5rem 0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-weight:600;font-size:0.8rem;cursor:pointer;">Remove</button>
+                            </form>
+                        </div>
+                        {% if reward_wallet_error %}
+                        <p style="color:var(--error);font-size:0.8rem;margin-top:0.55rem;">{{ reward_wallet_error }}</p>
+                        {% elif discount > 0 and not voucher_code %}
+                        <p style="color:var(--success);font-size:0.8rem;margin-top:0.55rem;">Reward applied: -£{{ discount|floatformat:2 }}</p>
+                        {% endif %}
+                    </div>
+                    {% elif active_offer %}
                     <div style="margin-bottom:0.9rem;padding:0.85rem 1rem;border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg);">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                             <div>

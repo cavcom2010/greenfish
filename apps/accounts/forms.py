@@ -4,7 +4,7 @@ Forms for the accounts app.
 from allauth.account.forms import SignupForm
 from django import forms
 
-from .models import User
+from .models import CustomerProfile, User
 
 
 class CustomSignupForm(SignupForm):
@@ -29,3 +29,14 @@ class UserProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ["first_name", "last_name", "phone_number"]
+
+
+class CustomerProfileForm(forms.ModelForm):
+    """Customer preference fields managed from the account hub."""
+
+    class Meta:
+        model = CustomerProfile
+        fields = ["date_of_birth", "notifications_enabled", "marketing_consent"]
+        widgets = {
+            "date_of_birth": forms.DateInput(attrs={"type": "date"}),
+        }

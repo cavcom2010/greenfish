@@ -49,7 +49,21 @@
 </div>
 
 <div class="cart-drawer-summary">
-    {% if active_offer %}
+    {% if reward_wallet_item %}
+    <div class="cart-drawer-offer">
+        <div>
+            <strong>{{ reward_wallet_item.title }}</strong>
+            {% if discount > 0 and not voucher_code %}
+            <span style="color:var(--success);font-size:0.8rem;">-£{{ discount|floatformat:2 }}</span>
+            {% endif %}
+        </div>
+        <form method="post" action="{% url 'loyalty:clear_wallet_item' %}" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'orders:cart' %}">
+            <button type="submit">Remove</button>
+        </form>
+    </div>
+    {% elif active_offer %}
     <div class="cart-drawer-offer">
         <div>
             <strong>{{ active_offer.name }}</strong>

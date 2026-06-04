@@ -25,6 +25,7 @@ PHONE_RE = re.compile(r"^(07\d{9}|\+447\d{9})$")
 POSTCODE_RE = re.compile(r"^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$", re.IGNORECASE)
 SERVICE_TYPE_SESSION_KEY = "service_type"
 ACTIVE_OFFER_SESSION_KEY = "active_offer_id"
+REWARD_WALLET_SESSION_KEY = "reward_wallet_item_id"
 DEFAULT_SERVICE_TYPE = Order.ServiceType.PICKUP
 VALID_SERVICE_TYPES = {choice for choice, _ in Order.ServiceType.choices}
 GOOGLE_ADDRESS_VALIDATION_URL = "https://addressvalidation.googleapis.com/v1:validateAddress"
@@ -231,6 +232,7 @@ def store_selected_offer(request, offer):
     """Persist the chosen offer in the session and clear voucher overrides."""
     offer_id = offer.id if hasattr(offer, "id") else int(offer)
     request.session[ACTIVE_OFFER_SESSION_KEY] = offer_id
+    request.session.pop(REWARD_WALLET_SESSION_KEY, None)
     request.session.pop("voucher_code", None)
     request.session.modified = True
     return offer_id
@@ -248,6 +250,32 @@ def selected_offer_id(request):
     raw_offer_id = request.session.get(ACTIVE_OFFER_SESSION_KEY)
     try:
         return int(raw_offer_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def store_reward_wallet_item(request, wallet_item):
+    """Persist a wallet reward in the checkout session and clear other discounts."""
+    wallet_item_id = wallet_item.id if hasattr(wallet_item, "id") else int(wallet_item)
+    request.session[REWARD_WALLET_SESSION_KEY] = wallet_item_id
+    request.session.pop(ACTIVE_OFFER_SESSION_KEY, None)
+    request.session.pop("voucher_code", None)
+    request.session.modified = True
+    return wallet_item_id
+
+
+def clear_reward_wallet_item(request):
+    """Remove any wallet reward from the session."""
+    if REWARD_WALLET_SESSION_KEY in request.session:
+        request.session.pop(REWARD_WALLET_SESSION_KEY, None)
+        request.session.modified = True
+
+
+def selected_reward_wallet_item_id(request):
+    """Return the selected wallet reward id from the session when present."""
+    raw_wallet_item_id = request.session.get(REWARD_WALLET_SESSION_KEY)
+    try:
+        return int(raw_wallet_item_id)
     except (TypeError, ValueError):
         return None
 
@@ -584,6 +612,7 @@ def get_cart_summary(
     user=None,
     voucher_code="",
     offer_id=None,
+    reward_wallet_item_id=None,
     guest_phone="",
     guest_email="",
 ):
@@ -632,6 +661,9 @@ def get_cart_summary(
     selected_offer = None
     offer_error = None
     offer_invalid = False
+    reward_wallet_item = None
+    reward_wallet_error = None
+    reward_wallet_invalid = False
     applied_offer = None
     discount = Decimal("0.00")
     cleaned_code = (voucher_code or "").strip().upper()
@@ -665,9 +697,42 @@ def get_cart_summary(
             else:
                 voucher_error = "This voucher code has expired or reached its usage limit."
                 voucher = None
+    elif reward_wallet_item_id:
+        try:
+            from apps.loyalty.models import RewardWalletItem
+
+            reward_wallet_item = RewardWalletItem.objects.select_related("offer").get(
+                pk=reward_wallet_item_id,
+                user=user if getattr(user, "is_authenticated", False) else None,
+            )
+        except (RewardWalletItem.DoesNotExist, TypeError, ValueError):
+            reward_wallet_error = "This reward is no longer available."
+            reward_wallet_invalid = True
+        else:
+            if not reward_wallet_item.is_available():
+                reward_wallet_error = "This reward is no longer available."
+                reward_wallet_invalid = True
+            elif not reward_wallet_item.offer:
+                reward_wallet_error = "This reward can be claimed from your Rewards Hub."
+                reward_wallet_invalid = True
+            else:
+                evaluation = _evaluate_offer_application(
+                    reward_wallet_item.offer,
+                    items,
+                    subtotal,
+                    menu_items_by_id,
+                )
+                reward_wallet_error = evaluation["error"]
+                reward_wallet_invalid = evaluation["invalid"]
+                if evaluation["discount"] > Decimal("0.00"):
+                    discount = evaluation["discount"]
+                    applied_offer = reward_wallet_item.offer
     elif offer_id:
         selected_offer = Offer.objects.filter(pk=offer_id).first()
         if not selected_offer:
+            offer_error = "This offer is no longer available."
+            offer_invalid = True
+        elif not selected_offer.is_available_for_user(user):
             offer_error = "This offer is no longer available."
             offer_invalid = True
         else:
@@ -696,6 +761,9 @@ def get_cart_summary(
         "selected_offer": selected_offer,
         "offer_error": offer_error,
         "offer_invalid": offer_invalid,
+        "reward_wallet_item": reward_wallet_item,
+        "reward_wallet_error": reward_wallet_error,
+        "reward_wallet_invalid": reward_wallet_invalid,
     }
 
 
@@ -794,6 +862,9 @@ def create_order_from_summary(
     elif summary["applied_offer"]:
         summary["applied_offer"].increment_usage()
 
+    if summary.get("reward_wallet_item"):
+        summary["reward_wallet_item"].mark_used(order)
+
     from .delivery import apply_delivery_pricing
     from .fulfilment import reserve_fulfilment_slot
     from .inventory import reserve_order_stock
@@ -810,4 +881,5 @@ def clear_checkout_session(request):
     request.session["cart"] = {}
     request.session.pop("voucher_code", None)
     request.session.pop(ACTIVE_OFFER_SESSION_KEY, None)
+    request.session.pop(REWARD_WALLET_SESSION_KEY, None)
     request.session.modified = True

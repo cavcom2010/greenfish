@@ -35,7 +35,7 @@ def _redirect_target(request, fallback):
 
 def offer_list(request):
     """List all active offers."""
-    offers = [offer for offer in _active_offer_queryset() if offer.is_valid()]
+    offers = [offer for offer in _active_offer_queryset() if offer.is_available_for_user(request.user)]
 
     context = {
         "offers": offers,
@@ -47,7 +47,7 @@ def offer_list(request):
 def offer_detail(request, pk):
     """Offer detail page."""
     offer = get_object_or_404(_active_offer_queryset(), pk=pk)
-    if not offer.is_valid():
+    if not offer.is_available_for_user(request.user):
         raise Http404("Offer is no longer available.")
 
     template = "desktop/offers/offer_detail.html" if getattr(request, "is_desktop", True) else "offers/offer_detail.html"
@@ -68,7 +68,7 @@ def activate_offer(request, pk):
     offer = get_object_or_404(_active_offer_queryset(), pk=pk)
     next_url = _redirect_target(request, reverse("menu:menu"))
 
-    if not offer.is_valid():
+    if not offer.is_available_for_user(request.user):
         messages.error(request, "This offer is no longer available.")
         return redirect(next_url)
 

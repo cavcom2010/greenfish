@@ -1,17 +1,18 @@
 // Service Worker for PWA
 
-const STATIC_CACHE_NAME = 'restaurant-static-v3';
-const RUNTIME_CACHE_NAME = 'restaurant-runtime-v3';
+const STATIC_CACHE_NAME = 'restaurant-static-v4';
+const RUNTIME_CACHE_NAME = 'restaurant-runtime-v4';
 const OFFLINE_URL = '/pwa/offline/';
 const STATIC_ASSETS = [
     '/',
     '/menu/',
+    '/offers/',
     OFFLINE_URL,
     '/pwa/manifest.json',
     '/static/icons/icon-192.png',
     '/static/icons/icon-512.png',
 ];
-const CACHEABLE_NAVIGATION_PATHS = new Set(['/', '/menu/']);
+const CACHEABLE_NAVIGATION_PATHS = new Set(['/', '/menu/', '/offers/']);
 const STATIC_PREFIXES = ['/static/'];
 const UNCACHEABLE_PREFIXES = ['/admin/', '/media/', '/orders/', '/payments/', '/pwa/push/'];
 

@@ -12,6 +12,7 @@ from .models import (
     FulfilmentCapacityRule,
     FulfilmentSlotReservation,
     Order,
+    OrderIssue,
     OrderItem,
     OrderStatusHistory,
 )
@@ -28,6 +29,12 @@ class OrderStatusHistoryInline(admin.TabularInline):
     extra = 0
     readonly_fields = ["old_status", "new_status", "changed_by", "created_at"]
     can_delete = False
+
+
+class OrderIssueInline(admin.TabularInline):
+    model = OrderIssue
+    extra = 0
+    readonly_fields = ["created_at", "updated_at", "resolved_at"]
 
 
 @admin.register(Order)
@@ -70,7 +77,7 @@ class OrderAdmin(admin.ModelAdmin):
         "cancelled_at",
         "delivery_distance_miles",
     ]
-    inlines = [OrderItemInline, OrderStatusHistoryInline]
+    inlines = [OrderItemInline, OrderIssueInline, OrderStatusHistoryInline]
     
     fieldsets = (
         ("Order Information", {
@@ -168,6 +175,15 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_display = ["order", "item_name", "quantity", "item_price", "line_total"]
     list_filter = ["order__status", "created_at"]
     search_fields = ["order__order_number", "item_name"]
+
+
+@admin.register(OrderIssue)
+class OrderIssueAdmin(admin.ModelAdmin):
+    list_display = ["order", "user", "issue_type", "status", "requested_refund_amount", "created_at"]
+    list_filter = ["issue_type", "status", "created_at"]
+    search_fields = ["order__order_number", "user__email", "description", "staff_notes"]
+    autocomplete_fields = ["order", "user", "refund_request"]
+    readonly_fields = ["created_at", "updated_at", "resolved_at"]
 
 
 @admin.register(FulfilmentCapacityRule)

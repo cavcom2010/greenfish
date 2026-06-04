@@ -13,13 +13,15 @@ class OfferAdmin(admin.ModelAdmin):
         "offer_type",
         "value",
         "minimum_order_amount",
+        "app_exclusive",
+        "audience",
         "is_active",
         "display_on_hero",
         "start_date",
         "end_date",
         "usage_count"
     ]
-    list_filter = ["offer_type", "is_active", "display_on_hero", "start_date"]
+    list_filter = ["offer_type", "audience", "app_exclusive", "is_active", "display_on_hero", "start_date"]
     search_fields = ["name", "description"]
     filter_horizontal = ["applicable_items", "applicable_categories"]
     
@@ -28,7 +30,16 @@ class OfferAdmin(admin.ModelAdmin):
             "fields": ("name", "description", "offer_type", "value")
         }),
         ("Conditions", {
-            "fields": ("minimum_order_amount", "applicable_items", "applicable_categories")
+            "fields": (
+                "minimum_order_amount",
+                "app_exclusive",
+                "audience",
+                "badge",
+                "off_peak_start",
+                "off_peak_end",
+                "applicable_items",
+                "applicable_categories",
+            )
         }),
         ("Validity", {
             "fields": ("start_date", "end_date", "is_active")

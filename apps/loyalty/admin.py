@@ -7,6 +7,7 @@ from .models import (
     ReferralCode,
     PointsRedemption,
     LoyaltyReward,
+    RewardWalletItem,
 )
 
 
@@ -62,3 +63,12 @@ class LoyaltyRewardAdmin(admin.ModelAdmin):
     list_display = ["name", "points_required", "reward_type", "is_active", "created_at"]
     list_filter = ["reward_type", "is_active"]
     search_fields = ["name", "description"]
+
+
+@admin.register(RewardWalletItem)
+class RewardWalletItemAdmin(admin.ModelAdmin):
+    list_display = ["title", "user", "source", "status", "offer", "points_value", "expires_at", "used_at"]
+    list_filter = ["source", "status", "expires_at", "created_at"]
+    search_fields = ["title", "description", "user__email", "offer__name"]
+    readonly_fields = ["created_at", "updated_at", "used_at"]
+    autocomplete_fields = ["user", "offer", "loyalty_reward", "used_order"]

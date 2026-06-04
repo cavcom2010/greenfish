@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.accounts.models import CustomerProfile
+from apps.accounts.models import CustomerProfile, SavedMeal
 from apps.core.test_support import create_menu_item, create_order, create_user, ensure_site_settings
 
 
@@ -77,3 +77,44 @@ class RepeatOrderExperienceTests(TestCase):
         response = self.client.post(reverse("accounts:reorder", args=[order.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_customer_can_save_past_order_item_as_meal_and_add_it_again(self):
+        order = create_order(user=self.user)
+        order_item = order.items.first()
+        order_item.menu_item = self.item
+        order_item.item_name = self.item.name
+        order_item.item_price = self.item.price
+        order_item.quantity = 2
+        order_item.modifiers = [{"id": 1, "name": "Extra Gravy", "price": "0.50"}]
+        order_item.save()
+
+        response = self.client.post(reverse("accounts:save_order_item_meal", args=[order_item.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        saved_meal = SavedMeal.objects.get(user=self.user, menu_item=self.item)
+        self.assertEqual(saved_meal.quantity, 2)
+        self.assertEqual(saved_meal.modifiers[0]["name"], "Extra Gravy")
+
+        response = self.client.post(reverse("accounts:add_saved_meal_to_cart", args=[saved_meal.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        stored_item = next(iter(self.client.session["cart"].values()))
+        self.assertEqual(stored_item["quantity"], 2)
+        self.assertEqual(stored_item["modifiers"][0]["name"], "Extra Gravy")
+
+    def test_app_home_renders_rewards_and_saved_meals(self):
+        SavedMeal.objects.create(
+            user=self.user,
+            menu_item=self.item,
+            name="Lunch favourite",
+            item_name=self.item.name,
+            item_price=self.item.price,
+            quantity=1,
+            modifiers=[],
+        )
+
+        response = self.client.get(reverse("accounts:app_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Rewards Hub")
+        self.assertContains(response, "Lunch favourite")

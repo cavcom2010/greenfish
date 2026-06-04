@@ -1,17 +1,20 @@
 """Service functions for loyalty system."""
 from decimal import Decimal, ROUND_DOWN
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
+from django.utils import timezone
 
 from apps.core.models import SiteSettings
+from apps.offers.models import Offer
 
-from .models import LoyaltySettings, LoyaltyTransaction, ReferralCode, PointsRedemption
+from .models import LoyaltySettings, LoyaltyTransaction, ReferralCode, PointsRedemption, RewardWalletItem
 from .utils import generate_referral_code, get_loyalty_tier
 
 
 def get_user_loyalty_summary(user):
     """Get complete loyalty summary for a user."""
     settings = LoyaltySettings.get()
+    sync_customer_reward_wallet(user)
     
     # Calculate current balance
     balance_data = LoyaltyTransaction.objects.filter(user=user).aggregate(
@@ -51,7 +54,82 @@ def get_user_loyalty_summary(user):
         "referral_count": referral_code.successful_referrals,
         "referral_total_points": referral_code.total_points_earned,
         "settings": settings,
+        "wallet_items": get_available_wallet_items(user),
     }
+
+
+def get_available_wallet_items(user):
+    """Return currently usable reward wallet items for a customer."""
+    if not getattr(user, "is_authenticated", False):
+        return RewardWalletItem.objects.none()
+    now = timezone.now()
+    return RewardWalletItem.objects.select_related("offer", "loyalty_reward").filter(
+        user=user,
+        status=RewardWalletItem.Status.AVAILABLE,
+        valid_from__lte=now,
+    ).filter(Q(expires_at__isnull=True) | Q(expires_at__gte=now))
+
+
+def _wallet_expiry(days):
+    return timezone.now() + timezone.timedelta(days=days)
+
+
+def sync_customer_reward_wallet(user):
+    """Issue automatic account rewards that should be visible now."""
+    if not getattr(user, "is_authenticated", False):
+        return
+
+    settings = LoyaltySettings.get()
+    site_name = SiteSettings.get().shop_name
+    profile = getattr(user, "profile", None)
+    now = timezone.localtime()
+
+    if settings.enabled and settings.welcome_bonus > 0:
+        RewardWalletItem.objects.get_or_create(
+            user=user,
+            source=RewardWalletItem.Source.WELCOME,
+            offer=None,
+            defaults={
+                "title": "Welcome reward",
+                "description": f"{settings.welcome_bonus} bonus points for joining {site_name}.",
+                "points_value": settings.welcome_bonus,
+                "expires_at": _wallet_expiry(60),
+            },
+        )
+
+    birthday = getattr(profile, "date_of_birth", None)
+    if settings.enabled and settings.birthday_bonus > 0 and birthday:
+        if birthday.month == now.month and birthday.day == now.day:
+            RewardWalletItem.objects.get_or_create(
+                user=user,
+                source=RewardWalletItem.Source.BIRTHDAY,
+                title=f"Birthday treat {now.year}",
+                defaults={
+                    "description": f"{settings.birthday_bonus} birthday points from {site_name}.",
+                    "points_value": settings.birthday_bonus,
+                    "expires_at": _wallet_expiry(14),
+                },
+            )
+
+    active_app_offers = Offer.objects.filter(app_exclusive=True, is_active=True)
+    for offer in active_app_offers:
+        if not offer.supports_checkout_discount() or not offer.is_available_for_user(user, now=now):
+            continue
+        source = (
+            RewardWalletItem.Source.OFF_PEAK
+            if offer.audience == Offer.Audience.OFF_PEAK
+            else RewardWalletItem.Source.APP_EXCLUSIVE
+        )
+        RewardWalletItem.objects.get_or_create(
+            user=user,
+            offer=offer,
+            source=source,
+            defaults={
+                "title": offer.hero_title or offer.name,
+                "description": offer.hero_subtitle or offer.description,
+                "expires_at": offer.end_date,
+            },
+        )
 
 
 def award_points_for_order(order):

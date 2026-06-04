@@ -4,7 +4,7 @@ Admin configuration for the accounts app.
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import CustomerDataRequest, CustomerProfile, User
+from .models import CustomerDataRequest, CustomerProfile, SavedMeal, User
 
 
 @admin.register(User)
@@ -31,10 +31,19 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(CustomerProfile)
 class CustomerProfileAdmin(admin.ModelAdmin):
-    list_display = ["user", "notifications_enabled", "created_at"]
+    list_display = ["user", "date_of_birth", "notifications_enabled", "marketing_consent", "created_at"]
     list_filter = ["notifications_enabled", "marketing_consent"]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     filter_horizontal = ["favorite_items"]
+
+
+@admin.register(SavedMeal)
+class SavedMealAdmin(admin.ModelAdmin):
+    list_display = ["name", "user", "item_name", "quantity", "last_added_at", "updated_at"]
+    list_filter = ["created_at", "last_added_at"]
+    search_fields = ["name", "item_name", "user__email"]
+    autocomplete_fields = ["user", "menu_item"]
+    readonly_fields = ["created_at", "updated_at", "last_added_at"]
 
 
 @admin.register(CustomerDataRequest)

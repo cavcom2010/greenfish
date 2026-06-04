@@ -21,6 +21,7 @@ urlpatterns = [
     path("confirmation/<str:order_number>/", views.order_confirmation, name="confirmation"),
     path("confirmation/<str:order_number>/instore/", views.confirmation_instore, name="confirmation_instore"),
     path("track/<str:order_number>/", views.order_tracking, name="tracking"),
+    path("track/<str:order_number>/issue/", views.create_order_issue, name="create_issue"),
     
     # Dashboard URLs (Legacy List View)
     path("dashboard/", views.order_board, name="order_board"),

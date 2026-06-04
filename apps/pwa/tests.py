@@ -18,6 +18,11 @@ class PwaViewTests(TestCase):
         response = self.client.get(reverse("pwa:manifest"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["name"], "Two Fish PWA")
+        self.assertEqual(response.json()["start_url"], "/accounts/app/")
+        shortcut_urls = {shortcut["url"] for shortcut in response.json()["shortcuts"]}
+        self.assertIn("/menu/", shortcut_urls)
+        self.assertIn("/rewards/", shortcut_urls)
+        self.assertIn("/accounts/app/", shortcut_urls)
 
     def test_push_subscription_endpoints_validate_and_persist(self):
         invalid_response = self.client.post(
@@ -90,4 +95,6 @@ class PwaViewTests(TestCase):
         self.assertIn("UNCACHEABLE_PREFIXES", body)
         self.assertIn("'/media/'", body)
         self.assertIn("'/payments/'", body)
+        self.assertIn("restaurant-static-v4", body)
+        self.assertNotIn("'/accounts/app/'", body)
         self.assertNotIn("cache.put(event.request, clonedResponse)", body)

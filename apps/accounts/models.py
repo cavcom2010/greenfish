@@ -95,6 +95,7 @@ class CustomerProfile(models.Model):
         blank=True,
         related_name="favorited_by"
     )
+    date_of_birth = models.DateField(null=True, blank=True)
     notifications_enabled = models.BooleanField(default=True)
     marketing_consent = models.BooleanField(default=False)
     
@@ -109,6 +110,49 @@ class CustomerProfile(models.Model):
     
     def __str__(self):
         return f"Profile for {self.user.email}"
+
+
+class SavedMeal(models.Model):
+    """Saved customer meal snapshot, including modifiers."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="saved_meals",
+    )
+    menu_item = models.ForeignKey(
+        "menu.MenuItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="saved_meal_snapshots",
+    )
+    name = models.CharField(max_length=120)
+    item_name = models.CharField(max_length=160)
+    item_price = models.DecimalField(max_digits=8, decimal_places=2)
+    quantity = models.PositiveIntegerField(default=1)
+    modifiers = models.JSONField(default=list, blank=True)
+    image_url = models.CharField(max_length=500, blank=True)
+    last_added_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-last_added_at", "-updated_at"]
+        indexes = [models.Index(fields=["user", "-updated_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "menu_item", "item_name"],
+                name="unique_saved_meal_base_item_per_user",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
+
+    @property
+    def is_available(self):
+        return bool(self.menu_item and self.menu_item.is_available)
 
 
 class CustomerDataRequest(models.Model):

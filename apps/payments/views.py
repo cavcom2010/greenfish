@@ -29,6 +29,7 @@ from apps.orders.services import (
     payment_fallback_hold_minutes,
     save_customer_profile,
     selected_offer_id,
+    selected_reward_wallet_item_id,
     selected_service_type,
     store_service_type,
     requested_pickup_time,
@@ -189,11 +190,13 @@ def create_payment(request):
         return _payment_error_response(request, message, status=503)
 
     active_offer_id = selected_offer_id(request)
+    active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
     summary = get_cart_summary(
         request.session.get("cart", {}),
         user=request.user,
         voucher_code=request.session.get("voucher_code", ""),
         offer_id=active_offer_id,
+        reward_wallet_item_id=active_reward_wallet_item_id,
     )
     if not summary["items"]:
         return _payment_error_response(request, "Your basket is empty.")
@@ -221,6 +224,7 @@ def create_payment(request):
         user=request.user,
         voucher_code=request.session.get("voucher_code", ""),
         offer_id=active_offer_id,
+        reward_wallet_item_id=active_reward_wallet_item_id,
         guest_phone=customer_phone,
         guest_email=customer_email,
     )
@@ -230,6 +234,13 @@ def create_payment(request):
         return _payment_error_response(
             request,
             summary["voucher_error"] or "Invalid voucher code.",
+        )
+    if active_reward_wallet_item_id and summary["reward_wallet_invalid"]:
+        request.session.pop("reward_wallet_item_id", None)
+        request.session.modified = True
+        return _payment_error_response(
+            request,
+            summary["reward_wallet_error"] or "This reward is no longer available.",
         )
 
     save_customer_profile(request.user, customer_name, customer_phone, customer_email)

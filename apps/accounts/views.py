@@ -8,11 +8,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from allauth.account.views import LoginView, SignupView, LogoutView, PasswordResetView
 
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderItem
 from apps.orders.services import add_menu_item_to_cart
 
-from .forms import UserProfileForm
-from .models import CustomerProfile
+from apps.loyalty.services import get_user_loyalty_summary
+
+from .forms import CustomerProfileForm, UserProfileForm
+from .models import CustomerProfile, SavedMeal
 from apps.menu.models import MenuItem
 
 
@@ -98,22 +100,59 @@ def profile(request):
     # Ensure profile exists
     profile, created = CustomerProfile.objects.get_or_create(user=user)
     favorite_items = profile.favorite_items.filter(is_available=True).select_related("category")[:6]
+    saved_meals = SavedMeal.objects.filter(user=user).select_related("menu_item")[:8]
 
     if request.method == "POST":
         form = UserProfileForm(request.POST, instance=user)
-        if form.is_valid():
+        profile_form = CustomerProfileForm(request.POST, instance=profile)
+        if form.is_valid() and profile_form.is_valid():
             form.save()
+            profile_form.save()
             return redirect("accounts:profile")
     else:
         form = UserProfileForm(instance=user)
+        profile_form = CustomerProfileForm(instance=profile)
 
     context = {
         "form": form,
+        "profile_form": profile_form,
         "orders": orders,
         "profile": profile,
         "favorite_items": favorite_items,
+        "saved_meals": saved_meals,
     }
     template = "desktop/accounts/profile.html" if getattr(request, "is_desktop", True) else "accounts/profile.html"
+    return render(request, template, context)
+
+
+@login_required
+def app_home(request):
+    """Account home designed as the installed-app start screen."""
+    profile, _ = CustomerProfile.objects.get_or_create(user=request.user)
+    recent_orders = (
+        Order.objects.filter(user=request.user)
+        .prefetch_related("items__menu_item")
+        .order_by("-created_at")[:5]
+    )
+    active_order = (
+        Order.objects.filter(user=request.user)
+        .exclude(status__in=[Order.OrderStatus.COMPLETED, Order.OrderStatus.CANCELLED])
+        .order_by("-created_at")
+        .first()
+    )
+    saved_meals = SavedMeal.objects.filter(user=request.user).select_related("menu_item")[:8]
+    favorite_items = profile.favorite_items.filter(is_available=True).select_related("category")[:6]
+    rewards = get_user_loyalty_summary(request.user)
+
+    context = {
+        "profile": profile,
+        "recent_orders": recent_orders,
+        "active_order": active_order,
+        "saved_meals": saved_meals,
+        "favorite_items": favorite_items,
+        **rewards,
+    }
+    template = "desktop/accounts/app_home.html" if getattr(request, "is_desktop", True) else "accounts/app_home.html"
     return render(request, template, context)
 
 
@@ -194,4 +233,60 @@ def add_favorite_to_cart(request, item_id):
     )
     add_menu_item_to_cart(request, item, quantity=1, modifiers=[])
     messages.success(request, f"Added {item.name} to your basket.")
+    return redirect("orders:cart")
+
+
+@login_required
+@require_POST
+def save_order_item_meal(request, order_item_id):
+    """Save a past order line, including modifiers, as a reusable meal."""
+    order_item = get_object_or_404(
+        OrderItem.objects.select_related("order", "menu_item"),
+        pk=order_item_id,
+        order__user=request.user,
+    )
+    menu_item = order_item.menu_item
+    image_url = ""
+    if menu_item and getattr(menu_item, "image", None):
+        try:
+            image_url = menu_item.image.url
+        except ValueError:
+            image_url = ""
+
+    saved_meal, created = SavedMeal.objects.update_or_create(
+        user=request.user,
+        menu_item=menu_item,
+        item_name=order_item.item_name,
+        defaults={
+            "name": request.POST.get("name", "").strip() or order_item.item_name,
+            "item_price": order_item.item_price,
+            "quantity": order_item.quantity,
+            "modifiers": order_item.modifiers,
+            "image_url": image_url,
+        },
+    )
+    messages.success(request, f"{saved_meal.name} {'saved' if created else 'updated'} in your favourites.")
+    return redirect(request.POST.get("next") or "accounts:app_home")
+
+
+@login_required
+@require_POST
+def add_saved_meal_to_cart(request, saved_meal_id):
+    """Add a saved meal snapshot to the basket."""
+    saved_meal = get_object_or_404(SavedMeal.objects.select_related("menu_item"), pk=saved_meal_id, user=request.user)
+    if not saved_meal.is_available:
+        messages.error(request, "That saved meal is not available right now.")
+        return redirect("accounts:app_home")
+
+    add_menu_item_to_cart(
+        request,
+        saved_meal.menu_item,
+        quantity=saved_meal.quantity,
+        modifiers=saved_meal.modifiers,
+    )
+    from django.utils import timezone
+
+    saved_meal.last_added_at = timezone.now()
+    saved_meal.save(update_fields=["last_added_at", "updated_at"])
+    messages.success(request, f"Added {saved_meal.name} to your basket.")
     return redirect("orders:cart")

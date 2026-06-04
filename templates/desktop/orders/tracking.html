@@ -99,6 +99,49 @@
             </div>
         </div>
 
+        {% if order.is_delivery %}
+        <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem; margin-bottom: 2rem;">
+            <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem;">Delivery Confidence</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                <div style="padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">ETA</div>
+                    <div style="font-weight: 800;">{% if order.delivery_eta_minutes %}{{ order.delivery_eta_minutes }} mins{% else %}Confirming{% endif %}</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Fee</div>
+                    <div style="font-weight: 800;">£{{ order.delivery_fee|floatformat:2 }}</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Zone</div>
+                    <div style="font-weight: 800;">{{ order.delivery_zone_name|default:"Local delivery" }}</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem;">Run</div>
+                    <div style="font-weight: 800;">{% if order.delivery_run_order %}{{ order.delivery_run_order.run.get_status_display }}{% elif order.delivery_driver %}Assigned{% else %}Not assigned{% endif %}</div>
+                </div>
+            </div>
+            {% if order.delivery_address_display or order.delivery_driver %}
+            <div style="margin-top: 1rem; color: var(--text-secondary); line-height: 1.6;">
+                {% if order.delivery_address_display %}<div>Delivery address: {{ order.delivery_address_display }}</div>{% endif %}
+                {% if order.delivery_driver %}<div>Driver/run: {{ order.delivery_driver.name }}{% if order.delivery_run_order.eta_at %} · ETA {{ order.delivery_run_order.eta_at|time:"H:i" }}{% endif %}</div>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; gap: 1.5rem; align-items: center;">
+            <div>
+                <div style="font-weight: 800; margin-bottom: 0.25rem;">Need help with this order?</div>
+                <div style="color: var(--text-secondary);">Report missing items, late delivery, wrong items or payment issues from your account.</div>
+                {% if order.issues.exists %}<div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem;">Support requests on this order: {{ order.issues.count }}</div>{% endif %}
+            </div>
+            {% if request.user.is_authenticated and order.user_id == request.user.id %}
+            <a href="{% url 'orders:create_issue' order.order_number %}" class="hero-btn-primary" style="text-decoration: none;"><i class="ph-bold ph-warning-circle"></i> Report an issue</a>
+            {% else %}
+            <a href="{% url 'account_login' %}?next={% url 'orders:create_issue' order.order_number %}" class="hero-btn-secondary" style="text-decoration: none; color: var(--text); border-color: var(--border);"><i class="ph-bold ph-user"></i> Sign in to report</a>
+            {% endif %}
+        </div>
+
         <!-- Order Details -->
         <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem; margin-bottom: 2rem;">
             <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem;">Order Details</h3>

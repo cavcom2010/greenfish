@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}GreenFish App - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}GreenFish{% endblock %}
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<style>
+.app-shell { padding: 12px 0 96px; }
+.app-hero { background: #0f172a; color: #fff; border-radius: 8px; padding: 18px; margin-bottom: 14px; }
+.app-hero h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: 0; }
+.app-hero p { margin: 0; color: #cbd5e1; font-size: 14px; }
+.app-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 18px; }
+.app-action { min-height: 72px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: #111827; text-align: center; text-decoration: none; display: flex; flex-direction: column; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.app-action i { font-size: 22px; color: var(--brand); }
+.app-section { margin-top: 20px; }
+.app-section h2 { font-size: 16px; margin: 0 0 10px; letter-spacing: 0; }
+.app-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04); }
+.app-card-title { font-weight: 800; color: #111827; margin-bottom: 4px; }
+.app-card-meta { color: #64748b; font-size: 13px; line-height: 1.4; }
+.app-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.app-button { width: 100%; border: 0; border-radius: 8px; background: var(--brand); color: #fff; padding: 10px 12px; font-weight: 800; text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.app-button.secondary { background: #111827; }
+.reward-wallet { border-left: 4px solid var(--brand); }
+@media (min-width: 520px) { .app-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<div class="app-shell">
+    <div class="app-hero">
+        <h1>{{ site_settings.shop_name }} Rewards Hub</h1>
+        <p>{{ current_points }} points available. {{ tier.name }} status. Fast access to rewards, favourites and live orders.</p>
+    </div>
+
+    <div class="app-actions" aria-label="Quick actions">
+        <a class="app-action" href="{% url 'menu:menu' %}"><i class="ph ph-fork-knife"></i><span>Order</span></a>
+        <a class="app-action" href="{% url 'loyalty:dashboard' %}"><i class="ph ph-gift"></i><span>Rewards</span></a>
+        <a class="app-action" href="{% url 'offers:list' %}"><i class="ph ph-ticket"></i><span>Offers</span></a>
+        <a class="app-action" href="{% url 'accounts:order_history' %}"><i class="ph ph-clock-counter-clockwise"></i><span>Orders</span></a>
+    </div>
+
+    {% if active_order %}
+    <section class="app-section">
+        <h2>Live Order</h2>
+        <div class="app-card">
+            <div class="app-card-title">#{{ active_order.order_number }} - {{ active_order.service_status_display }}</div>
+            <div class="app-card-meta">
+                {% if active_order.is_delivery %}
+                    Delivery{% if active_order.delivery_eta_minutes %} in about {{ active_order.delivery_eta_minutes }} minutes{% endif %}
+                    {% if active_order.delivery_fee %} · £{{ active_order.delivery_fee }} fee{% endif %}
+                {% else %}
+                    Pickup{% if active_order.estimated_ready_time %} around {{ active_order.estimated_ready_time|time:"H:i" }}{% endif %}
+                {% endif %}
+            </div>
+            <a class="app-button secondary" href="{% url 'orders:tracking' active_order.order_number %}" style="margin-top:12px;"><i class="ph ph-navigation-arrow"></i> Track order</a>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="app-section">
+        <h2>Wallet</h2>
+        {% for item in wallet_items %}
+        <div class="app-card reward-wallet">
+            <div class="app-card-title">{{ item.title }}</div>
+            <div class="app-card-meta">{{ item.description|truncatechars:110 }}</div>
+            {% if item.expires_at %}<div class="app-card-meta">Valid until {{ item.expires_at|date:"j M" }}</div>{% endif %}
+            <form method="post" action="{% url 'loyalty:activate_wallet_item' item.id %}" style="margin-top:12px;">
+                {% csrf_token %}
+                <button class="app-button" type="submit"><i class="ph ph-lightning"></i> {% if item.offer %}Activate{% else %}Claim{% endif %}</button>
+            </form>
+        </div>
+        {% empty %}
+        <div class="app-card"><div class="app-card-meta">No rewards waiting right now. New app-exclusive offers appear here first.</div></div>
+        {% endfor %}
+    </section>
+
+    <section class="app-section">
+        <h2>Saved Meals</h2>
+        <div class="app-grid">
+            {% for meal in saved_meals %}
+            <div class="app-card">
+                <div class="app-card-title">{{ meal.name }}</div>
+                <div class="app-card-meta">{{ meal.quantity }} x {{ meal.item_name }}{% if meal.modifiers %} with saved choices{% endif %}</div>
+                <form method="post" action="{% url 'accounts:add_saved_meal_to_cart' meal.id %}" style="margin-top:12px;">
+                    {% csrf_token %}
+                    <button class="app-button" type="submit"><i class="ph ph-shopping-bag-open"></i> Add again</button>
+                </form>
+            </div>
+            {% empty %}
+            <div class="app-card"><div class="app-card-meta">Save meals from your order history to make repeat orders faster.</div></div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="app-section">
+        <h2>Recent Orders</h2>
+        {% for order in recent_orders %}
+        <div class="app-card">
+            <div class="app-card-title">#{{ order.order_number }} - £{{ order.total_amount }}</div>
+            <div class="app-card-meta">{{ order.created_at|date:"j M, H:i" }} · {{ order.service_status_display }}</div>
+            <form method="post" action="{% url 'accounts:reorder' order.id %}" style="margin-top:12px;">
+                {% csrf_token %}
+                <button class="app-button secondary" type="submit"><i class="ph ph-arrows-clockwise"></i> Reorder</button>
+            </form>
+        </div>
+        {% empty %}
+        <div class="app-card"><div class="app-card-meta">Your orders will appear here.</div></div>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}
