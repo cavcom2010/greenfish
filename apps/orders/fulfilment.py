@@ -88,13 +88,16 @@ def _build_slot_option(service_type, slot_start, *, asap=False, window_minutes=1
     if service_type == Order.ServiceType.DELIVERY:
         primary = "ASAP" if asap else f"{local_start:%H:%M}-{local_end:%H:%M}"
         secondary = f"Arrives {local_start:%H:%M}-{local_end:%H:%M}"
+        summary = f"Arrival window: {local_start:%H:%M}-{local_end:%H:%M}"
     else:
         primary = "ASAP" if asap else f"{local_start:%H:%M}"
-        secondary = f"Ready around {local_start:%H:%M}" if asap else "Collection time"
+        secondary = f"Ready around {local_start:%H:%M}"
+        summary = f"Collection estimate: {local_start:%H:%M}"
     return {
         "value": slot_start.isoformat(),
         "primary": primary,
         "secondary": secondary,
+        "summary": summary,
         "asap": asap,
     }
 

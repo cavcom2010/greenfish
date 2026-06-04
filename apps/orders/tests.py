@@ -425,8 +425,10 @@ class OrderFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["pickup_time_options"])
-        self.assertContains(response, 'name="fulfilment_time"')
+        self.assertContains(response, '<select name="fulfilment_time"', html=False)
         self.assertContains(response, "Ready around")
+        self.assertContains(response, "Collection estimate:")
+        self.assertNotContains(response, "checkout-time-slot")
         self.assertNotContains(response, "In 30 mins")
 
     @override_settings(DELIVERY_ENABLED=True)
@@ -446,6 +448,8 @@ class OrderFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["delivery_time_options"])
         self.assertContains(response, "Arrives")
+        self.assertContains(response, "Arrival window:")
+        self.assertNotContains(response, "checkout-time-slot")
 
     def test_delivery_admin_switch_forces_pickup(self):
         ensure_site_settings(delivery_enabled=False)

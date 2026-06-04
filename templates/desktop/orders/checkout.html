@@ -158,27 +158,33 @@
                         </p>
 
                         <input type="hidden" name="pickup_time" value="15">
-                        <div class="time-slots" data-time-options="pickup" style="display:{% if delivery_enabled and service_type == 'delivery' %}none{% else %}grid{% endif %};">
-                            {% for option in pickup_time_options %}
-                            <label class="time-slot {% if service_type != 'delivery' and forloop.first %}active{% endif %}">
-                                <input type="radio" name="fulfilment_time" value="{{ option.value }}" {% if service_type != 'delivery' and forloop.first %}checked{% endif %} {% if service_type == 'delivery' %}disabled{% endif %} style="display:none;">
-                                <div>{{ option.primary }}</div>
-                                <div>{{ option.secondary }}</div>
-                            </label>
-                            {% empty %}
-                            <div style="grid-column:1 / -1;color:var(--text-secondary);font-size:0.9rem;">No pickup times are available today.</div>
-                            {% endfor %}
+                        <div data-time-options="pickup" style="display:{% if delivery_enabled and service_type == 'delivery' %}none{% else %}block{% endif %};">
+                            {% if pickup_time_options %}
+                            <select name="fulfilment_time" class="fulfilment-time-select" {% if service_type == 'delivery' %}disabled{% endif %} aria-label="Pickup time" style="width:100%;padding:0.85rem 1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font:inherit;font-weight:700;">
+                                {% for option in pickup_time_options %}
+                                <option value="{{ option.value }}" data-summary="{{ option.summary }}"{% if forloop.first %} selected{% endif %}>
+                                    {{ option.primary }}{% if option.asap %} - {{ option.secondary }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div data-time-summary style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.5rem;">{{ pickup_time_options.0.summary }}</div>
+                            {% else %}
+                            <div style="color:var(--text-secondary);font-size:0.9rem;">No pickup times are available today.</div>
+                            {% endif %}
                         </div>
-                        <div class="time-slots" data-time-options="delivery" style="display:{% if delivery_enabled and service_type == 'delivery' %}grid{% else %}none{% endif %};">
-                            {% for option in delivery_time_options %}
-                            <label class="time-slot {% if service_type == 'delivery' and forloop.first %}active{% endif %}">
-                                <input type="radio" name="fulfilment_time" value="{{ option.value }}" {% if service_type == 'delivery' and forloop.first %}checked{% endif %} {% if service_type != 'delivery' %}disabled{% endif %} style="display:none;">
-                                <div>{{ option.primary }}</div>
-                                <div>{{ option.secondary }}</div>
-                            </label>
-                            {% empty %}
-                            <div style="grid-column:1 / -1;color:var(--text-secondary);font-size:0.9rem;">No delivery times are available today.</div>
-                            {% endfor %}
+                        <div data-time-options="delivery" style="display:{% if delivery_enabled and service_type == 'delivery' %}block{% else %}none{% endif %};">
+                            {% if delivery_time_options %}
+                            <select name="fulfilment_time" class="fulfilment-time-select" {% if service_type != 'delivery' %}disabled{% endif %} aria-label="Delivery time" style="width:100%;padding:0.85rem 1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font:inherit;font-weight:700;">
+                                {% for option in delivery_time_options %}
+                                <option value="{{ option.value }}" data-summary="{{ option.summary }}"{% if forloop.first %} selected{% endif %}>
+                                    {{ option.primary }}{% if option.asap %} - {{ option.secondary }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div data-time-summary style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.5rem;">{{ delivery_time_options.0.summary }}</div>
+                            {% else %}
+                            <div style="color:var(--text-secondary);font-size:0.9rem;">No delivery times are available today.</div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -378,26 +384,26 @@ function deliveryIsSelected() {
     return serviceTypeInput?.value === 'delivery';
 }
 
-function updateFulfilmentTimeStyles() {
-    document.querySelectorAll('input[name="fulfilment_time"]').forEach(input => {
-        const label = input.closest('.time-slot');
-        if (!label) return;
-        label.classList.toggle('active', input.checked && !input.disabled);
-    });
-}
-
 function syncFulfilmentTimeOptions(service) {
     document.querySelectorAll('[data-time-options]').forEach(group => {
         const isActive = group.dataset.timeOptions === service;
-        group.style.display = isActive ? 'grid' : 'none';
-        group.querySelectorAll('input[name="fulfilment_time"]').forEach((input, index) => {
-            input.disabled = !isActive;
-            if (isActive && !group.querySelector('input[name="fulfilment_time"]:checked') && index === 0) {
-                input.checked = true;
+        group.style.display = isActive ? 'block' : 'none';
+        group.querySelectorAll('select[name="fulfilment_time"]').forEach(select => {
+            select.disabled = !isActive;
+            if (isActive && !select.value && select.options.length) {
+                select.selectedIndex = 0;
             }
         });
+        updateFulfilmentTimeSummary(group);
     });
-    updateFulfilmentTimeStyles();
+}
+
+function updateFulfilmentTimeSummary(group) {
+    const select = group.querySelector('select[name="fulfilment_time"]');
+    const summary = group.querySelector('[data-time-summary]');
+    if (!select || !summary) return;
+    const selectedOption = select.options[select.selectedIndex];
+    summary.textContent = selectedOption?.dataset.summary || '';
 }
 
 function updateDeliveryGate() {
@@ -502,8 +508,10 @@ document.addEventListener('checkout-service:changed', event => {
     updateDeliveryGate();
 });
 
-document.querySelectorAll('input[name="fulfilment_time"]').forEach(input => {
-    input.addEventListener('change', updateFulfilmentTimeStyles);
+document.querySelectorAll('select[name="fulfilment_time"]').forEach(select => {
+    select.addEventListener('change', function() {
+        updateFulfilmentTimeSummary(this.closest('[data-time-options]'));
+    });
 });
 
 document.addEventListener('checkout-delivery:validity', event => {
