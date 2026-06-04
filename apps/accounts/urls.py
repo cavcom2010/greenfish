@@ -11,6 +11,7 @@ urlpatterns = [
     path("app/", views.app_home, name="app_home"),
     path("profile/", views.profile, name="profile"),
     path("my-orders/", views.order_history, name="order_history"),
+    path("my-orders/claim/<str:order_number>/", views.claim_guest_order, name="claim_guest_order"),
     path("my-orders/<int:order_id>/reorder/", views.reorder, name="reorder"),
     path("favorites/<int:item_id>/add/", views.add_favorite_to_cart, name="add_favorite_to_cart"),
     path("favorites/<int:item_id>/toggle/", views.toggle_favorite, name="toggle_favorite"),

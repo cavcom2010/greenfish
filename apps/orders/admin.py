@@ -66,6 +66,7 @@ class OrderAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "paid_at",
+        "personal_data_anonymised_at",
         "payment_reference_display",
         "accepted_at",
         "preparing_started_at",

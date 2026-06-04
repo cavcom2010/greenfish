@@ -52,7 +52,19 @@ def _user_export_payload(user, email):
 def _anonymise_customer(user, email):
     anonymised_email = f"anonymised-{timezone.now().timestamp():.0f}@example.invalid"
     orders = Order.objects.filter(user=user) if user else Order.objects.filter(customer_email__iexact=email)
-    orders.update(
+    anonymise_order_personal_data(orders, anonymised_email=anonymised_email)
+    if user:
+        user.email = anonymised_email
+        user.first_name = "Anonymised"
+        user.last_name = "Customer"
+        user.phone_number = ""
+        user.is_active = False
+        user.save(update_fields=["email", "first_name", "last_name", "phone_number", "is_active"])
+
+
+def anonymise_order_personal_data(orders, *, anonymised_email="anonymised@example.invalid"):
+    """Remove customer-identifying fields while retaining order/accounting records."""
+    return orders.update(
         customer_name="Anonymised Customer",
         customer_phone="",
         customer_email=anonymised_email,
@@ -64,14 +76,10 @@ def _anonymise_customer(user, email):
         delivery_place_id="",
         delivery_latitude=None,
         delivery_longitude=None,
+        special_instructions="",
+        user=None,
+        personal_data_anonymised_at=timezone.now(),
     )
-    if user:
-        user.email = anonymised_email
-        user.first_name = "Anonymised"
-        user.last_name = "Customer"
-        user.phone_number = ""
-        user.is_active = False
-        user.save(update_fields=["email", "first_name", "last_name", "phone_number", "is_active"])
 
 
 def process_customer_data_request(data_request):

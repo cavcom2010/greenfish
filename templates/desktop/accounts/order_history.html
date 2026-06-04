@@ -42,6 +42,26 @@
             <div class="account-content">
                 <h2>Order History</h2>
 
+                <form method="get" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin: 1rem 0 1.25rem;">
+                    <select name="date" onchange="this.form.submit()" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+                        {% for value, label in date_options %}
+                        <option value="{{ value }}"{% if date_filter == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="status" onchange="this.form.submit()" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+                        <option value="all"{% if status_filter == 'all' %} selected{% endif %}>All statuses</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}"{% if status_filter == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="service" onchange="this.form.submit()" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+                        <option value="all"{% if service_filter == 'all' %} selected{% endif %}>All services</option>
+                        {% for value, label in service_choices %}
+                        <option value="{{ value }}"{% if service_filter == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+
                 {% if orders %}
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     {% for order in orders %}
@@ -99,6 +119,21 @@
                     </div>
                     {% endfor %}
                 </div>
+                {% if page_obj.has_other_pages %}
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1.5rem;">
+                    {% if page_obj.has_previous %}
+                    <a href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="hero-btn-secondary" style="text-decoration:none;color:var(--text);border-color:var(--border);">Previous</a>
+                    {% else %}
+                    <span class="hero-btn-secondary" style="opacity:0.45;color:var(--text);border-color:var(--border);">Previous</span>
+                    {% endif %}
+                    <span style="font-size:0.9rem;color:var(--text-secondary);">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                    <a href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="hero-btn-secondary" style="text-decoration:none;color:var(--text);border-color:var(--border);">Next</a>
+                    {% else %}
+                    <span class="hero-btn-secondary" style="opacity:0.45;color:var(--text);border-color:var(--border);">Next</span>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% else %}
                 <div style="text-align: center; padding: 4rem 2rem;">
                     <i class="ph ph-receipt" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>

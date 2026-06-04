@@ -2,9 +2,11 @@ from decimal import Decimal
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.accounts.models import CustomerProfile, SavedMeal
 from apps.core.test_support import create_menu_item, create_order, create_user, ensure_site_settings
+from apps.orders.models import Order
 
 
 class RepeatOrderExperienceTests(TestCase):
@@ -87,6 +89,78 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("orders:tracking", args=[order.order_number]))
         self.assertContains(response, "Track")
+
+    def test_order_history_is_paginated(self):
+        for index in range(12):
+            create_order(user=self.user, customer_email=f"page-{index}@example.com")
+
+        response = self.client.get(reverse("accounts:order_history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["orders"]), 10)
+        self.assertTrue(response.context["page_obj"].has_next())
+
+    def test_order_history_filters_by_status_and_service(self):
+        delivery_order = create_order(
+            user=self.user,
+            status=Order.OrderStatus.COMPLETED,
+            service_type=Order.ServiceType.DELIVERY,
+            customer_email="delivery-history@example.com",
+        )
+        create_order(
+            user=self.user,
+            status=Order.OrderStatus.CANCELLED,
+            service_type=Order.ServiceType.PICKUP,
+            customer_email="pickup-history@example.com",
+        )
+
+        response = self.client.get(
+            reverse("accounts:order_history"),
+            {"status": Order.OrderStatus.COMPLETED, "service": Order.ServiceType.DELIVERY},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["orders"]), [delivery_order])
+
+    def test_order_history_filters_by_date_window(self):
+        recent_order = create_order(user=self.user, customer_email="recent-history@example.com")
+        old_order = create_order(user=self.user, customer_email="old-history@example.com")
+        Order.objects.filter(pk=old_order.pk).update(created_at=timezone.now() - timezone.timedelta(days=90))
+
+        response = self.client.get(reverse("accounts:order_history"), {"date": "30d"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(recent_order, response.context["orders"])
+        self.assertNotIn(old_order, response.context["orders"])
+
+    def test_customer_can_claim_matching_guest_order_with_token(self):
+        order = create_order(user=None, customer_email=self.user.email)
+        claim_url = f"{reverse('accounts:claim_guest_order', args=[order.order_number])}?t={order.public_access_token}"
+
+        response = self.client.post(claim_url)
+
+        self.assertEqual(response.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(order.user, self.user)
+
+    def test_customer_cannot_claim_guest_order_with_wrong_email(self):
+        order = create_order(user=None, customer_email="someone-else@example.com")
+        claim_url = f"{reverse('accounts:claim_guest_order', args=[order.order_number])}?t={order.public_access_token}"
+
+        response = self.client.post(claim_url)
+
+        self.assertEqual(response.status_code, 404)
+        order.refresh_from_db()
+        self.assertIsNone(order.user)
+
+    def test_customer_cannot_claim_guest_order_without_token(self):
+        order = create_order(user=None, customer_email=self.user.email)
+
+        response = self.client.post(reverse("accounts:claim_guest_order", args=[order.order_number]))
+
+        self.assertEqual(response.status_code, 404)
+        order.refresh_from_db()
+        self.assertIsNone(order.user)
 
     def test_customer_cannot_reorder_someone_elses_order(self):
         other_user = create_user(email="other@example.com")

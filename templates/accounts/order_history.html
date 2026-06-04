@@ -7,6 +7,26 @@
 
 {% block content %}
 <div class="page-content">
+    <form method="get" style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 16px; display: grid; gap: 10px;">
+        <select name="date" class="form-input" onchange="this.form.submit()">
+            {% for value, label in date_options %}
+            <option value="{{ value }}"{% if date_filter == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" class="form-input" onchange="this.form.submit()">
+            <option value="all"{% if status_filter == 'all' %} selected{% endif %}>All statuses</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if status_filter == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="service" class="form-input" onchange="this.form.submit()">
+            <option value="all"{% if service_filter == 'all' %} selected{% endif %}>All services</option>
+            {% for value, label in service_choices %}
+            <option value="{{ value }}"{% if service_filter == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
     {% if orders %}
     <div class="menu-list" style="padding: 0;">
         {% for order in orders %}
@@ -63,6 +83,21 @@
         </div>
         {% endfor %}
     </div>
+    {% if page_obj.has_other_pages %}
+    <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 16px;">
+        {% if page_obj.has_previous %}
+        <a class="btn btn-secondary" style="flex:1;padding: 11px 14px;" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+        {% else %}
+        <span class="btn btn-secondary" style="flex:1;padding: 11px 14px; opacity: 0.45;">Previous</span>
+        {% endif %}
+        <span style="font-size: 13px; color: var(--text-secondary);">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a class="btn btn-secondary" style="flex:1;padding: 11px 14px;" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+        {% else %}
+        <span class="btn btn-secondary" style="flex:1;padding: 11px 14px; opacity: 0.45;">Next</span>
+        {% endif %}
+    </div>
+    {% endif %}
     {% else %}
     <div style="text-align: center; padding: 60px 20px;">
         <i class="ph ph-receipt" style="font-size: 64px; color: var(--border); margin-bottom: 16px;"></i>

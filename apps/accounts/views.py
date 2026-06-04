@@ -3,12 +3,15 @@ Views for the accounts app.
 """
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from apps.orders.access import order_customer_url, request_has_order_token
 from apps.orders.models import Order, OrderItem
 from apps.orders.services import add_menu_item_to_cart
 
@@ -171,9 +174,85 @@ def app_home(request):
 @login_required
 def order_history(request):
     """View all order history."""
-    orders = Order.objects.filter(user=request.user).prefetch_related("items__menu_item").order_by("-created_at")
+    base_orders = Order.objects.filter(user=request.user)
+    orders = base_orders.prefetch_related("items__menu_item").order_by("-created_at")
+    date_filter = request.GET.get("date", "all")
+    status_filter = request.GET.get("status", "all")
+    service_filter = request.GET.get("service", "all")
+
+    now = timezone.now()
+    if date_filter == "30d":
+        orders = orders.filter(created_at__gte=now - timezone.timedelta(days=30))
+    elif date_filter == "6m":
+        orders = orders.filter(created_at__gte=now - timezone.timedelta(days=182))
+    elif date_filter.startswith("year:"):
+        try:
+            orders = orders.filter(created_at__year=int(date_filter.split(":", 1)[1]))
+        except (TypeError, ValueError):
+            date_filter = "all"
+
+    valid_statuses = {choice for choice, _ in Order.OrderStatus.choices}
+    if status_filter != "all" and status_filter in valid_statuses:
+        orders = orders.filter(status=status_filter)
+    elif status_filter != "all":
+        status_filter = "all"
+
+    valid_services = {choice for choice, _ in Order.ServiceType.choices}
+    if service_filter != "all" and service_filter in valid_services:
+        orders = orders.filter(service_type=service_filter)
+    elif service_filter != "all":
+        service_filter = "all"
+
+    paginator = Paginator(orders, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    filter_query = request.GET.copy()
+    filter_query.pop("page", None)
+    filter_query_string = filter_query.urlencode()
+    order_years = [year.year for year in base_orders.dates("created_at", "year", order="DESC")]
+    date_options = [
+        ("all", "All dates"),
+        ("30d", "Last 30 days"),
+        ("6m", "Last 6 months"),
+        *[(f"year:{year}", str(year)) for year in order_years],
+    ]
+
+    context = {
+        "orders": page_obj.object_list,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "date_filter": date_filter,
+        "status_filter": status_filter,
+        "service_filter": service_filter,
+        "status_choices": Order.OrderStatus.choices,
+        "service_choices": Order.ServiceType.choices,
+        "date_options": date_options,
+        "filter_query_string": filter_query_string,
+    }
     template = "desktop/accounts/order_history.html" if getattr(request, "is_desktop", True) else "accounts/order_history.html"
-    return render(request, template, {"orders": orders})
+    return render(request, template, context)
+
+
+@login_required
+@require_POST
+def claim_guest_order(request, order_number):
+    """Attach a token-authorised guest order to the logged-in customer's account."""
+    order = get_object_or_404(Order, order_number=order_number)
+    if not request_has_order_token(request, order):
+        from django.http import Http404
+
+        raise Http404("Order not found")
+    if order.user_id:
+        messages.info(request, "That order is already linked to an account.")
+        return redirect(order_customer_url("orders:tracking", order))
+    if order.customer_email and order.customer_email.lower() != request.user.email.lower():
+        from django.http import Http404
+
+        raise Http404("Order not found")
+
+    order.user = request.user
+    order.save(update_fields=["user", "updated_at"])
+    messages.success(request, f"{order.order_number} has been added to your account.")
+    return redirect(order_customer_url("orders:tracking", order))
 
 
 @login_required

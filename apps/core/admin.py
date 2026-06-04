@@ -19,7 +19,12 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             "description": "Format: {\"0\": {\"open\": \"09:00\", \"close\": \"22:00\"}} where 0=Monday"
         }),
         ("Settings", {
-            "fields": ("currency", "delivery_enabled", "delivery_minimum_order_amount")
+            "fields": (
+                "currency",
+                "delivery_enabled",
+                "delivery_minimum_order_amount",
+                "order_personal_data_retention_years",
+            )
         }),
         ("Delivery Map", {
             "fields": (

@@ -180,6 +180,7 @@ class Order(models.Model):
     # Payment (Mollie)
     mollie_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
     paid_at = models.DateTimeField(null=True, blank=True)
+    personal_data_anonymised_at = models.DateTimeField(null=True, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

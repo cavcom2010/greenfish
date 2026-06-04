@@ -52,6 +52,11 @@ class SiteSettings(models.Model):
         validators=[MinValueValidator(Decimal("0.00"))],
         help_text="Minimum food subtotal for delivery orders. Leave blank to use DELIVERY_MINIMUM_ORDER_AMOUNT from .env. Use 0 to disable.",
     )
+    order_personal_data_retention_years = models.PositiveSmallIntegerField(
+        default=6,
+        validators=[MinValueValidator(1), MaxValueValidator(20)],
+        help_text="Years to keep customer-identifying order details before anonymisation. Business totals and item records are retained.",
+    )
     shop_latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,

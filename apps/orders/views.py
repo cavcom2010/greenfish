@@ -16,7 +16,7 @@ from apps.core.rate_limits import client_identity, consume_rate_limit, session_i
 from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuItem
 
-from .access import get_accessible_order_or_404, order_customer_url, request_can_access_order
+from .access import get_accessible_order_or_404, order_customer_url, request_can_access_order, request_has_order_token
 from .models import Order, OrderIssue
 from .services import (
     add_custom_item_to_cart,
@@ -595,6 +595,12 @@ def order_tracking(request, order_number):
         order_number,
         queryset=Order.objects.prefetch_related("items", "issues"),
     )
+    can_claim_order = (
+        getattr(request.user, "is_authenticated", False)
+        and not order.user_id
+        and request_has_order_token(request, order)
+        and (not order.customer_email or order.customer_email.lower() == request.user.email.lower())
+    )
     template = "desktop/orders/tracking.html" if getattr(request, "is_desktop", True) else "orders/tracking.html"
     return render(
         request,
@@ -603,6 +609,9 @@ def order_tracking(request, order_number):
             "order": order,
             "tracking_url": order_customer_url("orders:tracking", order),
             "issue_url": order_customer_url("orders:create_issue", order),
+            "claim_url": order_customer_url("accounts:claim_guest_order", order),
+            "can_claim_order": can_claim_order,
+            "can_prompt_guest_claim": not order.user_id and request_has_order_token(request, order),
         },
     )
 
