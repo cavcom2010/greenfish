@@ -12,6 +12,7 @@ from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -30,12 +31,14 @@ from apps.orders.services import (
     selected_offer_id,
     selected_service_type,
     store_service_type,
-    validate_delivery_minimum,
+    requested_pickup_time,
+    validate_checkout_backend_constraints,
     validate_customer_details,
+    validate_delivery_minimum,
     validate_service_details,
 )
 
-from .models import Payment, PaymentLog
+from .models import Payment, PaymentLog, PaymentWebhookEvent
 from .services import (
     StripePaymentService,
     active_payment_provider,
@@ -205,6 +208,11 @@ def create_payment(request):
         validate_delivery_minimum(service_type, summary["subtotal"])
         validate_customer_details(customer_name, customer_phone)
         validate_service_details(service_type, delivery_details)
+        validate_checkout_backend_constraints(
+            service_type,
+            summary,
+            requested_pickup_time(request.POST.get("pickup_time", 15)),
+        )
     except ValidationError as exc:
         return _payment_error_response(request, str(exc))
 
@@ -328,14 +336,25 @@ def _stripe_webhook(request):
     event_type = event.get("type", "")
     session_payload = (event.get("data") or {}).get("object") or {}
     checkout_session_id = session_payload.get("id")
+    event_id = event.get("id") or f"stripe:{event_type}:{checkout_session_id or uuid.uuid4().hex}"
 
     if event_type.startswith("checkout.session.") and checkout_session_id:
+        webhook_event, created = PaymentWebhookEvent.objects.get_or_create(
+            provider=Payment.Provider.STRIPE,
+            event_id=event_id,
+            defaults={"event_type": event_type, "payload": event},
+        )
+        if not created and webhook_event.processed_at:
+            return HttpResponse("OK", status=200)
         payment = StripePaymentService().update_payment_status(
             checkout_session_id,
             payload=session_payload,
             event_type=event_type,
         )
         if payment:
+            webhook_event.payment = payment
+            webhook_event.processed_at = timezone.now()
+            webhook_event.save(update_fields=["payment", "processed_at"])
             PaymentLog.objects.create(
                 payment=payment,
                 event_type="webhook_received",
@@ -358,9 +377,20 @@ def _mollie_webhook(request):
     if payment_id.startswith("demo_"):
         return HttpResponse("OK", status=200)
 
+    webhook_event, created = PaymentWebhookEvent.objects.get_or_create(
+        provider=Payment.Provider.MOLLIE,
+        event_id=payment_id,
+        defaults={"event_type": "payment.updated", "payload": {"id": payment_id}},
+    )
+    if not created and webhook_event.processed_at:
+        return HttpResponse("OK", status=200)
+
     logger.info("Mollie webhook received for payment: %s", payment_id)
     payment = payment_service_for_provider(Payment.Provider.MOLLIE).update_payment_status(payment_id)
     if payment:
+        webhook_event.payment = payment
+        webhook_event.processed_at = timezone.now()
+        webhook_event.save(update_fields=["payment", "processed_at"])
         logger.info("Payment %s updated to %s", payment_id, payment.status)
     else:
         logger.warning("Payment %s not found", payment_id)

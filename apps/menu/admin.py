@@ -3,7 +3,7 @@ Admin configuration for the menu app.
 """
 from django.contrib import admin
 
-from .models import MenuCategory, MenuItem, MenuModifier
+from .models import MenuCategory, MenuItem, MenuModifier, StockMovement
 
 
 @admin.register(MenuCategory)
@@ -41,10 +41,12 @@ class MenuItemAdmin(admin.ModelAdmin):
         "is_available",
         "is_popular",
         "preparation_time",
+        "track_stock",
+        "stock_quantity",
         "sort_order"
     ]
-    list_editable = ["price", "is_available", "is_popular", "preparation_time", "sort_order"]
-    list_filter = ["category", "is_available", "is_popular", "dietary_tags"]
+    list_editable = ["price", "is_available", "is_popular", "preparation_time", "track_stock", "stock_quantity", "sort_order"]
+    list_filter = ["category", "is_available", "is_popular", "track_stock", "dietary_tags"]
     search_fields = ["name", "description"]
     filter_horizontal = ["modifiers"]
     
@@ -53,9 +55,23 @@ class MenuItemAdmin(admin.ModelAdmin):
             "fields": ("category", "name", "description", "price", "image")
         }),
         ("Availability", {
-            "fields": ("is_available", "is_popular", "preparation_time")
+            "fields": ("is_available", "is_popular", "preparation_time", "track_stock", "stock_quantity", "low_stock_threshold")
         }),
         ("Details", {
             "fields": ("dietary_tags", "sort_order")
         }),
     )
+
+
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    list_display = ["menu_item", "movement_type", "quantity", "order", "created_at"]
+    list_filter = ["movement_type", "created_at"]
+    search_fields = ["menu_item__name", "order__order_number", "note"]
+    readonly_fields = ["menu_item", "order", "movement_type", "quantity", "note", "created_at"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

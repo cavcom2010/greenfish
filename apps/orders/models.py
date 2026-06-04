@@ -96,6 +96,12 @@ class Order(models.Model):
         decimal_places=2,
         default=Decimal("0.00")
     )
+    delivery_fee = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
     total_amount = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -114,6 +120,7 @@ class Order(models.Model):
     
     # Pickup details
     requested_pickup_time = models.DateTimeField(null=True, blank=True, help_text="Customer's requested pickup time")
+    fulfilment_slot_start = models.DateTimeField(null=True, blank=True, db_index=True)
     estimated_ready_time = models.DateTimeField(null=True, blank=True, help_text="Kitchen's estimated ready time")
     actual_ready_time = models.DateTimeField(null=True, blank=True, help_text="When order was actually marked ready")
     accepted_at = models.DateTimeField(null=True, blank=True)
@@ -149,6 +156,15 @@ class Order(models.Model):
     staff_notes = models.TextField(blank=True, help_text="Internal kitchen notes")
     handover_notes = models.TextField(blank=True, help_text="Collection/delivery handover notes")
     cancel_reason = models.CharField(max_length=255, blank=True)
+    delivery_zone_name = models.CharField(max_length=100, blank=True)
+    delivery_eta_minutes = models.PositiveIntegerField(null=True, blank=True)
+    delivery_driver = models.ForeignKey(
+        "orders.DeliveryDriver",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+    )
     
     # Payment (Mollie)
     mollie_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
@@ -227,7 +243,7 @@ class Order(models.Model):
         """Calculate order totals from items."""
         subtotal = sum(item.line_total for item in self.items.all())
         self.subtotal = subtotal
-        self.total_amount = max(Decimal("0.00"), subtotal - self.discount_amount)
+        self.total_amount = max(Decimal("0.00"), subtotal - self.discount_amount + self.delivery_fee)
         self.save(update_fields=["subtotal", "total_amount", "updated_at"])
     
     def mark_as_paid(self, changed_by=None):
@@ -236,6 +252,12 @@ class Order(models.Model):
         self.paid_at = timezone.now()
         update_fields = ["payment_status", "paid_at", "updated_at"]
         self.save(update_fields=update_fields)
+
+        from .fulfilment import confirm_fulfilment_slot
+        from .inventory import consume_order_stock
+
+        confirm_fulfilment_slot(self)
+        consume_order_stock(self)
 
         # Auto-confirm if pending
         if self.status == self.OrderStatus.PENDING:
@@ -325,6 +347,13 @@ class Order(models.Model):
             new_status=new_status,
             changed_by=changed_by
         )
+
+        if new_status == self.OrderStatus.CANCELLED and self.payment_status != self.PaymentStatus.PAID:
+            from .fulfilment import release_fulfilment_slot
+            from .inventory import release_order_stock
+
+            release_fulfilment_slot(self)
+            release_order_stock(self)
     
     @property
     def item_count(self):
@@ -445,3 +474,153 @@ class OrderStatusHistory(models.Model):
     
     def __str__(self):
         return f"{self.order.order_number}: {self.old_status} → {self.new_status}"
+
+
+class FulfilmentCapacityRule(models.Model):
+    """Capacity rule for pickup or delivery ordering windows."""
+
+    class ServiceType(models.TextChoices):
+        PICKUP = Order.ServiceType.PICKUP, "Pickup"
+        DELIVERY = Order.ServiceType.DELIVERY, "Delivery"
+
+    service_type = models.CharField(max_length=20, choices=ServiceType.choices, db_index=True)
+    day_of_week = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0)],
+        help_text="0=Monday, 6=Sunday.",
+    )
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    slot_minutes = models.PositiveIntegerField(default=15, validators=[MinValueValidator(5)])
+    lead_time_minutes = models.PositiveIntegerField(default=15)
+    last_order_minutes_before_close = models.PositiveIntegerField(default=15)
+    max_orders = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["service_type", "day_of_week", "start_time"]
+        indexes = [models.Index(fields=["service_type", "day_of_week", "is_active"])]
+
+    def __str__(self):
+        return f"{self.get_service_type_display()} day {self.day_of_week} {self.start_time}-{self.end_time}"
+
+
+class FulfilmentBlackout(models.Model):
+    """Date/time blackout for pickup, delivery, or both."""
+
+    class ServiceType(models.TextChoices):
+        ALL = "all", "All"
+        PICKUP = Order.ServiceType.PICKUP, "Pickup"
+        DELIVERY = Order.ServiceType.DELIVERY, "Delivery"
+
+    service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.ALL, db_index=True)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    reason = models.CharField(max_length=200, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["starts_at"]
+        indexes = [models.Index(fields=["service_type", "starts_at", "ends_at", "is_active"])]
+
+    def __str__(self):
+        return self.reason or f"Blackout {self.starts_at:%Y-%m-%d %H:%M}"
+
+
+class FulfilmentSlotReservation(models.Model):
+    """Reservation of capacity for an order fulfilment slot."""
+
+    class Status(models.TextChoices):
+        RESERVED = "reserved", "Reserved"
+        CONFIRMED = "confirmed", "Confirmed"
+        RELEASED = "released", "Released"
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="slot_reservation")
+    service_type = models.CharField(max_length=20, choices=Order.ServiceType.choices, db_index=True)
+    slot_start = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RESERVED, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["slot_start"]
+        indexes = [models.Index(fields=["service_type", "slot_start", "status"])]
+
+    def __str__(self):
+        return f"{self.order.order_number} {self.service_type} {self.slot_start:%Y-%m-%d %H:%M}"
+
+
+class DeliveryZone(models.Model):
+    """Delivery pricing and radius rule."""
+
+    name = models.CharField(max_length=100)
+    min_distance_miles = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    max_distance_miles = models.DecimalField(max_digits=6, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    fee = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"), validators=[MinValueValidator(Decimal("0.00"))])
+    estimated_minutes = models.PositiveIntegerField(default=30)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["min_distance_miles", "max_distance_miles"]
+
+    def __str__(self):
+        return f"{self.name} (£{self.fee})"
+
+
+class DeliveryDriver(models.Model):
+    """Staff-manageable delivery driver."""
+
+    name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=30, blank=True)
+    is_active = models.BooleanField(default=True)
+    current_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    current_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class DeliveryRun(models.Model):
+    """A sequenced dispatch run for one driver."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        DISPATCHED = "dispatched", "Dispatched"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    driver = models.ForeignKey(DeliveryDriver, on_delete=models.SET_NULL, null=True, blank=True, related_name="runs")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    planned_departure_at = models.DateTimeField(null=True, blank=True)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Delivery run #{self.pk or 'new'} ({self.status})"
+
+
+class DeliveryRunOrder(models.Model):
+    """Order position inside a delivery run."""
+
+    run = models.ForeignKey(DeliveryRun, on_delete=models.CASCADE, related_name="run_orders")
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="delivery_run_order")
+    sequence = models.PositiveIntegerField(default=1)
+    eta_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["sequence"]
+        unique_together = [("run", "sequence")]
+
+    def __str__(self):
+        return f"{self.run_id}:{self.sequence} {self.order.order_number}"

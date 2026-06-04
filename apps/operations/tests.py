@@ -1,10 +1,10 @@
-from unittest.mock import patch
 from decimal import Decimal
 
 from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.core.models import NotificationEvent
 from apps.core.test_support import create_order, create_user, ensure_site_settings
 from apps.operations.permissions import (
     OPERATIONS_CASHIER_GROUP,
@@ -411,24 +411,28 @@ class OperationsBoardTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Order.OrderStatus.CONFIRMED)
 
-    @patch("apps.pwa.services.notify_order_ready", side_effect=RuntimeError("push unavailable"))
-    @patch("apps.sms.services.send_order_ready", side_effect=RuntimeError("sms unavailable"))
-    def test_side_effect_failures_are_logged_without_blocking_status_change(self, mocked_sms, mocked_push):
+    def test_ready_action_enqueues_notification_without_blocking_status_change(self):
         order = create_order(
             status=Order.OrderStatus.PREPARING,
             payment_status=Order.PaymentStatus.PAID,
             service_type=Order.ServiceType.PICKUP,
+            user=self.user,
         )
         self.client.force_login(self.kitchen_user)
 
-        with self.assertLogs("apps.operations.services", level="ERROR") as logs:
-            response = self.client.post(
-                reverse("operations:order_action", args=[order.id]),
-                {"action": "mark_ready"},
-            )
+        response = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {"action": "mark_ready"},
+        )
 
         self.assertEqual(response.status_code, 200)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.OrderStatus.READY)
-        self.assertIn("Operations side effect failed: send_order_ready", "\n".join(logs.output))
-        self.assertIn("Operations side effect failed: notify_order_ready", "\n".join(logs.output))
+        self.assertTrue(
+            NotificationEvent.objects.filter(
+                order=order,
+                channel=NotificationEvent.Channel.PUSH,
+                event_type="order_ready",
+                status=NotificationEvent.Status.PENDING,
+            ).exists()
+        )

@@ -258,27 +258,30 @@ def perform_order_action(
     order.update_status(target_status, actor)
 
     if target_status == Order.OrderStatus.READY and old_status != Order.OrderStatus.READY and not order.is_delivery:
-        from apps.sms.services import send_order_ready
-        from apps.pwa.services import notify_order_ready
-
-        _run_side_effect("send_order_ready", send_order_ready, order)
-        _run_side_effect("notify_order_ready", notify_order_ready, order)
+        _enqueue_push(order, "order_ready", "Your order is ready for pickup.")
 
     if target_status == Order.OrderStatus.OUT_FOR_DELIVERY and old_status != Order.OrderStatus.OUT_FOR_DELIVERY:
-        from apps.sms.services import send_order_out_for_delivery
-        from apps.pwa.services import notify_order_out_for_delivery
-
-        _run_side_effect("send_order_out_for_delivery", send_order_out_for_delivery, order)
-        _run_side_effect("notify_order_out_for_delivery", notify_order_out_for_delivery, order)
+        _enqueue_push(order, "order_out_for_delivery", "Your order is on the way.")
 
     if target_status == Order.OrderStatus.COMPLETED and order.is_delivery and old_status != Order.OrderStatus.COMPLETED:
-        from apps.sms.services import send_order_delivered
-        from apps.pwa.services import notify_order_delivered
-
-        _run_side_effect("send_order_delivered", send_order_delivered, order)
-        _run_side_effect("notify_order_delivered", notify_order_delivered, order)
+        _enqueue_push(order, "order_delivered", "Your order has been delivered.")
 
     return order
+
+
+def _enqueue_push(order, event_type, message):
+    if not order.user:
+        return
+    from apps.core.models import NotificationEvent
+    from apps.core.notifications import enqueue_notification
+
+    enqueue_notification(
+        channel=NotificationEvent.Channel.PUSH,
+        event_type=event_type,
+        recipient=str(order.user_id),
+        payload={"message": message},
+        order=order,
+    )
 
 
 def _run_side_effect(name, func, order):

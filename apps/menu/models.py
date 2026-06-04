@@ -171,3 +171,36 @@ class MenuItem(models.Model):
         validate_changed_image_fields(self, changed_images)
         super().save(*args, **kwargs)
         sync_instance_image_variants(self, MENU_ITEM_IMAGE_VARIANTS, changed_images)
+
+
+class StockMovement(models.Model):
+    """Immutable inventory ledger for tracked menu items."""
+
+    class MovementType(models.TextChoices):
+        ADJUSTMENT = "adjustment", "Adjustment"
+        RESERVED = "reserved", "Reserved"
+        CONSUMED = "consumed", "Consumed"
+        RELEASED = "released", "Released"
+
+    menu_item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name="stock_movements")
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_movements",
+    )
+    movement_type = models.CharField(max_length=20, choices=MovementType.choices, db_index=True)
+    quantity = models.IntegerField()
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["menu_item", "created_at"]),
+            models.Index(fields=["movement_type", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.menu_item} {self.movement_type} {self.quantity:+d}"

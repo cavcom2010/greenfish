@@ -4,7 +4,7 @@ Admin configuration for the accounts app.
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import CustomerProfile, User
+from .models import CustomerDataRequest, CustomerProfile, User
 
 
 @admin.register(User)
@@ -35,3 +35,20 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     list_filter = ["notifications_enabled", "marketing_consent"]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     filter_horizontal = ["favorite_items"]
+
+
+@admin.register(CustomerDataRequest)
+class CustomerDataRequestAdmin(admin.ModelAdmin):
+    list_display = ["email", "request_type", "status", "requested_at", "completed_at"]
+    list_filter = ["request_type", "status", "requested_at"]
+    search_fields = ["email", "user__email", "notes"]
+    readonly_fields = ["export_payload", "requested_at", "completed_at"]
+    actions = ["process_requests"]
+
+    def process_requests(self, request, queryset):
+        from .privacy import process_customer_data_request
+
+        for data_request in queryset:
+            process_customer_data_request(data_request)
+
+    process_requests.short_description = "Process selected data requests"

@@ -22,7 +22,7 @@ from config.settings.payment_credentials import (
     stripe_credentials_configured,
 )
 
-from .models import ManualPaymentReceipt, Payment, PaymentLog
+from .models import ManualPaymentReceipt, Payment, PaymentLog, RefundRequest
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,40 @@ def refresh_payment_status(payment, *, external_id=None, payload=None, event_typ
     if not payment_reference:
         return payment
     return service.update_payment_status(payment_reference, payload=payload, event_type=event_type)
+
+
+def process_refund_request(refund_request):
+    """Process a staff refund request through the payment's provider service."""
+    refund_request = RefundRequest.objects.select_related("payment", "payment__order").get(pk=refund_request.pk)
+    if refund_request.status != RefundRequest.Status.REQUESTED:
+        return refund_request
+
+    payment = refund_request.payment
+    if payment.status != Payment.Status.PAID:
+        refund_request.status = RefundRequest.Status.FAILED
+        refund_request.error_message = "Only paid payments can be refunded."
+        refund_request.processed_at = timezone.now()
+        refund_request.save(update_fields=["status", "error_message", "processed_at"])
+        return refund_request
+
+    service = payment_service_for_payment(payment)
+    if not service:
+        refund_request.status = RefundRequest.Status.FAILED
+        refund_request.error_message = "No refund-capable payment service is configured."
+        refund_request.processed_at = timezone.now()
+        refund_request.save(update_fields=["status", "error_message", "processed_at"])
+        return refund_request
+
+    success = service.refund_payment(payment, amount=refund_request.amount)
+    refund_request.processed_at = timezone.now()
+    if success:
+        refund_request.status = RefundRequest.Status.SUCCEEDED
+        refund_request.provider_reference = payment.payment_reference
+    else:
+        refund_request.status = RefundRequest.Status.FAILED
+        refund_request.error_message = "Provider refund failed. Check payment logs."
+    refund_request.save(update_fields=["status", "provider_reference", "error_message", "processed_at"])
+    return refund_request
 
 
 def _minor_units(amount):
@@ -319,6 +353,12 @@ def expire_offline_pending_payment(payment, *, reason="Payment not received with
         order.save(update_fields=["payment_status", "updated_at"])
     if order.status == Order.OrderStatus.PENDING:
         order.update_status(Order.OrderStatus.CANCELLED)
+    else:
+        from apps.orders.fulfilment import release_fulfilment_slot
+        from apps.orders.inventory import release_order_stock
+
+        release_fulfilment_slot(order)
+        release_order_stock(order)
 
     _log_payment_event(
         payment,
@@ -358,10 +398,15 @@ def _apply_local_payment_state(
     elif payment.status in {Payment.Status.FAILED, Payment.Status.EXPIRED, Payment.Status.CANCELLED}:
         payment.order.payment_status = Order.PaymentStatus.FAILED
         if payment.order.status == Order.OrderStatus.PENDING:
-            payment.order.status = Order.OrderStatus.CANCELLED
-            payment.order.save(update_fields=["payment_status", "status", "updated_at"])
+            payment.order.save(update_fields=["payment_status", "updated_at"])
+            payment.order.update_status(Order.OrderStatus.CANCELLED)
         else:
             payment.order.save(update_fields=["payment_status", "updated_at"])
+            from apps.orders.fulfilment import release_fulfilment_slot
+            from apps.orders.inventory import release_order_stock
+
+            release_fulfilment_slot(payment.order)
+            release_order_stock(payment.order)
 
     payment.save()
 

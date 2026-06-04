@@ -109,3 +109,40 @@ class CustomerProfile(models.Model):
     
     def __str__(self):
         return f"Profile for {self.user.email}"
+
+
+class CustomerDataRequest(models.Model):
+    """Customer privacy workflow for export and anonymisation requests."""
+
+    class RequestType(models.TextChoices):
+        EXPORT = "export", "Export"
+        ANONYMISATION = "anonymisation", "Anonymisation"
+
+    class Status(models.TextChoices):
+        REQUESTED = "requested", "Requested"
+        PROCESSING = "processing", "Processing"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="data_requests",
+    )
+    email = models.EmailField()
+    request_type = models.CharField(max_length=20, choices=RequestType.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.REQUESTED, db_index=True)
+    export_payload = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-requested_at"]
+        indexes = [models.Index(fields=["status", "requested_at"])]
+
+    def __str__(self):
+        return f"{self.email} {self.request_type} ({self.status})"

@@ -3,7 +3,7 @@ Admin configuration for the payments app.
 """
 from django.contrib import admin
 
-from .models import ManualPaymentReceipt, Payment, PaymentLog
+from .models import ManualPaymentReceipt, Payment, PaymentLog, PaymentWebhookEvent, RefundRequest
 
 
 class PaymentLogInline(admin.TabularInline):
@@ -123,3 +123,28 @@ class ManualPaymentReceiptAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(PaymentWebhookEvent)
+class PaymentWebhookEventAdmin(admin.ModelAdmin):
+    list_display = ["provider", "event_id", "event_type", "payment", "processed_at", "created_at"]
+    list_filter = ["provider", "event_type", "processed_at", "created_at"]
+    search_fields = ["event_id", "payment__external_payment_id", "payment__order__order_number"]
+    readonly_fields = ["provider", "event_id", "event_type", "payment", "payload", "processed_at", "created_at"]
+
+
+@admin.register(RefundRequest)
+class RefundRequestAdmin(admin.ModelAdmin):
+    list_display = ["payment", "amount", "reason", "status", "requested_by", "requested_at", "processed_at"]
+    list_filter = ["status", "requested_at", "processed_at"]
+    search_fields = ["payment__external_payment_id", "payment__order__order_number", "reason"]
+    readonly_fields = ["status", "provider_reference", "error_message", "requested_at", "processed_at"]
+    actions = ["process_refunds"]
+
+    def process_refunds(self, request, queryset):
+        from .services import process_refund_request
+
+        for refund in queryset:
+            process_refund_request(refund)
+
+    process_refunds.short_description = "Process selected refund requests"

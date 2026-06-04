@@ -169,3 +169,62 @@ class PaymentLog(models.Model):
     
     def __str__(self):
         return f"{self.payment.payment_reference} - {self.event_type}"
+
+
+class PaymentWebhookEvent(models.Model):
+    """Idempotency record for provider webhook events."""
+
+    provider = models.CharField(max_length=20, choices=Payment.Provider.choices, db_index=True)
+    event_id = models.CharField(max_length=255)
+    event_type = models.CharField(max_length=100, blank=True)
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="webhook_events",
+    )
+    payload = models.JSONField(default=dict, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = [("provider", "event_id")]
+        indexes = [models.Index(fields=["provider", "event_type", "created_at"])]
+
+    def __str__(self):
+        return f"{self.provider}:{self.event_id}"
+
+
+class RefundRequest(models.Model):
+    """Staff initiated refund workflow."""
+
+    class Status(models.TextChoices):
+        REQUESTED = "requested", "Requested"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    payment = models.ForeignKey(Payment, on_delete=models.PROTECT, related_name="refund_requests")
+    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    reason = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.REQUESTED, db_index=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="refund_requests",
+    )
+    provider_reference = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-requested_at"]
+        indexes = [models.Index(fields=["status", "requested_at"])]
+
+    def __str__(self):
+        return f"Refund {self.payment.payment_reference} ({self.status})"

@@ -172,3 +172,46 @@ class TimeStampedModel(models.Model):
     
     class Meta:
         abstract = True
+
+
+class NotificationEvent(TimeStampedModel):
+    """Durable outbox entry for customer/staff notifications."""
+
+    class Channel(models.TextChoices):
+        SMS = "sms", "SMS"
+        PUSH = "push", "Push"
+        EMAIL = "email", "Email"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    channel = models.CharField(max_length=20, choices=Channel.choices, db_index=True)
+    event_type = models.CharField(max_length=80, db_index=True)
+    recipient = models.CharField(max_length=255, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notification_events",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    attempts = models.PositiveIntegerField(default=0)
+    max_attempts = models.PositiveIntegerField(default=3)
+    last_error = models.TextField(blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["next_attempt_at", "created_at"]
+        indexes = [
+            models.Index(fields=["status", "next_attempt_at"]),
+            models.Index(fields=["event_type", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.channel}:{self.event_type} ({self.status})"

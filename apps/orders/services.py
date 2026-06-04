@@ -334,6 +334,15 @@ def validate_service_details(service_type, delivery_details):
     )
 
 
+def validate_checkout_backend_constraints(service_type, summary, requested_time):
+    """Run operational checks that must pass before creating a payment."""
+    from .fulfilment import validate_fulfilment_slot
+    from .inventory import validate_cart_inventory
+
+    validate_cart_inventory(summary)
+    validate_fulfilment_slot(service_type, requested_time)
+
+
 def validate_delivery_minimum(service_type, subtotal):
     """Validate that delivery orders meet the configured food subtotal minimum."""
     if service_type != Order.ServiceType.DELIVERY:
@@ -751,6 +760,7 @@ def create_order_from_summary(
         voucher_code=summary["voucher_code"],
         special_instructions=special_instructions,
         requested_pickup_time=requested_time,
+        fulfilment_slot_start=requested_time,
         status=status,
         payment_status=payment_status,
         accepted_at=accepted_at,
@@ -783,6 +793,14 @@ def create_order_from_summary(
         )
     elif summary["applied_offer"]:
         summary["applied_offer"].increment_usage()
+
+    from .delivery import apply_delivery_pricing
+    from .fulfilment import reserve_fulfilment_slot
+    from .inventory import reserve_order_stock
+
+    apply_delivery_pricing(order)
+    reserve_fulfilment_slot(order)
+    reserve_order_stock(order)
 
     return order
 

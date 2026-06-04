@@ -3,7 +3,7 @@ Admin configuration for the core app.
 """
 from django.contrib import admin
 
-from .models import SiteSettings
+from .models import NotificationEvent, SiteSettings
 
 
 @admin.register(SiteSettings)
@@ -35,3 +35,19 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             "classes": ("collapse",)
         }),
     )
+
+
+@admin.register(NotificationEvent)
+class NotificationEventAdmin(admin.ModelAdmin):
+    list_display = ["channel", "event_type", "recipient", "order", "status", "attempts", "next_attempt_at", "created_at"]
+    list_filter = ["channel", "event_type", "status", "created_at"]
+    search_fields = ["recipient", "order__order_number", "last_error"]
+    readonly_fields = ["created_at", "updated_at", "sent_at"]
+    actions = ["retry_events"]
+
+    def retry_events(self, request, queryset):
+        from django.utils import timezone
+
+        queryset.update(status=NotificationEvent.Status.PENDING, next_attempt_at=timezone.now())
+
+    retry_events.short_description = "Retry selected notification events"

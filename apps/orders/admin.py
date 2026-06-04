@@ -3,7 +3,18 @@ Admin configuration for the orders app.
 """
 from django.contrib import admin
 
-from .models import Order, OrderItem, OrderStatusHistory
+from .models import (
+    DeliveryDriver,
+    DeliveryRun,
+    DeliveryRunOrder,
+    DeliveryZone,
+    FulfilmentBlackout,
+    FulfilmentCapacityRule,
+    FulfilmentSlotReservation,
+    Order,
+    OrderItem,
+    OrderStatusHistory,
+)
 
 
 class OrderItemInline(admin.TabularInline):
@@ -28,6 +39,7 @@ class OrderAdmin(admin.ModelAdmin):
         "customer_phone",
         "status",
         "payment_status",
+        "delivery_fee",
         "total_amount",
         "created_at"
     ]
@@ -81,14 +93,18 @@ class OrderAdmin(admin.ModelAdmin):
                 "delivery_latitude",
                 "delivery_longitude",
                 "delivery_distance_miles",
+                "delivery_zone_name",
+                "delivery_eta_minutes",
+                "delivery_driver",
             ),
         }),
         ("Financial", {
-            "fields": ("subtotal", "discount_amount", "total_amount")
+            "fields": ("subtotal", "discount_amount", "delivery_fee", "total_amount")
         }),
         ("Details", {
             "fields": (
                 "requested_pickup_time",
+                "fulfilment_slot_start",
                 "estimated_ready_time",
                 "actual_ready_time",
                 "accepted_at",
@@ -152,3 +168,56 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_display = ["order", "item_name", "quantity", "item_price", "line_total"]
     list_filter = ["order__status", "created_at"]
     search_fields = ["order__order_number", "item_name"]
+
+
+@admin.register(FulfilmentCapacityRule)
+class FulfilmentCapacityRuleAdmin(admin.ModelAdmin):
+    list_display = ["service_type", "day_of_week", "start_time", "end_time", "slot_minutes", "max_orders", "is_active"]
+    list_filter = ["service_type", "day_of_week", "is_active"]
+    list_editable = ["slot_minutes", "max_orders", "is_active"]
+
+
+@admin.register(FulfilmentBlackout)
+class FulfilmentBlackoutAdmin(admin.ModelAdmin):
+    list_display = ["service_type", "starts_at", "ends_at", "reason", "is_active"]
+    list_filter = ["service_type", "is_active", "starts_at"]
+    search_fields = ["reason"]
+
+
+@admin.register(FulfilmentSlotReservation)
+class FulfilmentSlotReservationAdmin(admin.ModelAdmin):
+    list_display = ["order", "service_type", "slot_start", "status", "created_at"]
+    list_filter = ["service_type", "status", "slot_start"]
+    search_fields = ["order__order_number"]
+
+
+@admin.register(DeliveryZone)
+class DeliveryZoneAdmin(admin.ModelAdmin):
+    list_display = ["name", "min_distance_miles", "max_distance_miles", "fee", "estimated_minutes", "is_active"]
+    list_editable = ["fee", "estimated_minutes", "is_active"]
+
+
+@admin.register(DeliveryDriver)
+class DeliveryDriverAdmin(admin.ModelAdmin):
+    list_display = ["name", "phone", "is_active", "updated_at"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "phone"]
+
+
+class DeliveryRunOrderInline(admin.TabularInline):
+    model = DeliveryRunOrder
+    extra = 0
+
+
+@admin.register(DeliveryRun)
+class DeliveryRunAdmin(admin.ModelAdmin):
+    list_display = ["id", "driver", "status", "planned_departure_at", "dispatched_at", "completed_at"]
+    list_filter = ["status", "driver", "planned_departure_at"]
+    inlines = [DeliveryRunOrderInline]
+
+
+@admin.register(DeliveryRunOrder)
+class DeliveryRunOrderAdmin(admin.ModelAdmin):
+    list_display = ["run", "sequence", "order", "eta_at", "delivered_at"]
+    list_filter = ["run__status"]
+    search_fields = ["order__order_number", "run__driver__name"]

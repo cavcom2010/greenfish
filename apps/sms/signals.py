@@ -4,13 +4,10 @@ from django.dispatch import receiver
 
 from apps.orders.models import Order
 
+from apps.core.models import NotificationEvent
+from apps.core.notifications import enqueue_notification
+
 from .models import SMSMessage, SMSSettings
-from .services import (
-    send_order_confirmation,
-    send_order_delivered,
-    send_order_out_for_delivery,
-    send_order_ready,
-)
 
 
 @receiver(post_save, sender=Order)
@@ -19,10 +16,25 @@ def send_order_sms_notifications(sender, instance, created, **kwargs):
     sms_settings = SMSSettings.get()
     if not sms_settings.enabled:
         return
+
+    def enqueue(message_type, message):
+        phone = instance.customer_phone or (instance.user.phone_number if instance.user else "")
+        if not phone:
+            return
+        enqueue_notification(
+            channel=NotificationEvent.Channel.SMS,
+            event_type=message_type,
+            recipient=phone,
+            payload={"message_type": message_type, "message": message},
+            order=instance,
+        )
     
     # Send confirmation on new order
     if created:
-        send_order_confirmation(instance)
+        enqueue(
+            SMSMessage.MessageType.ORDER_CONFIRMED,
+            f"Your order #{instance.order_number} for £{instance.total_amount} is confirmed.",
+        )
         return
     
     # Send ready notification when status changes to ready.
@@ -33,7 +45,10 @@ def send_order_sms_notifications(sender, instance, created, **kwargs):
         ).exists()
         
         if not already_sent:
-            send_order_ready(instance)
+            enqueue(
+                SMSMessage.MessageType.ORDER_READY,
+                f"Your order #{instance.order_number} is ready for collection.",
+            )
         return
 
     if instance.status == Order.OrderStatus.OUT_FOR_DELIVERY:
@@ -43,7 +58,10 @@ def send_order_sms_notifications(sender, instance, created, **kwargs):
         ).exists()
 
         if not already_sent:
-            send_order_out_for_delivery(instance)
+            enqueue(
+                SMSMessage.MessageType.ORDER_OUT_FOR_DELIVERY,
+                f"Your order #{instance.order_number} is out for delivery.",
+            )
         return
 
     if instance.status == Order.OrderStatus.COMPLETED and instance.is_delivery:
@@ -53,4 +71,7 @@ def send_order_sms_notifications(sender, instance, created, **kwargs):
         ).exists()
 
         if not already_sent:
-            send_order_delivered(instance)
+            enqueue(
+                SMSMessage.MessageType.ORDER_DELIVERED,
+                f"Your order #{instance.order_number} has been delivered.",
+            )
