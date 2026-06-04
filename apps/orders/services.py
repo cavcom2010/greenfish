@@ -11,6 +11,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db.utils import OperationalError, ProgrammingError
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
@@ -34,6 +35,12 @@ logger = logging.getLogger(__name__)
 
 
 def max_cart_item_quantity():
+    try:
+        from apps.core.models import SiteSettings
+
+        return SiteSettings.get().cart_item_quantity_limit_value
+    except (OperationalError, ProgrammingError):
+        pass
     try:
         return max(1, int(getattr(settings, "MAX_CART_ITEM_QUANTITY", 20)))
     except (TypeError, ValueError):

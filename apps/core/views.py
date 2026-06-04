@@ -1,16 +1,18 @@
 """
 Core views for Tinashe Takeaway.
 """
+from django.contrib import messages
 from django.db import connection
 from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.models import CustomerProfile
+from apps.core.forms import LargeOrderRequestForm
 from apps.menu.models import MenuCategory, MenuItem
 from apps.offers.models import Offer
-from apps.orders.services import selected_service_type
+from apps.orders.services import get_cart_summary, selected_service_type
 
 
 def _filter_items_by_dietary_tag(queryset, dietary_filter):
@@ -119,6 +121,72 @@ def contact(request):
     """Contact page view."""
     template = "desktop/core/contact.html" if getattr(request, "is_desktop", True) else "core/contact.html"
     return render(request, template)
+
+
+def _large_order_initial(request):
+    user = request.user
+    if not getattr(user, "is_authenticated", False):
+        return {"service_type": selected_service_type(request)}
+
+    return {
+        "name": getattr(user, "full_name", "") or user.get_full_name() or user.email,
+        "phone": getattr(user, "phone_number", ""),
+        "email": user.email,
+        "service_type": selected_service_type(request),
+    }
+
+
+def _large_order_basket_snapshot(request):
+    summary = get_cart_summary(request.session.get("cart", {}), user=request.user)
+    return {
+        "items": [
+            {
+                "name": item["name"],
+                "quantity": item["quantity"],
+                "price": str(item["price"]),
+                "line_total": str(item["line_total"]),
+                "modifiers": item.get("modifiers", []),
+            }
+            for item in summary["items"]
+        ],
+        "subtotal": str(summary["subtotal"]),
+        "discount": str(summary["discount"]),
+        "total": str(summary["total"]),
+    }, summary["total"]
+
+
+def large_order_request(request):
+    """Capture party, corporate, and catering-size order enquiries."""
+    initial = _large_order_initial(request)
+    basket_snapshot, estimated_total = _large_order_basket_snapshot(request)
+    if basket_snapshot["items"]:
+        initial.setdefault(
+            "requested_items",
+            "\n".join(f"{item['quantity']} x {item['name']}" for item in basket_snapshot["items"]),
+        )
+
+    if request.method == "POST":
+        form = LargeOrderRequestForm(request.POST)
+        if form.is_valid():
+            large_order = form.save(commit=False)
+            if request.user.is_authenticated:
+                large_order.user = request.user
+            large_order.basket_snapshot = basket_snapshot
+            large_order.estimated_total = estimated_total
+            large_order.save()
+            messages.success(request, "Large order request sent. The shop will confirm availability, timing, and payment with you.")
+            return redirect("core:large_orders")
+    else:
+        form = LargeOrderRequestForm(initial=initial)
+
+    context = {
+        "form": form,
+        "basket_snapshot": basket_snapshot,
+        "estimated_total": estimated_total,
+        "service_type": selected_service_type(request),
+    }
+    template = "desktop/core/large_orders.html" if getattr(request, "is_desktop", True) else "core/large_orders.html"
+    return render(request, template, context)
 
 
 @require_GET

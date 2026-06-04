@@ -63,6 +63,7 @@
                     <a href="{% url 'core:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Order</a>
                     <a href="{% url 'menu:menu' %}" class="{% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">Menu</a>
                     <a href="{% url 'offers:list' %}" class="{% if 'offers' in request.path %}active{% endif %}">Offers</a>
+                    <a href="{% url 'core:large_orders' %}" class="{% if request.resolver_match.url_name == 'large_orders' %}active{% endif %}">Large Orders</a>
                     <a href="{% url 'loyalty:dashboard' %}" class="{% if 'rewards' in request.path %}active{% endif %}">Rewards</a>
                     {% if site_settings.about_page_enabled %}
                     <a href="{% url 'core:about' %}">About</a>
@@ -188,6 +189,7 @@
                 <a href="{% url 'core:home' %}">Order Food</a>
                 <a href="{% url 'menu:menu' %}">Full Menu</a>
                 <a href="{% url 'offers:list' %}">Offers & Deals</a>
+                <a href="{% url 'core:large_orders' %}">Large Orders</a>
                 <a href="{% url 'orders:cart' %}">Your Basket</a>
             </div>
 
@@ -250,7 +252,8 @@
 
     <script>
         window.APP_CONFIG = Object.assign({}, window.APP_CONFIG, {
-            deliveryEnabled: {{ delivery_enabled|yesno:"true,false" }}
+            deliveryEnabled: {{ delivery_enabled|yesno:"true,false" }},
+            maxCartItemQuantity: {{ max_cart_item_quantity|default:20 }}
         });
     </script>
 

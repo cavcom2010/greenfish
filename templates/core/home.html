@@ -450,6 +450,24 @@
     border-radius: 24px;
 }
 
+.modal-item-stepper .qty-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed !important;
+}
+
+.modal-large-order-link {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin: -4px 0 12px;
+    text-align: right;
+}
+
+.modal-large-order-link a {
+    color: var(--brand);
+    font-weight: 700;
+    text-decoration: none;
+}
+
 @keyframes slideUp {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
@@ -785,6 +803,27 @@ let modalQuantity = 1;
 let modalBasePrice = 0;
 let modalItemId = null;
 let modalScrollCueFrame = null;
+const maxCartItemQuantity = Math.max(1, parseInt(window.APP_CONFIG?.maxCartItemQuantity || '{{ max_cart_item_quantity|default:20 }}', 10) || 20);
+
+function clampModalQuantity(quantity) {
+    return Math.min(maxCartItemQuantity, Math.max(1, quantity));
+}
+
+function updateModalQuantityState() {
+    modalQuantity = clampModalQuantity(modalQuantity);
+    const quantityEl = document.getElementById('modal-quantity');
+    if (quantityEl) quantityEl.textContent = modalQuantity;
+
+    document.querySelectorAll('#modalContent .qty-btn').forEach(btn => {
+        const change = parseInt(btn.dataset.change || '0', 10);
+        btn.disabled = (change < 0 && modalQuantity <= 1) || (change > 0 && modalQuantity >= maxCartItemQuantity);
+    });
+
+    const largeOrderCue = document.querySelector('#modalContent [data-large-order-cue]');
+    if (largeOrderCue) {
+        largeOrderCue.hidden = modalQuantity < maxCartItemQuantity;
+    }
+}
 
 function setupModalScrollCue() {
     if (modalScrollCueFrame) {
@@ -833,6 +872,7 @@ document.addEventListener('htmx:afterSwap', function(evt) {
         if (modalDiv) {
             modalItemId = modalDiv.dataset.itemId;
             modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
+            updateModalQuantityState();
             updateModalTotal();
             setupModalScrollCue();
         }
@@ -844,8 +884,8 @@ document.getElementById('modalContent').addEventListener('click', function(e) {
     // Quantity buttons
     if (e.target.classList.contains('qty-btn')) {
         const change = parseInt(e.target.dataset.change);
-        modalQuantity = Math.max(1, modalQuantity + change);
-        document.getElementById('modal-quantity').textContent = modalQuantity;
+        modalQuantity = clampModalQuantity(modalQuantity + change);
+        updateModalQuantityState();
         updateModalTotal();
     }
     

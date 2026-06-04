@@ -14,6 +14,7 @@ from django.urls import reverse
 from PIL import Image
 
 from apps.core.media import build_variant_name, get_image_variant_url
+from apps.core.models import LargeOrderRequest
 from apps.core.test_support import create_meal_deal, create_menu_item, create_offer, create_user, ensure_site_settings
 from apps.menu.models import MenuCategory, MenuItem
 
@@ -31,6 +32,7 @@ class PublicRouteTests(TestCase):
             reverse("core:home"),
             reverse("core:about"),
             reverse("core:contact"),
+            reverse("core:large_orders"),
             reverse("menu:menu"),
             reverse("offers:list"),
             reverse("offers:detail", args=[self.offer.pk]),
@@ -66,6 +68,57 @@ class PublicRouteTests(TestCase):
         self.assertContains(desktop_response, 'href="tel:+441131234567"')
         self.assertContains(desktop_response, "Get directions")
 
+    def test_large_order_request_captures_customer_and_basket_snapshot(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 3, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("core:large_orders"),
+            {
+                "name": "Office Manager",
+                "company_name": "Acme Ltd",
+                "phone": "07747055935",
+                "email": "office@example.com",
+                "event_datetime": "2026-12-24T12:30",
+                "service_type": "pickup",
+                "delivery_address": "",
+                "postcode": "",
+                "guest_count": "30",
+                "requested_items": "Lunch for the team",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core:large_orders"))
+        large_order = LargeOrderRequest.objects.get()
+        self.assertEqual(large_order.company_name, "Acme Ltd")
+        self.assertEqual(large_order.status, LargeOrderRequest.Status.NEW)
+        self.assertEqual(large_order.basket_snapshot["items"][0]["quantity"], 3)
+        self.assertEqual(large_order.estimated_total, self.menu_item.price * 3)
+
+    def test_large_order_delivery_requires_address_or_postcode(self):
+        response = self.client.post(
+            reverse("core:large_orders"),
+            {
+                "name": "Office Manager",
+                "company_name": "Acme Ltd",
+                "phone": "07747055935",
+                "email": "office@example.com",
+                "event_datetime": "2026-12-24T12:30",
+                "service_type": "delivery",
+                "delivery_address": "",
+                "postcode": "",
+                "guest_count": "30",
+                "requested_items": "Lunch for the team",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(LargeOrderRequest.objects.count(), 0)
+        self.assertContains(response, "Please add a delivery address or postcode")
+
     def test_health_endpoint_reports_database_state(self):
         response = self.client.get(reverse("core:health"))
         self.assertEqual(response.status_code, 200)
@@ -86,6 +139,7 @@ class PublicRouteTests(TestCase):
         self.assertEqual(html_response.status_code, 200)
         self.assertContains(html_response, self.menu_item.name)
         self.assertContains(html_response, 'class="desktop-item-detail"')
+        self.assertContains(html_response, "Request a large order")
 
         mobile_html_response = self.client.get(
             reverse("menu:item_detail", args=[self.menu_item.pk]),
@@ -94,6 +148,7 @@ class PublicRouteTests(TestCase):
         )
         self.assertEqual(mobile_html_response.status_code, 200)
         self.assertContains(mobile_html_response, 'id="modal-add-btn"')
+        self.assertContains(mobile_html_response, "Request a large order")
 
         json_response = self.client.get(
             reverse("menu:item_detail", args=[self.menu_item.pk]),

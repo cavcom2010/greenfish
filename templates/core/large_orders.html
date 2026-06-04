@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Large Orders - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Large Orders{% endblock %}
+
+{% block extra_css %}
+<style>
+.large-order-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+}
+
+.large-order-form {
+    display: grid;
+    gap: 14px;
+}
+
+.large-order-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.large-order-field input,
+.large-order-field select,
+.large-order-field textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font: inherit;
+    background: #fff;
+}
+
+.large-order-field textarea {
+    resize: vertical;
+}
+
+.large-order-help,
+.large-order-error {
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.large-order-help {
+    color: var(--text-secondary);
+}
+
+.large-order-error {
+    color: var(--error);
+}
+
+.large-order-snapshot {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.large-order-snapshot-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <div class="large-order-card">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">Planning a party or company order?</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.45;">
+            Send the details and the shop will confirm availability, timing, delivery, and payment before the order is accepted.
+        </p>
+    </div>
+
+    {% if basket_snapshot.items %}
+    <div class="large-order-card">
+        <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 6px;">Basket attached</h3>
+        <p style="color: var(--text-secondary); font-size: 13px;">Staff will see this basket with your request.</p>
+        <div class="large-order-snapshot">
+            {% for item in basket_snapshot.items %}
+            <div class="large-order-snapshot-row">
+                <span>{{ item.quantity }} x {{ item.name }}</span>
+                <strong>£{{ item.line_total }}</strong>
+            </div>
+            {% endfor %}
+            <div class="large-order-snapshot-row" style="border-top:1px solid var(--border); padding-top:8px;">
+                <span>Estimated total</span>
+                <strong>£{{ estimated_total|floatformat:2 }}</strong>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" class="large-order-card large-order-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="large-order-error">{{ form.non_field_errors|join:", " }}</div>
+        {% endif %}
+
+        {% for field in form %}
+        <div class="large-order-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="large-order-help">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div class="large-order-error">{{ field.errors|join:", " }}</div>{% endif %}
+        </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-brand" style="margin-top: 4px;">
+            Send Large Order Request
+        </button>
+    </form>
+</div>
+{% endblock %}

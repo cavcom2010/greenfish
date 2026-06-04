@@ -1,7 +1,7 @@
 """
 Core context processors - Cart and common utilities.
 """
-from apps.orders.services import get_cart_summary
+from apps.orders.services import get_cart_summary, max_cart_item_quantity
 
 
 def cart_context(request):
@@ -15,5 +15,6 @@ def cart_context(request):
         "cart_items": summary["items"],
         "cart_total": float(summary["total"]),
         "cart_count": sum(item["quantity"] for item in summary["items"]),
+        "max_cart_item_quantity": max_cart_item_quantity(),
         "is_desktop": getattr(request, "is_desktop", True),
     }

@@ -1732,6 +1732,20 @@ p {
     color: var(--brand);
 }
 
+.qty-btn:disabled,
+.cart-qty-btn:disabled,
+.drawer-qty-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.qty-btn:disabled:hover,
+.cart-qty-btn:disabled:hover,
+.drawer-qty-btn:disabled:hover {
+    border-color: var(--border);
+    color: inherit;
+}
+
 .qty-display {
     font-weight: 700;
     min-width: 32px;
@@ -2053,6 +2067,19 @@ p {
 
 .desktop-item-detail__quantity-control {
     padding: 0.4rem;
+}
+
+.desktop-item-detail__large-order {
+    flex-basis: 100%;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    text-align: right;
+}
+
+.desktop-item-detail__large-order a {
+    color: var(--brand);
+    font-weight: 700;
+    text-decoration: none;
 }
 
 .desktop-item-detail__add-btn {

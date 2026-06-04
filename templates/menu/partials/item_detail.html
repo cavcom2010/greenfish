@@ -153,10 +153,13 @@
         <div class="modal-item-quantity">
             <span style="font-weight: 600;">Quantity</span>
             <div class="modal-item-stepper">
-                <button class="qty-btn" data-change="-1" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">-</button>
+                <button class="qty-btn" type="button" data-change="-1" aria-label="Decrease quantity" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">-</button>
                 <span id="modal-quantity" style="font-weight: 700; min-width: 24px; text-align: center;">1</span>
-                <button class="qty-btn" data-change="1" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">+</button>
+                <button class="qty-btn" type="button" data-change="1" aria-label="Increase quantity" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">+</button>
             </div>
+        </div>
+        <div class="modal-large-order-link" data-large-order-cue hidden>
+            Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}">Request a large order</a>
         </div>
 
         <!-- Add to Cart Button -->

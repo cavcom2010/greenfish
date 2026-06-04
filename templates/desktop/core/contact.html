@@ -57,6 +57,17 @@
                     <p style="font-size: 0.85rem; color: var(--text-secondary); white-space: pre-line; margin: 0;">{{ site_settings.opening_hours }}</p>
                 </div>
                 {% endif %}
+
+                <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); padding: 2rem; margin-top: 1.5rem;">
+                    <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem;">Planning a large order?</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        For offices, parties, and event orders, send the details so the shop can confirm availability and timing.
+                    </p>
+                    <a href="{% url 'core:large_orders' %}" class="hero-btn-primary" style="justify-content: center;">
+                        <i class="ph-bold ph-clipboard-text"></i>
+                        Request a Large Order
+                    </a>
+                </div>
             </div>
 
             <!-- Contact Form -->

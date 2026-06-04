@@ -42,5 +42,15 @@
             View My Orders
         </a>
     </div>
+
+    <div style="background: var(--surface); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); margin-top: 16px;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">Planning a large order?</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 14px;">
+            For offices, parties, and event orders, send the details so the shop can confirm availability and timing.
+        </p>
+        <a href="{% url 'core:large_orders' %}" class="btn btn-brand" style="margin-top: 0;">
+            Request a Large Order
+        </a>
+    </div>
 </div>
 {% endblock %}

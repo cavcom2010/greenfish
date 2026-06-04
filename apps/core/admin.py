@@ -3,7 +3,7 @@ Admin configuration for the core app.
 """
 from django.contrib import admin
 
-from .models import NotificationEvent, SiteSettings
+from .models import LargeOrderRequest, NotificationEvent, SiteSettings
 
 
 @admin.register(SiteSettings)
@@ -23,6 +23,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 "currency",
                 "delivery_enabled",
                 "delivery_minimum_order_amount",
+                "cart_item_quantity_limit",
                 "order_personal_data_retention_years",
             )
         }),
@@ -56,3 +57,35 @@ class NotificationEventAdmin(admin.ModelAdmin):
         queryset.update(status=NotificationEvent.Status.PENDING, next_attempt_at=timezone.now())
 
     retry_events.short_description = "Retry selected notification events"
+
+
+@admin.register(LargeOrderRequest)
+class LargeOrderRequestAdmin(admin.ModelAdmin):
+    list_display = ["name", "company_name", "phone", "service_type", "guest_count", "event_datetime", "status", "created_at"]
+    list_filter = ["status", "service_type", "event_datetime", "created_at"]
+    search_fields = ["name", "company_name", "phone", "email", "requested_items", "staff_notes"]
+    readonly_fields = ["user", "basket_snapshot", "estimated_total", "created_at", "updated_at"]
+    fieldsets = (
+        ("Customer", {
+            "fields": ("user", "name", "company_name", "phone", "email")
+        }),
+        ("Request", {
+            "fields": (
+                "event_datetime",
+                "service_type",
+                "delivery_address",
+                "postcode",
+                "guest_count",
+                "requested_items",
+                "estimated_total",
+                "basket_snapshot",
+            )
+        }),
+        ("Staff Handling", {
+            "fields": ("status", "staff_notes")
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",),
+        }),
+    )

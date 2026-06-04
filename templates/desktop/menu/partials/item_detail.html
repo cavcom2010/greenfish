@@ -171,6 +171,9 @@
                     <span id="modalQtyDisplay" class="qty-display">1</span>
                     <button class="qty-btn" type="button" data-change="1" aria-label="Increase quantity">+</button>
                 </div>
+                <div class="desktop-item-detail__large-order" data-large-order-cue hidden>
+                    Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}">Request a large order</a>
+                </div>
             </div>
 
             <button id="modalAddBtn"

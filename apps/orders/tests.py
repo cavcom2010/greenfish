@@ -118,6 +118,23 @@ class OrderFlowTests(TestCase):
         self.assertEqual(update_response.json()["cart_count"], 5)
         self.assertEqual(self.client.session["cart"][item_id]["quantity"], 5)
 
+    @override_settings(MAX_CART_ITEM_QUANTITY=20)
+    def test_cart_quantity_cap_uses_site_settings_override(self):
+        ensure_site_settings(cart_item_quantity_limit=4)
+
+        add_response = self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 500, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(add_response.status_code, 200)
+        self.assertEqual(add_response.json()["cart_count"], 4)
+        self.assertEqual(add_response.json()["max_cart_item_quantity"], 4)
+        cart = self.client.session["cart"]
+        item_id = next(iter(cart.keys()))
+        self.assertEqual(cart[item_id]["quantity"], 4)
+
     def test_htmx_remove_from_cart_refreshes_drawer_and_triggers_cart_state(self):
         self.client.post(
             reverse("orders:add_to_cart"),

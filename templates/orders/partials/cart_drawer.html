@@ -27,12 +27,17 @@
                         <i class="ph ph-minus"></i>
                     </button>
                     <span class="drawer-qty-value">{{ item.quantity }}</span>
-                    <button type="button" class="drawer-qty-btn" onclick="drawerUpdateQty('{{ item.id }}', {{ item.quantity|add:1 }})" aria-label="Increase quantity">
+                    <button type="button" class="drawer-qty-btn" onclick="drawerUpdateQty('{{ item.id }}', {{ item.quantity|add:1 }})" aria-label="Increase quantity" {% if item.quantity >= max_cart_item_quantity %}disabled{% endif %}>
                         <i class="ph ph-plus"></i>
                     </button>
                 </div>
                 <div class="cart-drawer-item-price">£{{ item.line_total|floatformat:2 }}</div>
             </div>
+            {% if item.quantity >= max_cart_item_quantity %}
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.45rem;">
+                Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}" style="color:var(--brand);font-weight:700;text-decoration:none;">Request a large order</a>
+            </div>
+            {% endif %}
         </div>
         <form method="post" action="{% url 'orders:remove_from_cart' item.id %}"
               hx-post="{% url 'orders:remove_from_cart' item.id %}"

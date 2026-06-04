@@ -1193,6 +1193,13 @@
             lastTouchEnd = now;
         }, false);
     </script>
+
+    <script>
+        window.APP_CONFIG = Object.assign({}, window.APP_CONFIG, {
+            deliveryEnabled: {{ delivery_enabled|yesno:"true,false" }},
+            maxCartItemQuantity: {{ max_cart_item_quantity|default:20 }}
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 

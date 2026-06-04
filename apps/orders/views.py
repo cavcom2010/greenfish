@@ -29,6 +29,7 @@ from .services import (
     delivery_map_settings,
     delivery_minimum_order_amount,
     get_cart_summary,
+    max_cart_item_quantity,
     normalize_cart_quantity,
     online_payment_available,
     payment_fallback_available,
@@ -198,6 +199,7 @@ def _cart_button_response(request):
             "success": True,
             "cart_count": cart_count,
             "cart_total": f"{summary['total']:.2f}",
+            "max_cart_item_quantity": max_cart_item_quantity(),
         }
     )
 
@@ -208,6 +210,7 @@ def _cart_state_payload(request):
         "success": True,
         "cart_count": sum(item["quantity"] for item in summary["items"]),
         "cart_total": f"{summary['total']:.2f}",
+        "max_cart_item_quantity": max_cart_item_quantity(),
     }
 
 

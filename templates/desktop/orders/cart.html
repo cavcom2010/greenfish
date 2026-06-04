@@ -58,9 +58,14 @@
                             <form method="post" action="{% url 'orders:update_cart_item' item.id %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="quantity" value="{{ item.quantity|add:1 }}">
-                                <button type="submit" class="cart-qty-btn">+</button>
+                                <button type="submit" class="cart-qty-btn" {% if item.quantity >= max_cart_item_quantity %}disabled{% endif %}>+</button>
                             </form>
                         </div>
+                        {% if item.quantity >= max_cart_item_quantity %}
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.45rem;">
+                            Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}" style="color: var(--brand); font-weight: 700; text-decoration: none;">Request a large order</a>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Line Total -->

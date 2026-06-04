@@ -10,6 +10,13 @@
         serviceType: '/orders/service-type/',
         cartDrawer: '/orders/cart/drawer/'
     };
+    const maxCartItemQuantity = Math.max(1, parseInt(window.APP_CONFIG?.maxCartItemQuantity || '20', 10) || 20);
+
+    function clampCartQuantity(quantity, allowZero = false) {
+        const parsed = parseInt(quantity, 10);
+        if (allowZero && parsed <= 0) return 0;
+        return Math.min(maxCartItemQuantity, Math.max(1, Number.isNaN(parsed) ? 1 : parsed));
+    }
 
     // ── Toast Notification System ──────────────────────────────────────
     window.showToast = function(message, type = 'success', duration = 3000) {
@@ -99,6 +106,10 @@
     window.drawerUpdateQty = function(itemId, newQty) {
         if (newQty < 1) {
             showToast('Use the trash icon to remove items', 'info', 2000);
+            return;
+        }
+        if (newQty > maxCartItemQuantity) {
+            showToast(`Need more than ${maxCartItemQuantity}? Send a large order request.`, 'info', 3000);
             return;
         }
 
@@ -346,6 +357,7 @@
             modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
             const title = document.getElementById('modalDesktopTitle');
             if (title && modalDiv.dataset.itemName) title.textContent = modalDiv.dataset.itemName;
+            updateModalQuantityState();
             updateModalTotal();
         }
 
@@ -361,9 +373,8 @@
         content.querySelectorAll('.qty-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const change = parseInt(btn.dataset.change);
-                modalQuantity = Math.max(1, modalQuantity + change);
-                const display = document.getElementById('modalQtyDisplay');
-                if (display) display.textContent = modalQuantity;
+                modalQuantity = clampCartQuantity(modalQuantity + change);
+                updateModalQuantityState();
                 updateModalTotal();
             });
         });
@@ -377,6 +388,22 @@
         const addBtn = document.getElementById('modalAddBtn');
         if (addBtn) {
             addBtn.addEventListener('click', addToCartFromModal);
+        }
+    }
+
+    function updateModalQuantityState() {
+        modalQuantity = clampCartQuantity(modalQuantity);
+        const display = document.getElementById('modalQtyDisplay');
+        if (display) display.textContent = modalQuantity;
+
+        document.querySelectorAll('#modalDesktopContent .qty-btn').forEach(btn => {
+            const change = parseInt(btn.dataset.change || '0', 10);
+            btn.disabled = (change < 0 && modalQuantity <= 1) || (change > 0 && modalQuantity >= maxCartItemQuantity);
+        });
+
+        const largeOrderCue = document.querySelector('#modalDesktopContent [data-large-order-cue]');
+        if (largeOrderCue) {
+            largeOrderCue.hidden = modalQuantity < maxCartItemQuantity;
         }
     }
 

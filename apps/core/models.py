@@ -57,6 +57,12 @@ class SiteSettings(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(20)],
         help_text="Years to keep customer-identifying order details before anonymisation. Business totals and item records are retained.",
     )
+    cart_item_quantity_limit = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(500)],
+        help_text="Maximum quantity a customer can self-serve for one basket item. Leave blank to use MAX_CART_ITEM_QUANTITY from .env.",
+    )
     shop_latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
@@ -144,6 +150,16 @@ class SiteSettings(models.Model):
         )
 
     @property
+    def cart_item_quantity_limit_value(self):
+        """Return the normal self-service per-item basket cap."""
+        if self.cart_item_quantity_limit is not None:
+            return max(1, int(self.cart_item_quantity_limit))
+        try:
+            return max(1, int(getattr(django_settings, "MAX_CART_ITEM_QUANTITY", 20)))
+        except (TypeError, ValueError):
+            return 20
+
+    @property
     def is_delivery_map_configured(self):
         """Return whether Google Maps delivery-zone UX can be used."""
         return bool(
@@ -220,3 +236,51 @@ class NotificationEvent(TimeStampedModel):
 
     def __str__(self):
         return f"{self.channel}:{self.event_type} ({self.status})"
+
+
+class LargeOrderRequest(TimeStampedModel):
+    """Customer request for catering, party, or corporate-size orders."""
+
+    class Status(models.TextChoices):
+        NEW = "new", "New"
+        CONTACTED = "contacted", "Contacted"
+        QUOTED = "quoted", "Quoted"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+        CANCELLED = "cancelled", "Cancelled"
+
+    class ServiceType(models.TextChoices):
+        PICKUP = "pickup", "Pickup"
+        DELIVERY = "delivery", "Delivery"
+
+    user = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="large_order_requests",
+    )
+    name = models.CharField(max_length=120)
+    company_name = models.CharField(max_length=120, blank=True)
+    phone = models.CharField(max_length=30)
+    email = models.EmailField()
+    event_datetime = models.DateTimeField(null=True, blank=True)
+    service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.PICKUP)
+    delivery_address = models.TextField(blank=True)
+    postcode = models.CharField(max_length=20, blank=True)
+    guest_count = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    requested_items = models.TextField(help_text="Customer notes about requested food, quantities, budget, or event needs.")
+    basket_snapshot = models.JSONField(default=dict, blank=True)
+    estimated_total = models.DecimalField(max_digits=9, decimal_places=2, default=Decimal("0.00"))
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW, db_index=True)
+    staff_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["event_datetime"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} large order ({self.get_status_display()})"
