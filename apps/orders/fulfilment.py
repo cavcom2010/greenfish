@@ -1,5 +1,4 @@
 from django.core.exceptions import ValidationError
-from django.db.models import Count
 from django.utils import timezone
 
 from .models import FulfilmentBlackout, FulfilmentCapacityRule, FulfilmentSlotReservation, Order
@@ -43,12 +42,14 @@ def validate_fulfilment_slot(service_type, slot_start):
         raise ValidationError("That fulfilment time is unavailable. Please choose another time.")
 
     rule = _candidate_rule(service_type, slot_start)
+    now = timezone.localtime()
     if not rule:
+        if slot_start < now:
+            raise ValidationError("Please choose a future fulfilment time.")
         return slot_start
 
     slot_start = _normalise_to_rule_slot(slot_start, rule)
 
-    now = timezone.localtime()
     if slot_start < now + timezone.timedelta(minutes=rule.lead_time_minutes):
         raise ValidationError(f"Please choose a time at least {rule.lead_time_minutes} minutes from now.")
 
@@ -68,6 +69,92 @@ def validate_fulfilment_slot(service_type, slot_start):
     if used >= rule.max_orders:
         raise ValidationError("That time is fully booked. Please choose another slot.")
     return slot_start
+
+
+def _slot_used_count(service_type, slot_start):
+    return FulfilmentSlotReservation.objects.filter(
+        service_type=service_type,
+        slot_start=slot_start,
+        status__in=[
+            FulfilmentSlotReservation.Status.RESERVED,
+            FulfilmentSlotReservation.Status.CONFIRMED,
+        ],
+    ).count()
+
+
+def _build_slot_option(service_type, slot_start, *, asap=False, window_minutes=15):
+    local_start = timezone.localtime(slot_start)
+    local_end = local_start + timezone.timedelta(minutes=window_minutes)
+    if service_type == Order.ServiceType.DELIVERY:
+        primary = "ASAP" if asap else f"{local_start:%H:%M}-{local_end:%H:%M}"
+        secondary = f"Arrives {local_start:%H:%M}-{local_end:%H:%M}"
+    else:
+        primary = "ASAP" if asap else f"{local_start:%H:%M}"
+        secondary = f"Ready around {local_start:%H:%M}" if asap else "Collection time"
+    return {
+        "value": slot_start.isoformat(),
+        "primary": primary,
+        "secondary": secondary,
+        "asap": asap,
+    }
+
+
+def available_fulfilment_options(service_type, *, limit=8):
+    """Return same-day fulfilment options for checkout display."""
+    service_type = service_type if service_type in {Order.ServiceType.PICKUP, Order.ServiceType.DELIVERY} else Order.ServiceType.PICKUP
+    now = timezone.localtime()
+    today_rules = FulfilmentCapacityRule.objects.filter(
+        service_type=service_type,
+        day_of_week=now.weekday(),
+        is_active=True,
+    )
+    has_today_rules = today_rules.exists()
+    rule = _candidate_rule(service_type, now)
+    if rule:
+        step_minutes = rule.slot_minutes
+        lead_minutes = rule.lead_time_minutes
+        window_minutes = rule.slot_minutes
+        end_time = rule.end_time
+        last_order_minutes = rule.last_order_minutes_before_close
+        max_orders = rule.max_orders
+    else:
+        step_minutes = 15
+        lead_minutes = 15
+        window_minutes = 15
+        end_time = timezone.datetime.max.time().replace(hour=23, minute=59, second=0, microsecond=0)
+        last_order_minutes = 0
+        max_orders = None
+
+    earliest = now + timezone.timedelta(minutes=lead_minutes)
+    minute_bucket = ((earliest.minute + step_minutes - 1) // step_minutes) * step_minutes
+    if minute_bucket >= 60:
+        earliest = earliest.replace(minute=0, second=0, microsecond=0) + timezone.timedelta(hours=1)
+    else:
+        earliest = earliest.replace(minute=minute_bucket, second=0, microsecond=0)
+
+    last_order_at = timezone.datetime.combine(now.date(), end_time)
+    last_order_at = timezone.make_aware(last_order_at) - timezone.timedelta(minutes=last_order_minutes)
+    options = []
+    candidate = earliest
+    attempts = 0
+    while candidate.date() == now.date() and candidate <= last_order_at and len(options) < limit and attempts < 96:
+        attempts += 1
+        if not _is_blacked_out(service_type, candidate):
+            candidate_rule = _candidate_rule(service_type, candidate)
+            if candidate_rule or not has_today_rules:
+                used = _slot_used_count(service_type, candidate)
+                capacity = candidate_rule.max_orders if candidate_rule else max_orders
+                if capacity is None or used < capacity:
+                    options.append(
+                        _build_slot_option(
+                            service_type,
+                            candidate,
+                            asap=not options,
+                            window_minutes=(candidate_rule.slot_minutes if candidate_rule else window_minutes),
+                        )
+                    )
+        candidate += timezone.timedelta(minutes=step_minutes)
+    return options
 
 
 def reserve_fulfilment_slot(order):

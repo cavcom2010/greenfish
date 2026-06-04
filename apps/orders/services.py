@@ -11,6 +11,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
 from apps.core.media import get_image_variant_url
@@ -436,6 +437,15 @@ def requested_pickup_time(raw_minutes):
     return timezone.now() + timezone.timedelta(minutes=parse_pickup_minutes(raw_minutes))
 
 
+def requested_fulfilment_time(raw_fulfilment_time, raw_minutes=None):
+    """Return an absolute fulfilment time, with legacy minute choices as fallback."""
+    if raw_fulfilment_time:
+        parsed = parse_datetime(str(raw_fulfilment_time))
+        if parsed:
+            return parsed if timezone.is_aware(parsed) else timezone.make_aware(parsed)
+    return requested_pickup_time(raw_minutes)
+
+
 def normalize_modifiers(modifiers):
     """Return a cleaned list of modifiers suitable for session storage."""
     cleaned = []
@@ -804,6 +814,7 @@ def create_order_from_summary(
     user=None,
     special_instructions="",
     pickup_minutes=DEFAULT_PICKUP_MINUTES,
+    fulfilment_time=None,
     service_type=DEFAULT_SERVICE_TYPE,
     delivery_details=None,
     status=Order.OrderStatus.PENDING,
@@ -817,7 +828,7 @@ def create_order_from_summary(
     customer_phone = normalize_phone_number(customer_phone)
     customer_email = (customer_email or "").strip().lower()
     delivery_details = extract_delivery_details(delivery_details or {})
-    requested_time = requested_pickup_time(pickup_minutes)
+    requested_time = requested_fulfilment_time(fulfilment_time, pickup_minutes)
     accepted_at = timezone.now() if status == Order.OrderStatus.CONFIRMED else None
 
     order = Order.objects.create(

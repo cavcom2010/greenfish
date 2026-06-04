@@ -414,6 +414,39 @@ class OrderFlowTests(TestCase):
         self.assertNotContains(desktop_response, "delivered fresh to your door")
         self.assertNotContains(desktop_response, "Fast delivery")
 
+    def test_checkout_renders_real_clock_time_options(self):
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.get(reverse("orders:checkout"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["pickup_time_options"])
+        self.assertContains(response, 'name="fulfilment_time"')
+        self.assertContains(response, "Ready around")
+        self.assertNotContains(response, "In 30 mins")
+
+    @override_settings(DELIVERY_ENABLED=True)
+    def test_delivery_checkout_renders_arrival_windows(self):
+        ensure_site_settings(delivery_minimum_order_amount=Decimal("0.00"))
+        session = self.client.session
+        session["service_type"] = Order.ServiceType.DELIVERY
+        session.save()
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.get(reverse("orders:checkout"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["delivery_time_options"])
+        self.assertContains(response, "Arrives")
+
     def test_delivery_admin_switch_forces_pickup(self):
         ensure_site_settings(delivery_enabled=False)
         response = self.client.post(
@@ -1180,6 +1213,57 @@ class PaymentFlowTests(TestCase):
         self.assertIn(f"t={order.public_access_token}", response.url)
         self.assertTrue(Payment.objects.filter(order=order).exists())
         self.assertTrue(VoucherUsage.objects.filter(order=order).exists())
+
+    @override_settings(
+        DEBUG=True,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_create_payment_uses_absolute_fulfilment_time(self):
+        self._seed_cart()
+        requested_time = (timezone.now() + timezone.timedelta(minutes=90)).replace(second=0, microsecond=0)
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Slot User",
+                "customer_phone": "07747055935",
+                "customer_email": "slot@example.com",
+                "fulfilment_time": requested_time.isoformat(),
+                "pickup_time": "15",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.latest("id")
+        self.assertEqual(order.requested_pickup_time.replace(second=0, microsecond=0), requested_time)
+        self.assertEqual(order.fulfilment_slot_start.replace(second=0, microsecond=0), requested_time)
+
+    @override_settings(
+        DEBUG=True,
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_create_payment_rejects_past_fulfilment_time(self):
+        self._seed_cart()
+        requested_time = timezone.now() - timezone.timedelta(minutes=5)
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "customer_name": "Past Slot User",
+                "customer_phone": "07747055935",
+                "customer_email": "past-slot@example.com",
+                "fulfilment_time": requested_time.isoformat(),
+                "pickup_time": "15",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Order.objects.count(), 0)
 
     @override_settings(
         DEBUG=True,

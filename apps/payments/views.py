@@ -33,7 +33,7 @@ from apps.orders.services import (
     selected_reward_wallet_item_id,
     selected_service_type,
     store_service_type,
-    requested_pickup_time,
+    requested_fulfilment_time,
     validate_checkout_backend_constraints,
     validate_customer_details,
     validate_delivery_minimum,
@@ -215,7 +215,7 @@ def create_payment(request):
         validate_checkout_backend_constraints(
             service_type,
             summary,
-            requested_pickup_time(request.POST.get("pickup_time", 15)),
+            requested_fulfilment_time(request.POST.get("fulfilment_time"), request.POST.get("pickup_time", 15)),
         )
     except ValidationError as exc:
         return _payment_error_response(request, str(exc))
@@ -257,6 +257,7 @@ def create_payment(request):
                 user=request.user,
                 special_instructions=special_instructions,
                 pickup_minutes=request.POST.get("pickup_time", 15),
+                fulfilment_time=request.POST.get("fulfilment_time"),
                 service_type=service_type,
                 delivery_details=delivery_details,
                 status=Order.OrderStatus.PENDING,

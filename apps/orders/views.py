@@ -17,6 +17,7 @@ from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuItem
 
 from .access import get_accessible_order_or_404, order_customer_url, request_can_access_order, request_has_order_token
+from .fulfilment import available_fulfilment_options
 from .models import Order, OrderIssue
 from .services import (
     add_custom_item_to_cart,
@@ -478,6 +479,8 @@ def checkout(request):
         "delivery_minimum_order_amount": delivery_minimum,
         "delivery_minimum_met": delivery_minimum_remaining == Decimal("0.00"),
         "delivery_minimum_remaining": delivery_minimum_remaining,
+        "pickup_time_options": available_fulfilment_options(Order.ServiceType.PICKUP),
+        "delivery_time_options": available_fulfilment_options(Order.ServiceType.DELIVERY) if delivery_enabled() else [],
         **_default_delivery_address(request.user),
     }
     template = "desktop/orders/checkout.html" if getattr(request, "is_desktop", True) else "orders/checkout.html"
