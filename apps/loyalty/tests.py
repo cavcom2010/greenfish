@@ -32,6 +32,36 @@ class LoyaltyViewTests(TestCase):
                 response = self.client.get(reverse(name))
                 self.assertEqual(response.status_code, 200)
 
+    def test_rewards_sync_does_not_create_duplicate_welcome_wallet_reward(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("loyalty:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            RewardWalletItem.objects.filter(
+                user=self.user,
+                source=RewardWalletItem.Source.WELCOME,
+                status=RewardWalletItem.Status.AVAILABLE,
+            ).exists()
+        )
+
+    def test_rewards_sync_cancels_existing_unused_welcome_wallet_reward(self):
+        wallet_item = RewardWalletItem.objects.create(
+            user=self.user,
+            title="Welcome reward",
+            description="Duplicate welcome points",
+            source=RewardWalletItem.Source.WELCOME,
+            points_value=50,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("loyalty:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        wallet_item.refresh_from_db()
+        self.assertEqual(wallet_item.status, RewardWalletItem.Status.CANCELLED)
+
     def test_app_exclusive_offer_syncs_to_wallet_and_activates(self):
         offer = create_offer(value=Decimal("20.00"))
         offer.app_exclusive = True

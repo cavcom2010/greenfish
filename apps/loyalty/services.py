@@ -84,18 +84,12 @@ def sync_customer_reward_wallet(user):
     profile = getattr(user, "profile", None)
     now = timezone.localtime()
 
-    if settings.enabled and settings.welcome_bonus > 0:
-        RewardWalletItem.objects.get_or_create(
-            user=user,
-            source=RewardWalletItem.Source.WELCOME,
-            offer=None,
-            defaults={
-                "title": "Welcome reward",
-                "description": f"{settings.welcome_bonus} bonus points for joining {site_name}.",
-                "points_value": settings.welcome_bonus,
-                "expires_at": _wallet_expiry(60),
-            },
-        )
+    RewardWalletItem.objects.filter(
+        user=user,
+        source=RewardWalletItem.Source.WELCOME,
+        offer__isnull=True,
+        status=RewardWalletItem.Status.AVAILABLE,
+    ).update(status=RewardWalletItem.Status.CANCELLED, updated_at=timezone.now())
 
     birthday = getattr(profile, "date_of_birth", None)
     if settings.enabled and settings.birthday_bonus > 0 and birthday:
