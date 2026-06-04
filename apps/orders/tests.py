@@ -1025,11 +1025,7 @@ class OrderFlowTests(TestCase):
         self.assertContains(response, "I understand I must pay the shop within 15 minutes")
         self.assertContains(response, 'href="tel:+441131234567"')
         self.assertContains(response, "Call store")
-        self.assertContains(response, "Get directions")
-        self.assertContains(
-            response,
-            "https://www.google.com/maps/search/?api=1&query=45%20High%20Street%2C%20Leeds%20LS1%201AA",
-        )
+        self.assertNotContains(response, "Get directions")
         self.assertNotContains(response, "paymentAlert.textContent")
 
         self.client.cookies["view_mode"] = "desktop"
@@ -1037,7 +1033,7 @@ class OrderFlowTests(TestCase):
         self.assertEqual(desktop_response.status_code, 200)
         self.assertContains(desktop_response, 'href="tel:+441131234567"')
         self.assertContains(desktop_response, "Call store")
-        self.assertContains(desktop_response, "Get directions")
+        self.assertNotContains(desktop_response, "Get directions")
 
     def test_staff_boards_and_tracking_render(self):
         order = create_order(

@@ -213,14 +213,9 @@
                             Online card payments are unavailable right now. You can still place the order, but you must call or visit the shop to pay within {{ payment_fallback_hold_minutes }} minutes. The kitchen will not start until payment is received.
                             {% endif %}
                             {% if payment_fallback_available %}
-                            {% if site_settings.phone or site_settings.address %}
+                            {% if site_settings.phone %}
                             <div style="display:flex;flex-wrap:wrap;gap:0.65rem;margin-top:0.85rem;">
-                                {% if site_settings.phone %}
                                 <a href="tel:{{ site_settings.phone }}" class="hero-btn-primary" style="text-decoration:none;padding:0.65rem 0.9rem;"><i class="ph-bold ph-phone"></i> Call store</a>
-                                {% endif %}
-                                {% if site_settings.address %}
-                                <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="hero-btn-secondary" style="text-decoration:none;color:var(--text);border-color:var(--border);padding:0.65rem 0.9rem;" target="_blank" rel="noopener"><i class="ph-bold ph-map-pin"></i> Get directions</a>
-                                {% endif %}
                             </div>
                             {% endif %}
                             <label style="display:flex;gap:0.65rem;align-items:flex-start;margin-top:0.85rem;font-weight:700;line-height:1.4;">
