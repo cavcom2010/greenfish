@@ -90,6 +90,7 @@ DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
 |----------|---------|-------------|
 | `ORDER_PREFIX` | TN | Prefix for order numbers (e.g., TN-12345). |
 | `DEFAULT_PREP_TIME` | 15 | Default preparation time in minutes. |
+| `MAX_CART_ITEM_QUANTITY` | 20 | Normal self-service per-item basket cap. Admin → Site Settings can override it; large/customer event orders should use the large-order request flow. |
 | `DELIVERY_ENABLED` | True | Deployment-level delivery switch. Set to `False` to force pickup only, regardless of the admin setting. |
 | `DELIVERY_MINIMUM_ORDER_AMOUNT` | 15.00 | Delivery food-subtotal minimum fallback when Admin → Site Settings does not define one. Set admin value or env value to `0.00` to disable. |
 | `GOOGLE_MAPS_API_KEY` | Empty | Browser-restricted Google Maps key for checkout map loading and Places address search. |
