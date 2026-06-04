@@ -166,8 +166,7 @@ def _create_demo_payment(order, request):
 @require_POST
 def create_payment(request):
     """Create a payment for checkout, or a customer-approved fallback hold."""
-    service_type = selected_service_type(request)
-    store_service_type(request, service_type)
+    service_type = store_service_type(request, request.POST.get("service_type") or selected_service_type(request))
 
     provider = active_payment_provider()
     provider_ready = payment_provider_configured(provider)

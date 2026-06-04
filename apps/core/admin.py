@@ -23,6 +23,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 "currency",
                 "delivery_enabled",
                 "delivery_minimum_order_amount",
+                "delivery_default_fee",
                 "cart_item_quantity_limit",
                 "order_personal_data_retention_years",
             )

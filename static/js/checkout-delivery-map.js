@@ -16,9 +16,9 @@
         return match ? match.long_name : "";
     }
 
-    function emitValidity(valid) {
+    function emitValidity(valid, detail) {
         document.dispatchEvent(new CustomEvent("checkout-delivery:validity", {
-            detail: { valid: Boolean(valid) }
+            detail: Object.assign({ valid: Boolean(valid) }, detail || {})
         }));
     }
 
@@ -78,7 +78,8 @@
             formatted: document.getElementById("deliveryFormattedAddress"),
             placeId: document.getElementById("deliveryPlaceId"),
             latitude: document.getElementById("deliveryLatitude"),
-            longitude: document.getElementById("deliveryLongitude")
+            longitude: document.getElementById("deliveryLongitude"),
+            distance: document.getElementById("deliveryDistanceMiles")
         };
         const configured = Boolean(config.configured && config.apiKey && mapElement);
         let map;
@@ -94,7 +95,7 @@
 
         function clearSelection() {
             valid = !configured;
-            ["formatted", "placeId", "latitude", "longitude"].forEach(key => {
+            ["formatted", "placeId", "latitude", "longitude", "distance"].forEach(key => {
                 if (fields[key]) fields[key].value = "";
             });
             setStatus(config.readyMessage || "Choose an address to check delivery availability.", "neutral");
@@ -127,6 +128,7 @@
             valid = distance <= Number(config.radiusMiles);
             if (fields.latitude) fields.latitude.value = lat.toFixed(6);
             if (fields.longitude) fields.longitude.value = lng.toFixed(6);
+            if (fields.distance) fields.distance.value = distance.toFixed(2);
             fillAddress(place);
 
             if (map) {
@@ -149,7 +151,7 @@
             } else {
                 setStatus(`Outside our ${Number(config.radiusMiles).toFixed(1)} mile delivery area. Choose pickup or another address.`, "error");
             }
-            emitValidity(valid);
+            emitValidity(valid, { distanceMiles: distance });
         }
 
         function initializeMap() {

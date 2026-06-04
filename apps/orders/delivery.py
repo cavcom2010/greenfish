@@ -10,10 +10,18 @@ from .models import DeliveryRun, DeliveryRunOrder, DeliveryZone, Order
 logger = logging.getLogger(__name__)
 
 
+def default_delivery_fee():
+    """Return the configured fallback delivery fee."""
+    from apps.core.models import SiteSettings
+
+    return SiteSettings.get().delivery_default_fee_value
+
+
 def delivery_quote(distance_miles):
     """Return delivery zone, fee, and ETA minutes for a distance."""
+    fallback_fee = default_delivery_fee()
     if distance_miles is None:
-        return None, Decimal("0.00"), None
+        return None, fallback_fee, None
     distance = Decimal(str(distance_miles)).quantize(Decimal("0.01"))
     zone = (
         DeliveryZone.objects.filter(
@@ -25,7 +33,7 @@ def delivery_quote(distance_miles):
         .first()
     )
     if not zone:
-        return None, Decimal("0.00"), None
+        return None, fallback_fee, None
     return zone, zone.fee, zone.estimated_minutes
 
 

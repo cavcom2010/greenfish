@@ -23,7 +23,7 @@ from apps.core.test_support import (
 )
 from apps.offers.models import Offer, VoucherUsage
 from apps.operations.permissions import OPERATIONS_MANAGER_GROUP
-from apps.orders.models import Order, OrderItem
+from apps.orders.models import DeliveryZone, Order, OrderItem
 from apps.orders.services import (
     delivery_map_settings,
     delivery_minimum_order_amount,
@@ -528,6 +528,93 @@ class OrderFlowTests(TestCase):
         with self.assertRaisesMessage(ValidationError, "Add £2.50 more"):
             validate_delivery_minimum(Order.ServiceType.DELIVERY, Decimal("12.50"))
 
+    @override_settings(DELIVERY_ENABLED=True, DELIVERY_DEFAULT_FEE="2.50")
+    def test_delivery_quote_uses_default_fee_for_manual_delivery(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=False,
+            delivery_minimum_order_amount=Decimal("0.00"),
+            delivery_default_fee=None,
+        )
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 2,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("orders:delivery_quote"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "Leeds",
+                "delivery_postcode": "LS1 1AA",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["delivery_fee"], "2.50")
+        self.assertEqual(response.json()["total"], "27.50")
+        self.assertTrue(response.json()["quote_ready"])
+
+    @override_settings(
+        DELIVERY_ENABLED=True,
+        DELIVERY_DEFAULT_FEE="2.50",
+        GOOGLE_MAPS_API_KEY="test-google-key",
+        SHOP_LATITUDE="53.800755",
+        SHOP_LONGITUDE="-1.549077",
+    )
+    def test_delivery_quote_uses_zone_fee_when_distance_matches(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=True,
+            delivery_minimum_order_amount=Decimal("0.00"),
+            delivery_default_fee=None,
+            delivery_radius_miles=Decimal("3.00"),
+        )
+        DeliveryZone.objects.create(
+            name="Local",
+            min_distance_miles=Decimal("0.00"),
+            max_distance_miles=Decimal("3.00"),
+            fee=Decimal("4.00"),
+            estimated_minutes=22,
+        )
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "menu_item_id": self.menu_item.pk,
+                "quantity": 2,
+                "modifiers": "[]",
+                "service_type": Order.ServiceType.DELIVERY,
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("orders:delivery_quote"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "Leeds",
+                "delivery_postcode": "LS1 1AA",
+                "delivery_latitude": "53.801000",
+                "delivery_longitude": "-1.548000",
+            },
+        )
+
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["quote_ready"])
+        self.assertEqual(data["delivery_fee"], "4.00")
+        self.assertEqual(data["delivery_zone_name"], "Local")
+        self.assertEqual(data["delivery_eta_minutes"], 22)
+        self.assertEqual(data["total"], "29.00")
+
     def test_checkout_uses_polished_manual_delivery_panel_when_map_unconfigured(self):
         ensure_site_settings(delivery_enabled=True, delivery_map_enabled=True)
         self.client.post(
@@ -875,7 +962,11 @@ class OrderFlowTests(TestCase):
         STRIPE_WEBHOOK_SECRET="",
     )
     def test_delivery_checkout_at_minimum_allows_discounted_final_total(self):
-        ensure_site_settings(delivery_enabled=True, delivery_minimum_order_amount=Decimal("15.00"))
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_minimum_order_amount=Decimal("15.00"),
+            delivery_default_fee=Decimal("0.00"),
+        )
         offer = create_offer(name="Minimum Discount", value=Decimal("10.00"))
         voucher = create_voucher(code="MINOK", offer=offer)
         self.client.post(
@@ -1210,6 +1301,48 @@ class PaymentFlowTests(TestCase):
         session = self.client.session
         session["voucher_code"] = self.voucher.code
         session.save()
+
+    @override_settings(
+        DEBUG=True,
+        DELIVERY_ENABLED=True,
+        DELIVERY_DEFAULT_FEE="2.50",
+        PAYMENT_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="",
+        STRIPE_WEBHOOK_SECRET="",
+    )
+    def test_create_payment_uses_posted_delivery_service_and_default_fee(self):
+        ensure_site_settings(
+            delivery_enabled=True,
+            delivery_map_enabled=False,
+            delivery_minimum_order_amount=Decimal("0.00"),
+            delivery_default_fee=None,
+        )
+        self.client.force_login(self.user)
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = self.client.post(
+            reverse("payments:create"),
+            {
+                "service_type": Order.ServiceType.DELIVERY,
+                "customer_name": "Delivery User",
+                "customer_phone": "07747055935",
+                "customer_email": "delivery@example.com",
+                "delivery_address_line1": "12 Test Street",
+                "delivery_city": "Leeds",
+                "delivery_postcode": "LS1 1AA",
+                "fulfilment_time": (timezone.now() + timezone.timedelta(minutes=30)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.latest("id")
+        self.assertEqual(order.service_type, Order.ServiceType.DELIVERY)
+        self.assertEqual(order.delivery_fee, Decimal("2.50"))
+        self.assertEqual(order.total_amount, Decimal("15.00"))
 
     @override_settings(
         DEBUG=True,

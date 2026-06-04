@@ -52,6 +52,14 @@ class SiteSettings(models.Model):
         validators=[MinValueValidator(Decimal("0.00"))],
         help_text="Minimum food subtotal for delivery orders. Leave blank to use DELIVERY_MINIMUM_ORDER_AMOUNT from .env. Use 0 to disable.",
     )
+    delivery_default_fee = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Default delivery fee used before a distance zone is matched, or when manual address entry is used. Leave blank to use DELIVERY_DEFAULT_FEE from .env.",
+    )
     order_personal_data_retention_years = models.PositiveSmallIntegerField(
         default=6,
         validators=[MinValueValidator(1), MaxValueValidator(20)],
@@ -148,6 +156,16 @@ class SiteSettings(models.Model):
             self._decimal_from_setting(getattr(django_settings, "DELIVERY_MINIMUM_ORDER_AMOUNT", "15.00"))
             or Decimal("15.00")
         )
+
+    @property
+    def delivery_default_fee_value(self):
+        """Return fallback delivery fee from admin settings with env fallback."""
+        if self.delivery_default_fee is not None:
+            return self.delivery_default_fee.quantize(Decimal("0.01"))
+        return (
+            self._decimal_from_setting(getattr(django_settings, "DELIVERY_DEFAULT_FEE", "0.00"))
+            or Decimal("0.00")
+        ).quantize(Decimal("0.01"))
 
     @property
     def cart_item_quantity_limit_value(self):

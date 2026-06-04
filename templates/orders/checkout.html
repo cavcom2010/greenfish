@@ -56,6 +56,7 @@
             <input type="hidden" name="delivery_place_id" id="deliveryPlaceId" value="{{ checkout_form.delivery_place_id|default:delivery_place_id }}">
             <input type="hidden" name="delivery_latitude" id="deliveryLatitude" value="{{ checkout_form.delivery_latitude|default:delivery_latitude }}">
             <input type="hidden" name="delivery_longitude" id="deliveryLongitude" value="{{ checkout_form.delivery_longitude|default:delivery_longitude }}">
+            <input type="hidden" name="delivery_distance_miles" id="deliveryDistanceMiles" value="{{ checkout_form.delivery_distance_miles|default:'' }}">
 
             <div class="delivery-card-header">
                 <div>
@@ -82,6 +83,10 @@
                     Add £{{ delivery_minimum_remaining|floatformat:2 }} more or choose pickup.
                     {% endif %}
                 </span>
+            </div>
+            <div id="deliveryQuoteNotice" class="delivery-quote-panel" data-state="neutral" {% if service_type != 'delivery' %}hidden{% endif %}>
+                <i class="ph ph-truck"></i>
+                <span>Choose delivery details to calculate the delivery fee.</span>
             </div>
 
             {% if delivery_map.configured %}
@@ -219,9 +224,13 @@
                 <span>-£{{ discount|floatformat:2 }}</span>
             </div>
             {% endif %}
+            <div id="deliveryFeeRow" style="display: none; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-secondary);">Delivery fee</span>
+                <span id="deliveryFeeValue">£0.00</span>
+            </div>
             <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--border);">
                 <span>Total</span>
-                <span>£{{ total|floatformat:2 }}</span>
+                <span id="checkoutTotalValue">£{{ total|floatformat:2 }}</span>
             </div>
         </div>
 
@@ -361,10 +370,16 @@ const paymentNote = document.getElementById('paymentNote');
 const paymentAlert = document.getElementById('paymentAvailabilityAlert');
 const paymentAlertMessage = document.getElementById('paymentAvailabilityMessage');
 const onlineRadio = document.querySelector('input[name="payment_method"][value="online"]');
-const totalLabel = '£{{ total|floatformat:2 }}';
+const baseTotalLabel = '£{{ total|floatformat:2 }}';
+let checkoutTotalLabel = baseTotalLabel;
 const deliveryMinimumAmount = {{ delivery_minimum_order_amount|floatformat:2 }};
 const deliveryMinimumRemaining = {{ delivery_minimum_remaining|floatformat:2 }};
 const deliveryMinimumMet = {{ delivery_minimum_met|yesno:"true,false" }};
+const deliveryQuoteUrl = '{% url "orders:delivery_quote" %}';
+const deliveryFeeRow = document.getElementById('deliveryFeeRow');
+const deliveryFeeValue = document.getElementById('deliveryFeeValue');
+const checkoutTotalValue = document.getElementById('checkoutTotalValue');
+const deliveryQuoteNotice = document.getElementById('deliveryQuoteNotice');
 const checkoutDeliveryConfig = {
     configured: {{ delivery_map.configured|yesno:"true,false" }},
     apiKey: '{{ delivery_map.api_key|escapejs }}',
@@ -376,6 +391,8 @@ const checkoutDeliveryConfig = {
     serviceInputId: 'serviceTypeInput'
 };
 let deliveryPlaceIsValid = !checkoutDeliveryConfig.configured || Boolean(document.getElementById('deliveryLatitude')?.value && document.getElementById('deliveryLongitude')?.value);
+let deliveryQuoteReady = false;
+let deliveryQuoteRequestId = 0;
 let checkoutDeliveryController;
 
 function normalizeServiceType(service) {
@@ -408,10 +425,109 @@ function applyDeliveryMinimumGate() {
     paymentNote.innerHTML = `<i class="ph ph-basket" style="vertical-align: middle;"></i> Delivery starts at £${deliveryMinimumAmount.toFixed(2)} before discounts. Add £${deliveryMinimumRemaining.toFixed(2)} more or choose pickup.`;
 }
 
+function applyDeliveryQuoteGate() {
+    if (!deliveryIsSelected() || !deliveryMinimumMet || deliveryQuoteReady) {
+        return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.6';
+    submitBtn.style.cursor = 'not-allowed';
+    btnText.textContent = 'Confirm Delivery Fee';
+    paymentNote.innerHTML = '<i class="ph ph-truck" style="vertical-align: middle;"></i> Delivery fee must be confirmed before payment.';
+}
+
 function syncCheckoutSubmitState() {
     applySelectedPaymentMethod();
     applyDeliveryMinimumGate();
+    applyDeliveryQuoteGate();
     applyDeliveryLocationGate();
+}
+
+function setDeliveryQuoteNotice(state, message) {
+    if (!deliveryQuoteNotice) return;
+    deliveryQuoteNotice.hidden = !deliveryIsSelected();
+    deliveryQuoteNotice.dataset.state = state || 'neutral';
+    const text = deliveryQuoteNotice.querySelector('span');
+    if (text) text.textContent = message;
+}
+
+function resetDeliveryQuote(message) {
+    deliveryQuoteReady = !deliveryIsSelected();
+    checkoutTotalLabel = baseTotalLabel;
+    if (checkoutTotalValue) checkoutTotalValue.textContent = baseTotalLabel;
+    if (deliveryFeeRow) deliveryFeeRow.style.display = 'none';
+    if (deliveryFeeValue) deliveryFeeValue.textContent = '£0.00';
+    if (deliveryIsSelected()) {
+        setDeliveryQuoteNotice('neutral', message || 'Choose delivery details to calculate the delivery fee.');
+    } else if (deliveryQuoteNotice) {
+        deliveryQuoteNotice.hidden = true;
+    }
+}
+
+function applyDeliveryQuote(data) {
+    if (!data.quote_ready) {
+        resetDeliveryQuote(data.error || data.message || 'Choose delivery details to calculate the delivery fee.');
+        if (data.error) setDeliveryQuoteNotice('error', data.error);
+        syncCheckoutSubmitState();
+        return;
+    }
+
+    deliveryQuoteReady = true;
+    const fee = parseFloat(data.delivery_fee || '0') || 0;
+    const total = parseFloat(data.total || '{{ total|floatformat:2 }}') || 0;
+    checkoutTotalLabel = `£${total.toFixed(2)}`;
+    if (deliveryFeeRow) deliveryFeeRow.style.display = 'flex';
+    if (deliveryFeeValue) deliveryFeeValue.textContent = `£${fee.toFixed(2)}`;
+    if (checkoutTotalValue) checkoutTotalValue.textContent = checkoutTotalLabel;
+    const distanceInput = document.getElementById('deliveryDistanceMiles');
+    if (distanceInput && data.delivery_distance_miles) {
+        distanceInput.value = data.delivery_distance_miles;
+    }
+    const detailParts = [`Delivery fee £${fee.toFixed(2)}`];
+    if (data.delivery_zone_name) detailParts.push(data.delivery_zone_name);
+    if (data.delivery_eta_minutes) detailParts.push(`~${data.delivery_eta_minutes} mins`);
+    setDeliveryQuoteNotice('success', detailParts.join(' · '));
+    syncCheckoutSubmitState();
+}
+
+function requestDeliveryQuote() {
+    if (!deliveryIsSelected()) {
+        resetDeliveryQuote();
+        syncCheckoutSubmitState();
+        return;
+    }
+    if (!deliveryMinimumMet) {
+        resetDeliveryQuote(`Delivery starts at £${deliveryMinimumAmount.toFixed(2)} before discounts.`);
+        syncCheckoutSubmitState();
+        return;
+    }
+    if (checkoutDeliveryConfig.configured && !deliveryPlaceIsValid) {
+        resetDeliveryQuote('Choose your delivery address to calculate the delivery fee.');
+        syncCheckoutSubmitState();
+        return;
+    }
+
+    const requestId = ++deliveryQuoteRequestId;
+    setDeliveryQuoteNotice('loading', 'Calculating delivery fee...');
+    fetch(deliveryQuoteUrl, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new FormData(checkoutForm)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (requestId !== deliveryQuoteRequestId) return;
+        applyDeliveryQuote(data);
+    })
+    .catch(() => {
+        if (requestId !== deliveryQuoteRequestId) return;
+        deliveryQuoteReady = false;
+        setDeliveryQuoteNotice('error', 'Could not calculate delivery fee. Please try again.');
+        syncCheckoutSubmitState();
+    });
 }
 
 function setVoucherFeedback(message, isError) {
@@ -588,7 +704,7 @@ function applySelectedPaymentMethod() {
     submitBtn.style.opacity = '1';
     submitBtn.style.cursor = 'pointer';
 
-    btnText.textContent = `Pay ${totalLabel}`;
+    btnText.textContent = `Pay ${checkoutTotalLabel}`;
     paymentNote.innerHTML = '<i class="ph ph-lock-key" style="vertical-align: middle;"></i> Secure payment powered by Mollie';
     checkoutForm.action = '{% url "payments:create" %}';
 }
@@ -617,6 +733,7 @@ function updateServiceType(service, persist = true) {
     updateServiceButtons(service);
     updateServiceCopy(service);
     syncPaymentState();
+    requestDeliveryQuote();
     syncCheckoutSubmitState();
     if (persist) {
         persistServiceType(service);
@@ -638,7 +755,14 @@ document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
 
 document.addEventListener('checkout-delivery:validity', event => {
     deliveryPlaceIsValid = Boolean(event.detail.valid);
+    requestDeliveryQuote();
     syncCheckoutSubmitState();
+});
+
+['delivery_address_line1', 'delivery_city', 'delivery_postcode'].forEach(name => {
+    document.querySelector(`[name="${name}"]`)?.addEventListener('input', () => {
+        if (!checkoutDeliveryConfig.configured) requestDeliveryQuote();
+    });
 });
 
 document.querySelector('input[name="customer_phone"]').addEventListener('blur', function() {
@@ -670,6 +794,7 @@ checkoutForm.addEventListener('submit', function(event) {
 });
 
 checkoutDeliveryController = window.CheckoutDeliveryMap?.init(checkoutDeliveryConfig);
+requestDeliveryQuote();
 
 const savedServiceType = localStorage.getItem('service_type');
 if (savedServiceType === 'pickup' || savedServiceType === 'delivery') {

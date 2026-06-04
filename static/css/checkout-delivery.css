@@ -176,6 +176,49 @@
     border: 1px solid #fecaca;
 }
 
+.delivery-quote-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 14px 0;
+    padding: 13px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.38;
+    color: #334155;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.delivery-quote-panel[hidden] {
+    display: none !important;
+}
+
+.delivery-quote-panel i {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    font-size: 17px;
+}
+
+.delivery-quote-panel[data-state="success"] {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+
+.delivery-quote-panel[data-state="error"] {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.delivery-quote-panel[data-state="loading"] {
+    color: #854d0e;
+    background: #fef3c7;
+    border-color: #fde68a;
+}
+
 .delivery-address-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

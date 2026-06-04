@@ -28,6 +28,7 @@ from .services import (
     delivery_enabled,
     delivery_map_settings,
     delivery_minimum_order_amount,
+    extract_delivery_details,
     get_cart_summary,
     max_cart_item_quantity,
     normalize_cart_quantity,
@@ -40,6 +41,8 @@ from .services import (
     selected_service_type,
     store_service_type,
     update_session_cart_item,
+    validate_delivery_minimum,
+    validate_service_details,
 )
 
 PAYMENT_FALLBACK_FORM_SESSION_KEY = "payment_fallback_form"
@@ -488,6 +491,96 @@ def checkout(request):
     }
     template = "desktop/orders/checkout.html" if getattr(request, "is_desktop", True) else "orders/checkout.html"
     return render(request, template, context)
+
+
+@require_POST
+def delivery_quote(request):
+    """Return the current delivery fee and payable total for checkout."""
+    service_type = store_service_type(request, request.POST.get("service_type") or selected_service_type(request))
+    if service_type != Order.ServiceType.DELIVERY:
+        return JsonResponse({"success": False, "error": "Delivery is not selected."}, status=400)
+
+    active_offer_id = selected_offer_id(request)
+    active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
+    summary = get_cart_summary(
+        request.session.get("cart", {}),
+        user=request.user,
+        voucher_code=request.session.get("voucher_code", ""),
+        offer_id=active_offer_id,
+        reward_wallet_item_id=active_reward_wallet_item_id,
+    )
+    if not summary["items"]:
+        return JsonResponse({"success": False, "error": "Your basket is empty."}, status=400)
+
+    try:
+        validate_delivery_minimum(service_type, summary["subtotal"])
+    except ValidationError as exc:
+        return JsonResponse(
+            {
+                "success": True,
+                "quote_ready": False,
+                "error": str(exc),
+                "subtotal": f"{summary['subtotal']:.2f}",
+                "discount": f"{summary['discount']:.2f}",
+                "delivery_fee": "0.00",
+                "total": f"{summary['total']:.2f}",
+            }
+        )
+
+    delivery_details = extract_delivery_details(request.POST)
+    map_settings = delivery_map_settings()
+    if map_settings["configured"] and not (
+        delivery_details["latitude"] is not None and delivery_details["longitude"] is not None
+    ):
+        return JsonResponse(
+            {
+                "success": True,
+                "quote_ready": False,
+                "message": "Choose your delivery address to calculate the delivery fee.",
+                "subtotal": f"{summary['subtotal']:.2f}",
+                "discount": f"{summary['discount']:.2f}",
+                "delivery_fee": "0.00",
+                "total": f"{summary['total']:.2f}",
+            }
+        )
+
+    try:
+        validate_service_details(service_type, delivery_details)
+    except ValidationError as exc:
+        return JsonResponse(
+            {
+                "success": True,
+                "quote_ready": False,
+                "error": str(exc),
+                "subtotal": f"{summary['subtotal']:.2f}",
+                "discount": f"{summary['discount']:.2f}",
+                "delivery_fee": "0.00",
+                "total": f"{summary['total']:.2f}",
+            }
+        )
+
+    from .delivery import delivery_quote as calculate_delivery_quote
+
+    zone, fee, eta = calculate_delivery_quote(delivery_details.get("distance_miles"))
+    total = max(Decimal("0.00"), summary["subtotal"] - summary["discount"] + fee).quantize(Decimal("0.01"))
+
+    return JsonResponse(
+        {
+            "success": True,
+            "quote_ready": True,
+            "delivery_fee": f"{fee:.2f}",
+            "delivery_zone_name": zone.name if zone else "",
+            "delivery_eta_minutes": eta,
+            "delivery_distance_miles": (
+                f"{delivery_details['distance_miles']:.2f}"
+                if delivery_details.get("distance_miles") is not None
+                else ""
+            ),
+            "subtotal": f"{summary['subtotal']:.2f}",
+            "discount": f"{summary['discount']:.2f}",
+            "total": f"{total:.2f}",
+        }
+    )
 
 
 @require_POST
