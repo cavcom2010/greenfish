@@ -46,8 +46,8 @@
 <div style="height: 100px;"></div>
 
 <!-- Item Modal -->
-<div id="itemModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: flex-end;" onclick="closeItemModal(event)">
-    <div style="background: white; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; width: 100%; max-width: 430px; margin: 0 auto; animation: slideUp 0.3s ease;" onclick="event.stopPropagation()">
+<div id="itemModal" class="item-modal" onclick="closeItemModal(event)">
+    <div class="item-modal-sheet" onclick="event.stopPropagation()">
         <div id="modalContent">
             <div style="text-align: center; padding: 40px;">
                 <i class="ph ph-spinner animate-spin" style="font-size: 32px; color: var(--brand);"></i>
@@ -58,9 +58,113 @@
 </div>
 
 <style>
+.item-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    align-items: flex-end;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+}
+
+.item-modal-sheet {
+    width: 100%;
+    max-width: 430px;
+    height: min(92dvh, 640px);
+    max-height: calc(100dvh - var(--safe-top, 0px) - 10px);
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+#modalContent,
+#modalContent > .modal-item-detail {
+    min-height: 0;
+    height: 100%;
+}
+
+.modal-item-detail {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
+.modal-item-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 44px !important;
+}
+
+.modal-item-detail::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--modal-actions-height, 124px);
+    height: 58px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.96));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 3;
+}
+
+.modal-item-detail.has-more-content::after {
+    opacity: 1;
+}
+
+.modal-scroll-cue {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--modal-actions-height, 124px) + 12px);
+    transform: translateX(-50%);
+    z-index: 4;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(17, 24, 39, 0.9);
+    color: #fff;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.22);
+    pointer-events: none;
+}
+
+.modal-scroll-cue i {
+    font-size: 16px;
+    animation: modalScrollCueBounce 1.2s ease-in-out infinite;
+}
+
+.modal-item-detail.has-more-content .modal-scroll-cue {
+    display: inline-flex;
+}
+
+.modal-item-detail.has-seen-scroll .modal-scroll-cue {
+    display: none;
+}
+
+.modal-item-detail.has-seen-scroll::after,
+.modal-item-detail.is-at-scroll-end::after {
+    opacity: 0;
+}
+
 @keyframes slideUp {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
+}
+
+@keyframes modalScrollCueBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
 }
 </style>
 {% endblock %}
@@ -107,6 +211,7 @@ function openItemModal(itemId) {
     .then(response => response.text())
     .then(html => {
         content.innerHTML = html;
+        setupModalScrollCue();
     })
     .catch(() => {
         content.innerHTML = `
@@ -116,6 +221,46 @@ function openItemModal(itemId) {
                 <button onclick="closeItemModal({target: {id: 'itemModal'}})" class="btn btn-brand mt-4">Close</button>
             </div>
         `;
+    });
+}
+
+let modalScrollCueFrame = null;
+
+function setupModalScrollCue() {
+    if (modalScrollCueFrame) {
+        cancelAnimationFrame(modalScrollCueFrame);
+    }
+
+    modalScrollCueFrame = requestAnimationFrame(() => {
+        const detail = document.querySelector('#modalContent .modal-item-detail');
+        const scrollArea = document.querySelector('#modalContent [data-scrollable-content]');
+        const actions = document.querySelector('#modalContent .modal-item-actions');
+        if (!detail || !scrollArea) return;
+
+        if (actions) {
+            detail.style.setProperty('--modal-actions-height', `${actions.offsetHeight}px`);
+        }
+
+        const updateScrollState = () => {
+            const hasOverflow = scrollArea.scrollHeight > scrollArea.clientHeight + 8;
+            const isAtEnd = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 8;
+            detail.classList.toggle('has-more-content', hasOverflow);
+            detail.classList.toggle('is-at-scroll-end', isAtEnd);
+            if (!hasOverflow) {
+                detail.classList.remove('has-seen-scroll');
+            }
+        };
+
+        updateScrollState();
+
+        scrollArea.addEventListener('scroll', () => {
+            if (scrollArea.scrollTop > 8) {
+                detail.classList.add('has-seen-scroll');
+            }
+            updateScrollState();
+        }, { passive: true });
+
+        window.addEventListener('resize', updateScrollState, { once: true });
     });
 }
 

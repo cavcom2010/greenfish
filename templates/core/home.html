@@ -299,8 +299,63 @@
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 24px 24px 12px;
+    padding: 24px 24px 44px;
     scrollbar-width: thin;
+}
+
+.modal-item-detail::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--modal-actions-height, 124px);
+    height: 58px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.96));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 3;
+}
+
+.modal-item-detail.has-more-content::after {
+    opacity: 1;
+}
+
+.modal-scroll-cue {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--modal-actions-height, 124px) + 12px);
+    transform: translateX(-50%);
+    z-index: 4;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(17, 24, 39, 0.9);
+    color: #fff;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.22);
+    pointer-events: none;
+}
+
+.modal-scroll-cue i {
+    font-size: 16px;
+    animation: modalScrollCueBounce 1.2s ease-in-out infinite;
+}
+
+.modal-item-detail.has-more-content .modal-scroll-cue {
+    display: inline-flex;
+}
+
+.modal-item-detail.has-seen-scroll .modal-scroll-cue {
+    display: none;
+}
+
+.modal-item-detail.has-seen-scroll::after,
+.modal-item-detail.is-at-scroll-end::after {
+    opacity: 0;
 }
 
 .modal-item-actions {
@@ -400,13 +455,18 @@
     to { transform: translateY(0); }
 }
 
+@keyframes modalScrollCueBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+}
+
 @media (max-height: 700px) {
     .item-modal-sheet {
         height: min(92dvh, 614px);
     }
 
     .modal-item-scroll {
-        padding: 18px 24px 8px;
+        padding: 18px 24px 40px;
     }
 
     .modal-item-actions {
@@ -686,6 +746,7 @@ function openItemModal(itemId) {
                 modalItemId = modalDiv.dataset.itemId;
                 modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
                 updateModalTotal();
+                setupModalScrollCue();
             }
         })
         .catch(() => {
@@ -723,6 +784,45 @@ if (window.location.search.includes('category=')) {
 let modalQuantity = 1;
 let modalBasePrice = 0;
 let modalItemId = null;
+let modalScrollCueFrame = null;
+
+function setupModalScrollCue() {
+    if (modalScrollCueFrame) {
+        cancelAnimationFrame(modalScrollCueFrame);
+    }
+
+    modalScrollCueFrame = requestAnimationFrame(() => {
+        const detail = document.querySelector('#modalContent .modal-item-detail');
+        const scrollArea = document.querySelector('#modalContent [data-scrollable-content]');
+        const actions = document.querySelector('#modalContent .modal-item-actions');
+        if (!detail || !scrollArea) return;
+
+        if (actions) {
+            detail.style.setProperty('--modal-actions-height', `${actions.offsetHeight}px`);
+        }
+
+        const updateScrollState = () => {
+            const hasOverflow = scrollArea.scrollHeight > scrollArea.clientHeight + 8;
+            const isAtEnd = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 8;
+            detail.classList.toggle('has-more-content', hasOverflow);
+            detail.classList.toggle('is-at-scroll-end', isAtEnd);
+            if (!hasOverflow) {
+                detail.classList.remove('has-seen-scroll');
+            }
+        };
+
+        updateScrollState();
+
+        scrollArea.addEventListener('scroll', () => {
+            if (scrollArea.scrollTop > 8) {
+                detail.classList.add('has-seen-scroll');
+            }
+            updateScrollState();
+        }, { passive: true });
+
+        window.addEventListener('resize', updateScrollState, { once: true });
+    });
+}
 
 // Handle modal content loaded
 document.addEventListener('htmx:afterSwap', function(evt) {
@@ -734,6 +834,7 @@ document.addEventListener('htmx:afterSwap', function(evt) {
             modalItemId = modalDiv.dataset.itemId;
             modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
             updateModalTotal();
+            setupModalScrollCue();
         }
     }
 });

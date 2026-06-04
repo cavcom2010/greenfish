@@ -6,7 +6,7 @@
         <i class="ph ph-x"></i>
     </button>
 
-    <div class="modal-item-scroll">
+    <div class="modal-item-scroll" data-scrollable-content>
         <!-- Item Image -->
         <div class="modal-item-image">
             {% if item.image %}
@@ -142,6 +142,10 @@
             </div>
             {% endif %}
         </div>
+    </div>
+
+    <div class="modal-scroll-cue" data-scroll-cue aria-hidden="true">
+        <i class="ph ph-caret-down"></i>
     </div>
 
     <div class="modal-item-actions">
