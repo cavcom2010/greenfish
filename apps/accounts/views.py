@@ -50,7 +50,7 @@ def desktop_aware_login(request):
         return LoginView.as_view()(request)
     from allauth.account.forms import LoginForm
     if request.method == "POST":
-        form = LoginForm(request)
+        form = LoginForm(request.POST, request=request)
         if form.is_valid():
             form.login(request)
             return redirect("core:home")

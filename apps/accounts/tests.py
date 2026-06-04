@@ -219,6 +219,17 @@ class RepeatOrderExperienceTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_desktop_login_posts_credentials(self):
+        self.client.logout()
+
+        response = self.client.post(
+            reverse("account_login"),
+            {"login": self.user.email, "password": "password123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("_auth_user_id", self.client.session)
+
     def test_app_home_renders_rewards_and_saved_meals(self):
         SavedMeal.objects.create(
             user=self.user,
