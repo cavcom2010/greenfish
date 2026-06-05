@@ -100,6 +100,8 @@ Use this checklist before deploying to production.
 - [ ] Payment processed correctly
 - [ ] Fallback setting is reviewed: either provider credentials work, or `PAYMENT_FALLBACK_ENABLED=True` with `expire_unpaid_orders` scheduled
 - [ ] Notification dispatcher scheduled, for example cron/systemd/Celery running `venv/bin/python manage.py dispatch_notifications`
+- [ ] Production release script tested: `./deploy/production/start.sh --no-pull --no-install --no-migrate --no-static --daemon` then `./deploy/production/stop.sh`
+- [ ] Live code reload performed after release checks with `./deploy/production/start.sh --reload-live`
 - [ ] Order appears on order board
 - [ ] Order status updates work
 - [ ] Email notifications received
