@@ -6,7 +6,9 @@ from django.test import TestCase, override_settings
 
 from apps.core.models import NotificationEvent
 from apps.core.notifications import dispatch_due_notifications, enqueue_notification
-from apps.core.test_support import create_order, ensure_site_settings
+from apps.core.test_support import create_order, create_user, ensure_site_settings
+from apps.accounts.models import CustomerProfile
+from apps.orders.models import Order
 from apps.sms.models import SMSMessage, SMSSettings
 from apps.sms.services import send_sms_to_phone
 
@@ -101,17 +103,114 @@ class SMSBackendTests(TestCase):
         self.assertEqual(sms.twilio_sid, "console")
 
     @override_settings(SMS_BACKEND="console")
-    def test_order_signal_enqueues_sms_and_dispatches_when_enabled(self):
+    def test_sms_daily_limit_marks_message_failed(self):
+        sms_settings = SMSSettings.get()
+        sms_settings.max_daily_messages = 0
+        sms_settings.save(update_fields=["max_daily_messages"])
+
+        sms = send_sms_to_phone("+447700900123", "Over limit", SMSMessage.MessageType.REMINDER)
+
+        self.assertEqual(sms.status, SMSMessage.Status.FAILED)
+        self.assertIn("Daily SMS limit", sms.error_message)
+
+    @override_settings(SMS_BACKEND="console")
+    def test_order_creation_does_not_enqueue_customer_confirmation(self):
         sms_settings = SMSSettings.get()
         sms_settings.enabled = True
         sms_settings.save()
 
         order = create_order(customer_phone="+447700900123")
 
-        event = NotificationEvent.objects.get(channel=NotificationEvent.Channel.SMS, order=order)
-        self.assertEqual(event.status, NotificationEvent.Status.PENDING)
+        self.assertFalse(NotificationEvent.objects.filter(order=order).exists())
 
+    @override_settings(SMS_BACKEND="console")
+    def test_paid_order_enqueues_email_and_sms_confirmation_once(self):
+        sms_settings = SMSSettings.get()
+        sms_settings.enabled = True
+        sms_settings.save(update_fields=["enabled"])
+
+        order = create_order(
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PENDING,
+            customer_phone="+447700900123",
+            customer_email="customer@example.com",
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            order.mark_as_paid()
+
+        events = NotificationEvent.objects.filter(order=order, event_type=SMSMessage.MessageType.ORDER_CONFIRMED)
+        self.assertEqual(events.count(), 2)
+        self.assertTrue(events.filter(channel=NotificationEvent.Channel.EMAIL, recipient="customer@example.com").exists())
+        self.assertTrue(events.filter(channel=NotificationEvent.Channel.SMS, recipient="+447700900123").exists())
+
+        with self.captureOnCommitCallbacks(execute=True):
+            order.mark_as_paid()
+
+        self.assertEqual(
+            NotificationEvent.objects.filter(order=order, event_type=SMSMessage.MessageType.ORDER_CONFIRMED).count(),
+            2,
+        )
+
+    @override_settings(SMS_BACKEND="console")
+    def test_paid_order_confirmation_dispatches_to_sms_backend(self):
+        sms_settings = SMSSettings.get()
+        sms_settings.enabled = True
+        sms_settings.save(update_fields=["enabled"])
+
+        order = create_order(
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PENDING,
+            customer_phone="+447700900123",
+            customer_email="",
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            order.mark_as_paid()
+
+        self.assertEqual(NotificationEvent.objects.filter(channel=NotificationEvent.Channel.SMS, order=order).count(), 1)
         self.assertEqual(dispatch_due_notifications(), 1)
-        event.refresh_from_db()
+        event = NotificationEvent.objects.get(channel=NotificationEvent.Channel.SMS, order=order)
         self.assertEqual(event.status, NotificationEvent.Status.SENT)
         self.assertTrue(SMSMessage.objects.filter(order=order, status=SMSMessage.Status.SENT).exists())
+
+    @override_settings(SMS_BACKEND="console")
+    def test_status_transitions_enqueue_unique_customer_notifications(self):
+        sms_settings = SMSSettings.get()
+        sms_settings.enabled = True
+        sms_settings.save(update_fields=["enabled"])
+        order = create_order(
+            status=Order.OrderStatus.CONFIRMED,
+            payment_status=Order.PaymentStatus.PAID,
+            customer_phone="+447700900123",
+            customer_email="customer@example.com",
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            order.update_status(Order.OrderStatus.READY)
+
+        self.assertEqual(NotificationEvent.objects.filter(order=order, event_type=SMSMessage.MessageType.ORDER_READY).count(), 2)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            order.update_status(Order.OrderStatus.READY)
+
+        self.assertEqual(NotificationEvent.objects.filter(order=order, event_type=SMSMessage.MessageType.ORDER_READY).count(), 2)
+
+    @override_settings(SMS_BACKEND="console")
+    def test_customer_notification_preference_suppresses_email_and_sms(self):
+        sms_settings = SMSSettings.get()
+        sms_settings.enabled = True
+        sms_settings.save(update_fields=["enabled"])
+        user = create_user(email="quiet@example.com", phone_number="+447700900123")
+        CustomerProfile.objects.create(user=user, notifications_enabled=False)
+        order = create_order(
+            user=user,
+            status=Order.OrderStatus.PENDING,
+            payment_status=Order.PaymentStatus.PENDING,
+            customer_phone="",
+            customer_email="",
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            order.mark_as_paid()
+
+        self.assertFalse(NotificationEvent.objects.filter(order=order).exists())

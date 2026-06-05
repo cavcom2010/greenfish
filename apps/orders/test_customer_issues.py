@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.core.models import NotificationEvent
 from apps.core.test_support import create_order, create_user, ensure_site_settings
 from apps.orders.models import OrderIssue
 
@@ -29,6 +30,14 @@ class CustomerOrderIssueTests(TestCase):
         issue = OrderIssue.objects.get(order=self.order)
         self.assertEqual(issue.user, self.user)
         self.assertEqual(issue.requested_refund_amount, Decimal("3.50"))
+        self.assertTrue(
+            NotificationEvent.objects.filter(
+                order=self.order,
+                channel=NotificationEvent.Channel.EMAIL,
+                event_type="order_issue_received",
+                recipient=self.order.customer_email,
+            ).exists()
+        )
 
     def test_guest_with_order_token_can_report_issue(self):
         guest_order = create_order(user=None)

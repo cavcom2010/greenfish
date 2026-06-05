@@ -108,7 +108,7 @@ In Django admin:
 Then test the order flow:
 
 1. Place an order with a valid customer phone number.
-2. Confirm/pay the order as normal.
+2. Confirm/pay the order as normal. Unpaid orders must not create customer confirmation SMS events.
 3. Update the order status on the operations board.
 4. Run the dispatcher if it is not running automatically:
 
@@ -118,10 +118,11 @@ venv/bin/python manage.py dispatch_notifications
 
 Expected result:
 
-- Order confirmation creates an SMS notification event.
+- Successful payment creates the order confirmation SMS notification event.
 - Ready for pickup creates a ready SMS event.
 - Out for delivery creates a dispatch SMS event.
 - Delivered creates a delivered SMS event only when enabled.
+- SMS events remain pending until `dispatch_notifications` sends them.
 
 ## 5. Where To Check Results
 

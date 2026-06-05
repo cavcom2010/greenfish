@@ -745,13 +745,16 @@ def create_order_issue(request, order_number):
             messages.error(request, "Please describe what happened.")
             return redirect(order_customer_url("orders:create_issue", order))
 
-        OrderIssue.objects.create(
+        issue = OrderIssue.objects.create(
             order=order,
             user=request.user if getattr(request.user, "is_authenticated", False) else None,
             issue_type=issue_type,
             description=description,
             requested_refund_amount=refund_amount,
         )
+        from apps.core.customer_notifications import enqueue_order_issue_received
+
+        enqueue_order_issue_received(issue)
         messages.success(request, "Your issue has been sent to the team.")
         return redirect(order_customer_url("orders:tracking", order))
 

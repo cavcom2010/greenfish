@@ -142,6 +142,10 @@ def process_refund_request(refund_request):
         refund_request.status = RefundRequest.Status.FAILED
         refund_request.error_message = "Provider refund failed. Check payment logs."
     refund_request.save(update_fields=["status", "provider_reference", "error_message", "processed_at"])
+    if refund_request.status == RefundRequest.Status.SUCCEEDED:
+        from apps.core.customer_notifications import enqueue_refund_processed
+
+        enqueue_refund_processed(refund_request)
     return refund_request
 
 

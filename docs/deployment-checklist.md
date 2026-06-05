@@ -99,6 +99,7 @@ Use this checklist before deploying to production.
 - [ ] Place test order successfully
 - [ ] Payment processed correctly
 - [ ] Fallback setting is reviewed: either provider credentials work, or `PAYMENT_FALLBACK_ENABLED=True` with `expire_unpaid_orders` scheduled
+- [ ] Notification dispatcher scheduled, for example cron/systemd/Celery running `venv/bin/python manage.py dispatch_notifications`
 - [ ] Order appears on order board
 - [ ] Order status updates work
 - [ ] Email notifications received

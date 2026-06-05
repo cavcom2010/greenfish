@@ -111,7 +111,7 @@ Expected result:
 
 ## 5. Notification Outbox Test
 
-Email notification events are sent by the notification dispatcher.
+Email notification events are sent by the notification dispatcher. Customer-facing events are queued when an order is paid, when order status changes to ready/out-for-delivery/delivered, when a customer raises an issue, when a refund succeeds, and when a large-order request is submitted.
 
 Run pending notifications:
 

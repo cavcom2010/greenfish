@@ -285,6 +285,10 @@ class Order(models.Model):
         if self.status == self.OrderStatus.PENDING:
             self.update_status(self.OrderStatus.CONFIRMED, changed_by=changed_by)
 
+        from apps.core.customer_notifications import enqueue_order_confirmed_by_id
+
+        transaction.on_commit(lambda order_id=self.pk: enqueue_order_confirmed_by_id(order_id))
+
     def preparation_time_minutes(self):
         """Return the order prep estimate using the slowest line item."""
         prep_times = []
@@ -376,6 +380,12 @@ class Order(models.Model):
 
             release_fulfilment_slot(self)
             release_order_stock(self)
+
+        from apps.core.customer_notifications import enqueue_order_status_notification
+
+        transaction.on_commit(
+            lambda order_id=self.pk, status=new_status: enqueue_order_status_notification(order_id, status)
+        )
     
     @property
     def item_count(self):

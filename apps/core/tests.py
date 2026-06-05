@@ -15,7 +15,7 @@ from django.utils import timezone
 from PIL import Image
 
 from apps.core.media import build_variant_name, get_image_variant_url
-from apps.core.models import LargeOrderRequest
+from apps.core.models import LargeOrderRequest, NotificationEvent
 from apps.core.test_support import create_meal_deal, create_menu_item, create_offer, create_order, create_user, ensure_site_settings
 from apps.menu.models import MenuCategory, MenuItem
 from apps.orders.models import Order
@@ -99,6 +99,13 @@ class PublicRouteTests(TestCase):
         self.assertEqual(large_order.status, LargeOrderRequest.Status.NEW)
         self.assertEqual(large_order.basket_snapshot["items"][0]["quantity"], 3)
         self.assertEqual(large_order.estimated_total, self.menu_item.price * 3)
+        self.assertTrue(
+            NotificationEvent.objects.filter(
+                channel=NotificationEvent.Channel.EMAIL,
+                event_type="large_order_request_received",
+                recipient="office@example.com",
+            ).exists()
+        )
 
     def test_large_order_delivery_requires_address_or_postcode(self):
         response = self.client.post(

@@ -2,6 +2,7 @@
 import logging
 
 from django.conf import settings
+from django.utils import timezone
 
 from apps.core.models import SiteSettings
 
@@ -120,6 +121,14 @@ def _mark_sms_failed(sms, error):
 def _dispatch_sms_record(sms):
     config = sms_provider_config()
     try:
+        sms_settings = config["settings"]
+        sent_today = SMSMessage.objects.filter(
+            created_at__date=timezone.localdate(),
+            status__in=[SMSMessage.Status.SENT, SMSMessage.Status.DELIVERED],
+        ).count()
+        if sent_today >= sms_settings.max_daily_messages:
+            return _mark_sms_failed(sms, "Daily SMS limit reached.")
+
         if config["backend"] == SMS_BACKEND_CONSOLE:
             sms.twilio_sid = "console"
             sms.status = SMSMessage.Status.SENT

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
+from apps.core.models import NotificationEvent
 from apps.core.test_support import create_order
 from apps.orders.models import Order
 from apps.payments.models import Payment, RefundRequest
@@ -26,3 +27,11 @@ class RefundWorkflowTests(TestCase):
         process_refund_request(refund)
         refund.refresh_from_db()
         self.assertEqual(refund.status, RefundRequest.Status.SUCCEEDED)
+        self.assertTrue(
+            NotificationEvent.objects.filter(
+                order=order,
+                channel=NotificationEvent.Channel.EMAIL,
+                event_type="order_refund_processed",
+                recipient=order.customer_email,
+            ).exists()
+        )

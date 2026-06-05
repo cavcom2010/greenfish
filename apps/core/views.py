@@ -175,6 +175,9 @@ def large_order_request(request):
             large_order.basket_snapshot = basket_snapshot
             large_order.estimated_total = estimated_total
             large_order.save()
+            from apps.core.customer_notifications import enqueue_large_order_request_received
+
+            enqueue_large_order_request_received(large_order)
             messages.success(request, "Large order request sent. The shop will confirm availability, timing, and payment with you.")
             return redirect("core:large_orders")
     else:
