@@ -5,6 +5,7 @@
 
 staticfiles/
 logs/
+backups/
 
 *.pyc
 
