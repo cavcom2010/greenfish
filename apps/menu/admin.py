@@ -43,16 +43,22 @@ class MenuItemAdmin(admin.ModelAdmin):
         "preparation_time",
         "track_stock",
         "stock_quantity",
+        "image_source",
         "sort_order"
     ]
     list_editable = ["price", "is_available", "is_popular", "preparation_time", "track_stock", "stock_quantity", "sort_order"]
     list_filter = ["category", "is_available", "is_popular", "track_stock", "dietary_tags"]
     search_fields = ["name", "description"]
     filter_horizontal = ["modifiers"]
+    readonly_fields = ["image_source_metadata"]
     
     fieldsets = (
         ("Basic Information", {
             "fields": ("category", "name", "description", "price", "image")
+        }),
+        ("Image Source", {
+            "fields": ("image_source_metadata",),
+            "classes": ("collapse",),
         }),
         ("Availability", {
             "fields": ("is_available", "is_popular", "preparation_time", "track_stock", "stock_quantity", "low_stock_threshold")
@@ -61,6 +67,16 @@ class MenuItemAdmin(admin.ModelAdmin):
             "fields": ("dietary_tags", "sort_order")
         }),
     )
+
+    def image_source(self, obj):
+        metadata = obj.image_source_metadata or {}
+        provider = metadata.get("provider")
+        if not provider:
+            return "-"
+        source_id = metadata.get("pixabay_id") or metadata.get("id") or ""
+        return f"{provider}:{source_id}" if source_id else provider
+
+    image_source.short_description = "Image Source"
 
 
 @admin.register(StockMovement)

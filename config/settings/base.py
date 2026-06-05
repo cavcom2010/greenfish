@@ -236,6 +236,7 @@ GOOGLE_ROUTES_TIMEOUT_SECONDS = env("GOOGLE_ROUTES_TIMEOUT_SECONDS", default=4, 
 SHOP_LATITUDE = env("SHOP_LATITUDE", default="")
 SHOP_LONGITUDE = env("SHOP_LONGITUDE", default="")
 DELIVERY_RADIUS_MILES = env("DELIVERY_RADIUS_MILES", default=3, cast=float)
+PIXABAY_API_KEY = env("PIXABAY_API_KEY", default="")
 
 # Payment Provider Settings
 PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", default="stripe").strip().lower()

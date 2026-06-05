@@ -1,7 +1,14 @@
 from decimal import Decimal
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import Mock, patch
 
+from django.core.management import call_command
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.test import override_settings
+from PIL import Image
 
 from apps.core.test_support import create_menu_item
 
@@ -18,3 +25,75 @@ class MenuItemPrepTimeTests(TestCase):
 
         item.full_clean()
         self.assertEqual(item.preparation_time, 25)
+
+
+class PixabayImageImportCommandTests(TestCase):
+    def _image_bytes(self, color=(20, 90, 140)):
+        buffer = BytesIO()
+        Image.new("RGB", (900, 600), color=color).save(buffer, format="JPEG")
+        return buffer.getvalue()
+
+    def _response(self, *, json_data=None, content=b""):
+        response = Mock()
+        response.raise_for_status = Mock()
+        response.json = Mock(return_value=json_data or {})
+        response.content = content
+        return response
+
+    @override_settings(PIXABAY_API_KEY="test-key")
+    @patch("apps.menu.management.commands.fetch_menu_images.requests.get")
+    def test_dry_run_writes_review_csv_without_saving_image(self, mock_get):
+        item = create_menu_item(name="Chicken Stew")
+        mock_get.return_value = self._response(
+            json_data={
+                "hits": [
+                    {
+                        "id": 123,
+                        "pageURL": "https://pixabay.com/photos/chicken-stew-123/",
+                        "user": "FoodPhotographer",
+                        "previewURL": "https://cdn.example/preview.jpg",
+                        "largeImageURL": "https://cdn.example/large.jpg",
+                        "tags": "chicken, stew, food",
+                    }
+                ]
+            }
+        )
+
+        with TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "candidates.csv"
+            call_command("fetch_menu_images", "--dry-run", "--output", str(output))
+            content = output.read_text(encoding="utf-8")
+
+        item.refresh_from_db()
+        self.assertFalse(item.image)
+        self.assertIn("Chicken Stew", content)
+        self.assertIn("https://cdn.example/large.jpg", content)
+        self.assertIn("approved,item_id,item_name", content)
+
+    @override_settings(PIXABAY_API_KEY="test-key")
+    @patch("apps.menu.management.commands.fetch_menu_images.requests.get")
+    def test_apply_approved_downloads_image_and_stores_source_metadata(self, mock_get):
+        item = create_menu_item(name="Beef Stew")
+        mock_get.return_value = self._response(content=self._image_bytes())
+
+        with TemporaryDirectory() as tmpdir:
+            media_root = Path(tmpdir) / "media"
+            csv_path = Path(tmpdir) / "approved.csv"
+            csv_path.write_text(
+                "\n".join(
+                    [
+                        "approved,item_id,item_name,category,query,pixabay_id,page_url,contributor,preview_url,image_url,tags",
+                        f"yes,{item.pk},Beef Stew,Mains,beef stew plate,456,https://pixabay.com/photos/beef-456/,ChefCam,,https://cdn.example/beef.jpg,\"beef, stew\"",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            with override_settings(MEDIA_ROOT=media_root):
+                call_command("fetch_menu_images", "--apply-approved", str(csv_path))
+
+                item.refresh_from_db()
+                self.assertTrue(item.image)
+                self.assertTrue(item.image.storage.exists(item.image.name))
+                self.assertEqual(item.image_source_metadata["provider"], "pixabay")
+                self.assertEqual(item.image_source_metadata["pixabay_id"], "456")
+                self.assertEqual(item.image_source_metadata["query"], "beef stew plate")

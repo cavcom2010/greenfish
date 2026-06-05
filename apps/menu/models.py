@@ -93,6 +93,11 @@ class MenuItem(models.Model):
         validators=[MinValueValidator(Decimal("0.01"))],
     )
     image = models.ImageField(upload_to="menu/items/", blank=True, validators=MENU_IMAGE_VALIDATORS)
+    image_source_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Audit metadata for imported menu imagery, such as Pixabay id, query, and source page.",
+    )
     
     # Availability & Inventory
     is_available = models.BooleanField(default=True)
