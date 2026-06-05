@@ -40,6 +40,7 @@ Use this checklist before deploying to production.
 - [ ] Confirmed fallback mode prints emails to shell/console when SMTP/SendGrid/Sender.net keys are absent
 - [ ] Local Mailpit preview tested with `venv/bin/python manage.py send_test_email you@example.com`
 - [ ] DEFAULT_FROM_EMAIL set correctly
+- [ ] ADMIN_EMAIL set to the inbox that should receive important failure alerts
 - [ ] If using SMTP/SendGrid/Sender.net, credentials are working and a test email/signup has been verified
 - [ ] SPF/DKIM records configured if sending from a custom domain
 

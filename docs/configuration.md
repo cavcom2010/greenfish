@@ -58,10 +58,14 @@ Customer checkout prefers online payment. If Stripe/Mollie is unavailable and `P
 | `EMAIL_HOST_USER` | Empty | SMTP username. Leave empty for shell/console email output. |
 | `EMAIL_HOST_PASSWORD` | Empty | SMTP password or app-specific password. Leave empty for shell/console email output. |
 | `DEFAULT_FROM_EMAIL` | orders@tinashe.com | Default sender email address. |
+| `SERVER_EMAIL` | DEFAULT_FROM_EMAIL | Sender used for server/admin alert emails. |
+| `ADMIN_EMAIL` | SHOP_EMAIL | Recipient for important production failure alerts. |
+| `ADMIN_FAILURE_ALERTS_ENABLED` | True | Enable immediate admin emails for important 5xx/critical 4xx failures. |
+| `ADMIN_FAILURE_ALERT_THROTTLE_SECONDS` | 600 | Duplicate-alert throttle window per status/path/error fingerprint. |
 | `SENDGRID_API_KEY` | Empty | Reserved for SendGrid integration. Missing key does not block startup. |
 | `SENDER_NET_API_KEY` | Empty | Optional marketing email key. Missing key logs newsletter signups instead of calling Sender.net. |
 
-**Fallback behavior:** if SMTP/SendGrid/Sender.net credentials are absent, all Django emails are printed to the shell/console and marketing signup activity is logged.
+**Fallback behavior:** if SMTP/SendGrid/Sender.net credentials are absent, all Django emails, including admin failure alerts, are printed to the shell/console and marketing signup activity is logged.
 
 **Local Mailpit preview:**
 ```bash

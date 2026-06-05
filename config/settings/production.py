@@ -53,6 +53,7 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 SECURE_REFERRER_POLICY = "same-origin"
+ALLAUTH_TRUSTED_PROXY_COUNT = env("ALLAUTH_TRUSTED_PROXY_COUNT", default=1, cast=int)
 
 # Email backend for production. If no external provider credentials are present,
 # emails are printed to the shell via Django's console backend.

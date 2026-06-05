@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.core.middleware.FailureAlertMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -199,6 +200,7 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_LOGOUT_ON_GET = False
+ALLAUTH_TRUSTED_PROXY_COUNT = env("ALLAUTH_TRUSTED_PROXY_COUNT", default=0, cast=int)
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -215,6 +217,7 @@ SHOP_NAME = env("SHOP_NAME", default="Tinashe Zimbabwean Kitchen")
 SHOP_ADDRESS = env("SHOP_ADDRESS", default="123 High Street, Harare")
 SHOP_PHONE = env("SHOP_PHONE", default="")
 SHOP_EMAIL = env("SHOP_EMAIL", default="")
+ADMIN_EMAIL = env("ADMIN_EMAIL", default=SHOP_EMAIL)
 CURRENCY = env("CURRENCY", default="GBP")
 ORDER_PREFIX = env("ORDER_PREFIX", default="TN")
 DEFAULT_PREP_TIME = env("DEFAULT_PREP_TIME", default=15, cast=int)
@@ -254,6 +257,10 @@ EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="orders@tinashe.com")
+SERVER_EMAIL = env("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
+ADMIN_FAILURE_ALERTS_ENABLED = env("ADMIN_FAILURE_ALERTS_ENABLED", default=True, cast=bool)
+ADMIN_FAILURE_ALERT_THROTTLE_SECONDS = env("ADMIN_FAILURE_ALERT_THROTTLE_SECONDS", default=600, cast=int)
+ADMINS = [("GreenFish Admin", ADMIN_EMAIL)] if ADMIN_EMAIL else []
 
 # SendGrid API — optional future transactional email provider.
 SENDGRID_API_KEY = env("SENDGRID_API_KEY", default="")

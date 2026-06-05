@@ -3,10 +3,31 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.core.cache import cache
 
 from apps.accounts.models import CustomerProfile, SavedMeal
 from apps.core.test_support import create_menu_item, create_order, create_user, ensure_site_settings
 from apps.orders.models import Order
+
+
+class AuthProxyIPTests(TestCase):
+    def setUp(self):
+        ensure_site_settings()
+        cache.clear()
+
+    def test_mobile_login_accepts_forwarded_client_ip(self):
+        user = create_user(email="mobile-login@example.com", password="password123")
+
+        response = self.client.post(
+            reverse("account_login"),
+            {"login": user.email, "password": "password123"},
+            HTTP_USER_AGENT="Mozilla/5.0 (Linux; Android 10; Mobile)",
+            HTTP_X_FORWARDED_FOR="198.51.100.44",
+            REMOTE_ADDR="",
+        )
+
+        self.assertNotEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 302)
 
 
 class RepeatOrderExperienceTests(TestCase):

@@ -2,13 +2,21 @@
 Custom allauth adapter — routes auth pages to desktop templates on desktop.
 """
 from django.template import loader
-from django.http import HttpResponse
 
 from allauth.account.adapter import DefaultAccountAdapter
+
+from apps.core.request_meta import client_ip_from_request
 
 
 class DesktopAwareAccountAdapter(DefaultAccountAdapter):
     """Render desktop auth templates when request.is_desktop is True."""
+
+    def get_client_ip(self, request):
+        """Return the client IP in socket/proxy deployments."""
+        ip = client_ip_from_request(request)
+        if ip:
+            return ip
+        return super().get_client_ip(request)
 
     def render_template(self, request, template_name, context):
         """Override to swap in desktop templates."""
