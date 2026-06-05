@@ -341,6 +341,50 @@ class ProductionSettingsEmailTests(TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("django.core.mail.backends.console.EmailBackend", result.stdout)
 
+    def test_local_settings_can_use_mailpit_smtp_from_env(self):
+        with tempfile.NamedTemporaryFile("w", delete=False) as env_file:
+            env_file.write("\n".join([
+                "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend",
+                "EMAIL_HOST=127.0.0.1",
+                "EMAIL_PORT=1025",
+                "EMAIL_USE_TLS=False",
+            ]))
+            env_file.write("\n")
+            env_path = env_file.name
+
+        probe_env = os.environ.copy()
+        probe_env["ENV_FILE"] = env_path
+        probe_env["DJANGO_SETTINGS_MODULE"] = "config.settings.local"
+
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import importlib; "
+                        "settings = importlib.import_module('config.settings.local'); "
+                        "print(settings.EMAIL_BACKEND); "
+                        "print(settings.EMAIL_HOST); "
+                        "print(settings.EMAIL_PORT); "
+                        "print(settings.EMAIL_USE_TLS)"
+                    ),
+                ],
+                cwd=Path(__file__).resolve().parents[2],
+                env=probe_env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        finally:
+            Path(env_path).unlink(missing_ok=True)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("django.core.mail.backends.smtp.EmailBackend", result.stdout)
+        self.assertIn("127.0.0.1", result.stdout)
+        self.assertIn("1025", result.stdout)
+        self.assertIn("False", result.stdout)
+
     def test_production_still_requires_payment_credentials(self):
         env_lines = [
             line for line in self._required_production_env()

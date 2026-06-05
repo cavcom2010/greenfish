@@ -263,6 +263,16 @@ SENDER_NET_API_KEY = env("SENDER_NET_API_KEY", default="")
 SENDER_NET_FROM_EMAIL = env("SENDER_NET_FROM_EMAIL", default="")
 SENDER_NET_FROM_NAME = env("SENDER_NET_FROM_NAME", default="")
 
+# SMS delivery. Use console locally, twilio_test for no-charge provider tests,
+# and twilio only when intentionally sending real customer texts.
+SMS_BACKEND = env("SMS_BACKEND", default="console")
+TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID", default="")
+TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN", default="")
+TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER", default="")
+TWILIO_TEST_ACCOUNT_SID = env("TWILIO_TEST_ACCOUNT_SID", default="")
+TWILIO_TEST_AUTH_TOKEN = env("TWILIO_TEST_AUTH_TOKEN", default="")
+TWILIO_TEST_PHONE_NUMBER = env("TWILIO_TEST_PHONE_NUMBER", default="+15005550006")
+
 # Async jobs
 REDIS_URL = env("REDIS_URL", default="redis://127.0.0.1:6379/0")
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)

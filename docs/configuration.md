@@ -63,6 +63,18 @@ Customer checkout prefers online payment. If Stripe/Mollie is unavailable and `P
 
 **Fallback behavior:** if SMTP/SendGrid/Sender.net credentials are absent, all Django emails are printed to the shell/console and marketing signup activity is logged.
 
+**Local Mailpit preview:**
+```bash
+docker run --rm -p 1025:1025 -p 8025:8025 axllent/mailpit
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=127.0.0.1
+EMAIL_PORT=1025
+EMAIL_USE_TLS=False
+venv/bin/python manage.py send_test_email you@example.com
+```
+
+Open `http://127.0.0.1:8025` to inspect the rendered email.
+
 **Gmail SMTP Example:**
 ```bash
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
@@ -72,6 +84,25 @@ EMAIL_USE_TLS=True
 EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
 DEFAULT_FROM_EMAIL=Tinashe Takeaway <orders@tinashe.com>
+```
+
+### SMS Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMS_BACKEND` | console | `console` records fake local SMS, `twilio_test` calls Twilio test credentials without sending a real text, `twilio` sends real paid SMS. |
+| `TWILIO_ACCOUNT_SID` | Empty | Live Twilio account SID. Also used as fallback for test mode if test SID is blank. |
+| `TWILIO_AUTH_TOKEN` | Empty | Live Twilio auth token. Also used as fallback for test mode if test token is blank. |
+| `TWILIO_PHONE_NUMBER` | Empty | Live Twilio sending number for `SMS_BACKEND=twilio`. |
+| `TWILIO_TEST_ACCOUNT_SID` | Empty | Twilio test account SID for no-charge provider tests. |
+| `TWILIO_TEST_AUTH_TOKEN` | Empty | Twilio test auth token for no-charge provider tests. |
+| `TWILIO_TEST_PHONE_NUMBER` | +15005550006 | Twilio magic sender number for successful SMS test requests. |
+
+SMS order notifications still require Admin -> SMS Settings -> `enabled` for normal order-flow sends. Manual testing uses:
+```bash
+venv/bin/python manage.py send_test_sms +447700900123
+SMS_BACKEND=twilio_test venv/bin/python manage.py send_test_sms +447700900123
+SMS_BACKEND=twilio venv/bin/python manage.py send_test_sms +447700900123 --live
 ```
 
 ### Shop Settings

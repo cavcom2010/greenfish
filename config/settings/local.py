@@ -7,8 +7,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
-# Email backend for development
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email backend is inherited from base settings so .env can switch local
+# development between console output and a local SMTP inbox such as Mailpit.
 
 # Debug toolbar (optional)
 # INSTALLED_APPS += ["debug_toolbar"]

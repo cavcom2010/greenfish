@@ -1,5 +1,6 @@
 import logging
 
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 
 from .models import NotificationEvent
@@ -28,14 +29,25 @@ def dispatch_notification_event(event):
     try:
         if event.channel == NotificationEvent.Channel.SMS:
             from apps.sms.services import send_sms_to_phone
+            from apps.sms.models import SMSMessage
 
             message = event.payload.get("message", "")
             message_type = event.payload.get("message_type", event.event_type)
-            send_sms_to_phone(event.recipient, message, message_type, order=event.order)
+            sms = send_sms_to_phone(event.recipient, message, message_type, order=event.order)
+            if sms and sms.status == SMSMessage.Status.FAILED:
+                raise RuntimeError(sms.error_message or "SMS delivery failed")
         elif event.channel == NotificationEvent.Channel.PUSH:
             from apps.pwa.services import notify_order_status
 
             notify_order_status(event.order, event.payload.get("message", event.event_type))
+        elif event.channel == NotificationEvent.Channel.EMAIL:
+            subject = event.payload.get("subject") or event.event_type.replace("_", " ").title()
+            text_body = event.payload.get("text_body") or event.payload.get("message") or ""
+            html_body = event.payload.get("html_body") or event.payload.get("html_message") or ""
+            email = EmailMultiAlternatives(subject=subject, body=text_body, to=[event.recipient])
+            if html_body:
+                email.attach_alternative(html_body, "text/html")
+            email.send(fail_silently=False)
         else:
             raise ValueError(f"Unsupported notification channel: {event.channel}")
     except Exception as exc:

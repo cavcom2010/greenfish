@@ -38,9 +38,17 @@ Use this checklist before deploying to production.
 ## Email
 
 - [ ] Confirmed fallback mode prints emails to shell/console when SMTP/SendGrid/Sender.net keys are absent
+- [ ] Local Mailpit preview tested with `venv/bin/python manage.py send_test_email you@example.com`
 - [ ] DEFAULT_FROM_EMAIL set correctly
 - [ ] If using SMTP/SendGrid/Sender.net, credentials are working and a test email/signup has been verified
 - [ ] SPF/DKIM records configured if sending from a custom domain
+
+## SMS
+
+- [ ] `SMS_BACKEND=console` fake SMS tested with `venv/bin/python manage.py send_test_sms +447700900123`
+- [ ] `SMS_BACKEND=twilio_test` verified with Twilio test credentials before any live send
+- [ ] `SMS_BACKEND=twilio` live SMS tested once with `--live` to a shop-owned phone only
+- [ ] Admin -> SMS Settings reviewed and enabled only when the shop is ready for customer SMS
 
 ## Static & Media Files
 
@@ -94,6 +102,7 @@ Use this checklist before deploying to production.
 - [ ] Order appears on order board
 - [ ] Order status updates work
 - [ ] Email notifications received
+- [ ] SMS notification path tested or intentionally left disabled
 - [ ] Admin panel accessible
 - [ ] Mobile responsive test passed
 - [ ] PWA install test passed

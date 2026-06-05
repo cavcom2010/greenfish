@@ -19,6 +19,7 @@ stripe>=11.0
 django-extensions>=3.2
 requests>=2.31
 python-dateutil>=2.8
+twilio>=9.0
 
 # Celery for async tasks (optional but recommended)
 celery>=5.3

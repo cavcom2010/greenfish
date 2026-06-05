@@ -91,9 +91,23 @@ class SMSSettings(models.Model):
     
     @property
     def is_configured(self):
-        return all([
-            self.enabled,
-            self.twilio_account_sid,
-            self.twilio_auth_token,
-            self.twilio_phone_number
-        ])
+        from django.conf import settings
+
+        backend = getattr(settings, "SMS_BACKEND", "console").strip().lower()
+        if backend == "console":
+            return self.enabled
+        if backend == "twilio_test":
+            return all([
+                self.enabled,
+                getattr(settings, "TWILIO_TEST_ACCOUNT_SID", "") or getattr(settings, "TWILIO_ACCOUNT_SID", "") or self.twilio_account_sid,
+                getattr(settings, "TWILIO_TEST_AUTH_TOKEN", "") or getattr(settings, "TWILIO_AUTH_TOKEN", "") or self.twilio_auth_token,
+                getattr(settings, "TWILIO_TEST_PHONE_NUMBER", "+15005550006"),
+            ])
+        if backend == "twilio":
+            return all([
+                self.enabled,
+                getattr(settings, "TWILIO_ACCOUNT_SID", "") or self.twilio_account_sid,
+                getattr(settings, "TWILIO_AUTH_TOKEN", "") or self.twilio_auth_token,
+                getattr(settings, "TWILIO_PHONE_NUMBER", "") or self.twilio_phone_number,
+            ])
+        return False
