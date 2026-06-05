@@ -4,9 +4,12 @@ URL configuration for Tinashe Takeaway project.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.templatetags.static import static as static_url
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 urlpatterns = [
+    path("favicon.ico", RedirectView.as_view(url=static_url("icons/icon-192.png"), permanent=True)),
     path("admin/", admin.site.urls),
     # Desktop-aware auth pages (must come before allauth to override)
     path("accounts/", include("apps.accounts.urls", namespace="accounts")),

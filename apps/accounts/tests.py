@@ -30,6 +30,52 @@ class AuthProxyIPTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
 
+class PasswordResetTemplateTests(TestCase):
+    phone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"
+
+    def setUp(self):
+        ensure_site_settings()
+
+    def test_mobile_reset_sent_page_uses_app_shell(self):
+        response = self.client.get(
+            reverse("account_reset_password_done"),
+            HTTP_USER_AGENT=self.phone_ua,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="mobile-container"')
+        self.assertContains(response, "Check your email")
+        self.assertNotContains(response, "Menu:")
+
+    def test_desktop_reset_sent_page_uses_desktop_shell(self):
+        response = self.client.get(reverse("account_reset_password_done"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="site-header"')
+        self.assertContains(response, "Check your email")
+        self.assertNotContains(response, "Menu:")
+
+    def test_invalid_reset_key_page_is_styled(self):
+        response = self.client.get(
+            reverse("account_reset_password_from_key", kwargs={"uidb36": "bad", "key": "bad"}),
+            HTTP_USER_AGENT=self.phone_ua,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="mobile-container"')
+        self.assertContains(response, "Link expired")
+        self.assertContains(response, "Request New Link")
+        self.assertNotContains(response, "Menu:")
+
+    def test_reset_complete_page_uses_desktop_shell(self):
+        response = self.client.get(reverse("account_reset_password_from_key_done"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="site-header"')
+        self.assertContains(response, "Password changed")
+        self.assertNotContains(response, "Menu:")
+
+
 class RepeatOrderExperienceTests(TestCase):
     def setUp(self):
         ensure_site_settings()

@@ -22,4 +22,15 @@ urlpatterns = [
     path("signup/", views.desktop_aware_signup, name="account_signup"),
     path("logout/", views.desktop_aware_logout, name="account_logout"),
     path("password/reset/", views.desktop_aware_password_reset, name="account_reset_password"),
+    path("password/reset/done/", views.desktop_aware_password_reset_done, name="account_reset_password_done"),
+    path(
+        "password/reset/key/<uidb36>-<key>/",
+        views.desktop_aware_password_reset_from_key,
+        name="account_reset_password_from_key",
+    ),
+    path(
+        "password/reset/key/done/",
+        views.desktop_aware_password_reset_from_key_done,
+        name="account_reset_password_from_key_done",
+    ),
 ]

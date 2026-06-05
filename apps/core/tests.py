@@ -70,6 +70,12 @@ class PublicRouteTests(TestCase):
         self.assertContains(desktop_response, 'href="tel:+441131234567"')
         self.assertContains(desktop_response, "Get directions")
 
+    def test_favicon_ico_redirects_to_app_icon(self):
+        response = self.client.get("/favicon.ico")
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response["Location"], "/static/icons/icon-192.png")
+
     def test_large_order_request_captures_customer_and_basket_snapshot(self):
         self.client.post(
             reverse("orders:add_to_cart"),

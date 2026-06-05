@@ -98,10 +98,29 @@ def desktop_aware_password_reset(request):
         form = ResetPasswordForm(request.POST)
         if form.is_valid():
             form.save(request)
-            return redirect("account_login")
+            return redirect("account_reset_password_done")
     else:
         form = ResetPasswordForm()
     return render(request, "desktop/account/password_reset.html", {"form": form})
+
+
+def desktop_aware_password_reset_done(request):
+    """Password reset sent confirmation — desktop-aware."""
+    return render(request, _desktop_template("account/password_reset_done.html", request), {})
+
+
+def desktop_aware_password_reset_from_key(request, uidb36, key):
+    """Password reset link form — desktop-aware."""
+    from allauth.account.views import PasswordResetFromKeyView
+
+    template_name = _desktop_template("account/password_reset_from_key.html", request)
+    view = PasswordResetFromKeyView.as_view(template_name=template_name)
+    return view(request, uidb36=uidb36, key=key)
+
+
+def desktop_aware_password_reset_from_key_done(request):
+    """Password reset complete confirmation — desktop-aware."""
+    return render(request, _desktop_template("account/password_reset_from_key_done.html", request), {})
 
 
 # ── Existing views ──────────────────────────────────────────────────────
