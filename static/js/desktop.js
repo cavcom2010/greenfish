@@ -5,6 +5,23 @@
 (function () {
     'use strict';
 
+    function revealLoadedImages(root = document) {
+        root.querySelectorAll('img[loading="lazy"]').forEach((image) => {
+            if (image.complete && image.naturalWidth > 0) {
+                image.classList.add('loaded');
+                return;
+            }
+            image.addEventListener('load', () => image.classList.add('loaded'), { once: true });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => revealLoadedImages());
+    } else {
+        revealLoadedImages();
+    }
+    document.addEventListener('htmx:afterSwap', (event) => revealLoadedImages(event.target));
+
     const ORDER_ROUTES = {
         addToCart: '/orders/cart/add/',
         serviceType: '/orders/service-type/',

@@ -1222,5 +1222,28 @@
         };
     })();
     </script>
+    <script>
+    (function() {
+        function revealLoadedImages(root) {
+            (root || document).querySelectorAll('img[loading="lazy"]').forEach(function(image) {
+                if (image.complete && image.naturalWidth > 0) {
+                    image.classList.add('loaded');
+                    return;
+                }
+                image.addEventListener('load', function() {
+                    image.classList.add('loaded');
+                }, { once: true });
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() { revealLoadedImages(document); });
+        } else {
+            revealLoadedImages(document);
+        }
+        document.addEventListener('htmx:afterSwap', function(event) {
+            revealLoadedImages(event.target);
+        });
+    })();
+    </script>
 </body>
 </html>
