@@ -250,7 +250,7 @@ MOLLIE_API_KEY = env("MOLLIE_API_KEY", default="")
 MOLLIE_WEBHOOK_SECRET = env("MOLLIE_WEBHOOK_SECRET", default="")
 
 # Email Settings (Google Workspace SMTP — transactional emails)
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="").strip() or "django.core.mail.backends.console.EmailBackend"
 EMAIL_HOST = env("EMAIL_HOST", default="")
 EMAIL_PORT = env("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=True, cast=bool)
