@@ -172,6 +172,31 @@ class PublicRouteTests(TestCase):
         self.assertEqual(json_response.status_code, 200)
         self.assertEqual(json_response.json()["name"], self.menu_item.name)
 
+    def test_mobile_menu_uses_home_filter_and_modal_contract(self):
+        category = MenuCategory.objects.create(name="Sides", sort_order=2, is_active=True, icon="🍟")
+        side_item = create_menu_item(
+            name="Spicy Chips",
+            category=category,
+            dietary_tags=["vegetarian"],
+            is_popular=False,
+        )
+
+        response = self.client.get(
+            reverse("menu:menu"),
+            {"category": category.id},
+            HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="menu-filters-sticky"')
+        self.assertContains(response, 'data-menu-category=""')
+        self.assertContains(response, 'id="menuGrid"')
+        self.assertContains(response, f'data-category-id="{self.menu_item.category_id}"')
+        self.assertContains(response, f'data-category-id="{side_item.category_id}"')
+        self.assertContains(response, "function addToCartFromModal")
+        self.assertContains(response, "modal-add-btn")
+        self.assertContains(response, ".modal-item-actions")
+
     def test_category_fragment_renders(self):
         response = self.client.get(
             reverse("menu:category_items", args=[self.menu_item.category_id]),

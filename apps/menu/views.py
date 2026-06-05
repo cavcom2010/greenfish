@@ -20,24 +20,29 @@ def menu_list(request):
         "items"
     ).order_by("sort_order")
 
+    all_items = MenuItem.objects.filter(
+        is_available=True
+    ).select_related("category").order_by("category__sort_order", "sort_order")
+
     # Get category filter from query params
     category_id = request.GET.get("category")
+    dietary_filter = request.GET.get("dietary") or ""
     if category_id:
         active_category = get_object_or_404(MenuCategory, id=category_id)
         items = MenuItem.objects.filter(
             category=active_category,
             is_available=True
-        ).order_by("sort_order")
+        ).select_related("category").order_by("sort_order")
     else:
         active_category = None
-        items = MenuItem.objects.filter(
-            is_available=True
-        ).select_related("category").order_by("category__sort_order", "sort_order")
+        items = all_items
 
     context = {
         "categories": categories,
         "items": items,
+        "all_items": all_items,
         "active_category": active_category,
+        "dietary_filter": dietary_filter,
         "service_type": selected_service_type(request),
     }
 
