@@ -55,8 +55,7 @@ USE_X_FORWARDED_HOST = True
 SECURE_REFERRER_POLICY = "same-origin"
 ALLAUTH_TRUSTED_PROXY_COUNT = env("ALLAUTH_TRUSTED_PROXY_COUNT", default=1, cast=int)
 
-# Email backend for production. If no external provider credentials are present,
-# emails are printed to the shell via Django's console backend.
+# Email backend for production.
 CONSOLE_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SMTP_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
@@ -65,15 +64,42 @@ SMTP_EMAIL_CONFIGURED = bool(EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSW
 SENDGRID_CONFIGURED = bool(SENDGRID_API_KEY)
 SENDER_NET_CONFIGURED = bool(SENDER_NET_API_KEY)
 
-if SMTP_EMAIL_CONFIGURED and EMAIL_BACKEND_OVERRIDE:
+if EMAIL_BACKEND_OVERRIDE:
     EMAIL_BACKEND = EMAIL_BACKEND_OVERRIDE
+elif SENDGRID_CONFIGURED:
+    EMAIL_HOST = env("SENDGRID_SMTP_HOST", default="smtp.sendgrid.net")
+    EMAIL_PORT = env("SENDGRID_SMTP_PORT", default=587, cast=int)
+    EMAIL_USE_TLS = env("SENDGRID_SMTP_USE_TLS", default=True, cast=bool)
+    EMAIL_HOST_USER = env("SENDGRID_SMTP_USERNAME", default="apikey")
+    EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
+    EMAIL_BACKEND = SMTP_EMAIL_BACKEND
 elif SMTP_EMAIL_CONFIGURED:
     EMAIL_BACKEND = SMTP_EMAIL_BACKEND
+elif SENDER_NET_CONFIGURED:
+    EMAIL_HOST = "smtp.sender.net"
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = SENDER_NET_API_KEY
+    EMAIL_HOST_PASSWORD = SENDER_NET_API_KEY
+    EMAIL_BACKEND = SMTP_EMAIL_BACKEND
 else:
-    EMAIL_BACKEND = CONSOLE_EMAIL_BACKEND
+    raise ImproperlyConfigured(
+        "No email backend configured for production. "
+        "Set EMAIL_HOST, EMAIL_HOST_USER, and EMAIL_HOST_PASSWORD, "
+        "or SENDGRID_API_KEY, or SENDER_NET_API_KEY in .env."
+    )
+
+# Cache — use the same Redis instance already relied on for Celery (REDIS_URL,
+# set in base.py) instead of the per-process LocMemCache default, so rate
+# limiting and other cache-backed state are consistent across Gunicorn workers.
+CACHES["default"] = {
+    "BACKEND": "django.core.cache.backends.redis.RedisCache",
+    "LOCATION": REDIS_URL,
+}
 
 # Static files
-MIDDLEWARE = ["whitenoise.middleware.WhiteNoiseMiddleware"] + MIDDLEWARE
+MIDDLEWARE = list(MIDDLEWARE)
+MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
@@ -93,3 +119,19 @@ LOGGING["handlers"]["file"] = {
     "formatter": "verbose",
 }
 LOGGING["root"]["handlers"] = ["console", "file"]
+
+# Error tracking. Entirely skipped when SENTRY_DSN is unset, so this doesn't
+# force every deploy to have Sentry configured.
+SENTRY_DSN = env("SENTRY_DSN", default="").strip()
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=env("SENTRY_TRACES_SAMPLE_RATE", default=0.0, cast=float),
+        environment=env("APP_ENV", default="production"),
+        release=env("RELEASE_VERSION", default=""),
+        send_default_pii=False,
+    )

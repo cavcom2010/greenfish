@@ -1,30 +1,42 @@
-Django>=6.0,<7.0
-Pillow>=10.0
-gunicorn>=21.2
-whitenoise>=6.8
-python-decouple>=3.8
-dj-database-url>=2.2
-psycopg[binary]>=3.1
+# Versions are pinned exactly to what has been installed and tested against.
+# To upgrade a dependency: bump the version here, install it in a throwaway
+# venv (`python3 -m venv /tmp/verify-venv && /tmp/verify-venv/bin/pip install -r requirements.txt`),
+# run the full test suite (`python manage.py test`), run
+# `python manage.py check --deploy`, manually smoke-test the payment and auth
+# flows, then commit.
+Django==6.0.6
+Pillow==12.2.0
+gunicorn==26.0.0
+whitenoise==6.12.0
+python-decouple==3.8
+dj-database-url==3.1.2
+psycopg[binary]==3.3.4
 
 # API and Frontend
-djangorestframework>=3.14
-django-htmx>=1.17
-django-allauth>=0.60
+djangorestframework==3.17.1
+django-htmx==1.27.0
+django-allauth==65.18.0
 
 # Mollie Payments
-mollie-api-python>=2.15
-stripe>=11.0
+mollie-api-python==4.0.0
+stripe==15.2.0
 
 # Utilities
-django-extensions>=3.2
-requests>=2.31
-python-dateutil>=2.8
+django-extensions==4.1
+requests==2.34.2
+python-dateutil==2.9.0.post0
+# twilio is not installed in the current venv (SMS_BACKEND defaults to
+# "console"); kept as a floor since there's no installed version to pin to.
 twilio>=9.0
 
 # Celery for async tasks (optional but recommended)
-celery>=5.3
-redis>=5.0
+celery==5.6.3
+redis==8.0.0
 
 # SSL Certificate Automation (DigitalOcean deployment)
-certbot>=2.8.0
-certbot-nginx>=2.8.0
+certbot==5.6.0
+certbot-nginx==5.6.0
+
+# Error tracking (optional; no-op unless SENTRY_DSN is set)
+sentry-sdk==2.64.0
+-e packages/django_messaging  # shared WhatsApp client
