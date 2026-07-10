@@ -1,176 +1,189 @@
 {% load static media_tags %}
 
-<div class="modal-item-detail" data-item-id="{{ item.id }}" data-base-price="{{ item.price }}">
-    <!-- Close button -->
-    <button class="modal-item-close" onclick="closeItemModal({target: {id: 'itemModal'}})">
-        <i class="ph ph-x"></i>
-    </button>
-
-    <div class="modal-item-scroll" data-scrollable-content>
-        <!-- Item Image -->
-        <div class="modal-item-image">
+<div class="desktop-item-detail"
+     data-item-id="{{ item.id }}"
+     data-base-price="{{ item.price }}"
+     data-item-name="{{ item.name }}">
+    <div class="desktop-item-detail__media">
+        <div class="desktop-item-detail__image-shell">
             {% if item.image %}
-            <img src="{{ item.image|image_variant:'detail' }}" alt="{{ item.name }}" loading="eager" decoding="async" width="960" height="960">
+            <img class="desktop-item-detail__image"
+                 src="{{ item.image|image_variant:'detail' }}"
+                 alt="{{ item.name }}"
+                 loading="eager"
+                 decoding="async"
+                 width="960"
+                 height="960">
             {% else %}
-            <span class="modal-item-emoji">{{ item.category.icon|default:"🍽️" }}</span>
-            {% endif %}
-        </div>
-
-        <!-- Item Info -->
-        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">{{ item.name }}</h2>
-        <p style="color: var(--text-secondary); font-size: 15px; margin-bottom: 16px;">{{ item.description }}</p>
-
-        {% if request.user.is_authenticated %}
-        <form method="post" action="{% url 'accounts:toggle_favorite' item.id %}" style="margin-bottom: 16px;">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'core:home' %}">
-            <button type="submit" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: {% if is_favorite %}var(--brand){% else %}var(--text){% endif %}; font-weight: 800;">
-                <i class="ph{% if is_favorite %}-fill{% endif %} ph-heart"></i>
-                {% if is_favorite %}Saved to favourites{% else %}Save to favourites{% endif %}
-            </button>
-        </form>
-        {% endif %}
-
-        <!-- Dietary Tags -->
-        {% if item.dietary_tags %}
-        <div style="margin-bottom: 16px;">
-            {% for tag in item.dietary_tags %}
-            <span style="display: inline-block; background: var(--success-bg); color: var(--success); padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-right: 8px; margin-bottom: 4px;">
-                {{ tag }}
-            </span>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Preparation Time -->
-        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
-            <i class="ph ph-clock"></i>
-            <span>{{ item.preparation_time }} mins prep time</span>
-        </div>
-
-        <!-- Nutritional Info -->
-        {% if item.calories or item.protein or item.carbs or item.fat %}
-        <div style="background: #F8FAFC; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <i class="ph ph-chart-bar" style="color: var(--brand);"></i>
-                <span style="font-weight: 600; font-size: 14px;">Nutritional Info (per serving)</span>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
-                {% if item.calories %}
-                <div>
-                    <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.calories }}</div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">kcal</div>
-                </div>
-                {% endif %}
-                {% if item.protein %}
-                <div>
-                    <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.protein }}g</div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">protein</div>
-                </div>
-                {% endif %}
-                {% if item.carbs %}
-                <div>
-                    <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.carbs }}g</div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">carbs</div>
-                </div>
-                {% endif %}
-                {% if item.fat %}
-                <div>
-                    <div style="font-size: 18px; font-weight: 700; color: var(--brand);">{{ item.fat }}g</div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">fat</div>
-                </div>
-                {% endif %}
-            </div>
-            {% if item.salt %}
-            <div style="text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #E2E8F0;">
-                <span style="font-size: 12px; color: var(--text-secondary);">Salt: {{ item.salt }}g</span>
+            <div class="desktop-item-detail__image-fallback">
+                <span>{{ item.category.icon|default:"Menu item" }}</span>
             </div>
             {% endif %}
-        </div>
-        {% endif %}
 
-        <!-- Allergens -->
-        {% if item.allergens %}
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px; background: #FEF3C7; border-radius: 8px;">
-            <i class="ph ph-warning" style="color: #D97706;"></i>
-            <span style="font-size: 13px; color: #92400E;">
-                <strong>Allergens:</strong> {{ item.allergens|join:", " }}
-            </span>
-        </div>
-        {% endif %}
-
-        <!-- Customers Also Ordered -->
-        {% if recommendations %}
-        <div style="margin-bottom: 18px;">
-            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">
-                <i class="ph ph-users" style="color: var(--brand);"></i> Customers also ordered
-            </h3>
-            <div class="modal-recommendations">
-                {% for rec in recommendations %}
-                <div class="modal-recommendation-card" onclick="openItemModal({{ rec.id }})">
-                    <div class="modal-recommendation-image">
-                        {% if rec.image %}
-                        <img src="{{ rec.image|image_variant:'thumb' }}" alt="{{ rec.name }}" loading="lazy" decoding="async" width="160" height="160">
-                        {% else %}
-                        {{ rec.category.icon|default:"🍽️" }}
-                        {% endif %}
-                    </div>
-                    <div style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ rec.name }}</div>
-                    <div style="font-size: 13px; font-weight: 700; color: var(--brand);">£{{ rec.price }}</div>
-                </div>
+            {% if item.dietary_tags %}
+            <div class="desktop-item-detail__badges">
+                {% for tag in item.dietary_tags %}
+                <span class="desktop-item-detail__badge">{{ tag }}</span>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
-
-        <!-- Add-ons Section (Always Visible for Consistency) -->
-        <div style="margin-bottom: 8px;">
-            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Add-ons</h3>
-            {% if item.modifiers.exists %}
-            {% for modifier in item.modifiers.all %}
-            <label class="modifier-option" style="display: flex; align-items: center; padding: 12px; background: var(--bg); border-radius: 12px; margin-bottom: 8px; cursor: pointer;">
-                <input type="checkbox" class="modifier-checkbox" value="{{ modifier.id }}" data-name="{{ modifier.name }}" data-price="{{ modifier.price_adjustment }}" style="margin-right: 12px; width: 20px; height: 20px; accent-color: var(--brand);">
-                <span style="flex: 1;">{{ modifier.name }}</span>
-                {% if modifier.price_adjustment > 0 %}
-                <span class="modifier-price" style="font-weight: 600; color: var(--brand);">+£{{ modifier.price_adjustment }}</span>
-                {% endif %}
-            </label>
-            {% endfor %}
-            {% else %}
-            <div style="padding: 16px; background: var(--bg); border-radius: 12px; color: var(--text-secondary); text-align: center; font-size: 14px;">
-                No add-ons available for this item
-            </div>
             {% endif %}
         </div>
-    </div>
 
-    <div class="modal-scroll-cue" data-scroll-cue aria-hidden="true">
-        <i class="ph ph-caret-down"></i>
-    </div>
-
-    <div class="modal-item-actions">
-        <!-- Quantity -->
-        <div class="modal-item-quantity">
-            <span style="font-weight: 600;">Quantity</span>
-            <div class="modal-item-stepper">
-                <button class="qty-btn" type="button" data-change="-1" aria-label="Decrease quantity" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">-</button>
-                <span id="modal-quantity" style="font-weight: 700; min-width: 24px; text-align: center;">1</span>
-                <button class="qty-btn" type="button" data-change="1" aria-label="Increase quantity" style="width: 32px; height: 32px; border: none; background: white; border-radius: 50%; cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">+</button>
+        <div class="desktop-item-detail__meta">
+            <div class="desktop-item-detail__meta-row">
+                <i class="ph ph-clock"></i>
+                <span>{{ item.preparation_time }} mins prep time</span>
             </div>
-        </div>
-        <div class="modal-large-order-link" data-large-order-cue hidden>
-            Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}">Request a large order</a>
+
+            {% if item.allergens %}
+            <div class="desktop-item-detail__alert">
+                <i class="ph ph-warning"></i>
+                <span><strong>Allergens:</strong> {{ item.allergens|join:", " }}</span>
+            </div>
+            {% endif %}
+
+            {% if item.calories or item.protein or item.carbs or item.fat %}
+            <section class="desktop-item-detail__nutrition">
+                <div class="desktop-item-detail__section-heading">
+                    <i class="ph ph-chart-bar"></i>
+                    <span>Nutritional info</span>
+                </div>
+                <div class="desktop-item-detail__nutrition-grid">
+                    {% if item.calories %}
+                    <div class="desktop-item-detail__nutrition-stat">
+                        <div class="desktop-item-detail__nutrition-value">{{ item.calories }}</div>
+                        <div class="desktop-item-detail__nutrition-label">kcal</div>
+                    </div>
+                    {% endif %}
+                    {% if item.protein %}
+                    <div class="desktop-item-detail__nutrition-stat">
+                        <div class="desktop-item-detail__nutrition-value">{{ item.protein }}g</div>
+                        <div class="desktop-item-detail__nutrition-label">protein</div>
+                    </div>
+                    {% endif %}
+                    {% if item.carbs %}
+                    <div class="desktop-item-detail__nutrition-stat">
+                        <div class="desktop-item-detail__nutrition-value">{{ item.carbs }}g</div>
+                        <div class="desktop-item-detail__nutrition-label">carbs</div>
+                    </div>
+                    {% endif %}
+                    {% if item.fat %}
+                    <div class="desktop-item-detail__nutrition-stat">
+                        <div class="desktop-item-detail__nutrition-value">{{ item.fat }}g</div>
+                        <div class="desktop-item-detail__nutrition-label">fat</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if item.salt %}
+                <div class="desktop-item-detail__nutrition-footnote">Salt: {{ item.salt }}g</div>
+                {% endif %}
+            </section>
+            {% endif %}
         </div>
 
-        <!-- Add to Cart Button -->
-        <button id="modal-add-btn" data-item-id="{{ item.id }}" data-base-price="{{ item.price }}"
-                style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: var(--brand); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(255,107,53,0.3); transition: transform 0.2s, box-shadow 0.2s;"
-                onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 6px 16px rgba(255,107,53,0.4)'"
-                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(255,107,53,0.3)'"
-                onmousedown="this.style.transform='scale(0.98)'"
-                onmouseup="this.style.transform='scale(1.02)'">
-            <span>Add to Basket</span>
-            <span id="modal-total-price" style="font-weight: 800;">£{{ item.price }}</span>
-        </button>
+        {% if recommendations %}
+        <section class="desktop-item-detail__recommendations">
+            <div class="desktop-item-detail__section-heading">
+                <i class="ph ph-users"></i>
+                <span>Customers also ordered</span>
+            </div>
+            <div class="desktop-item-detail__recommendation-grid">
+                {% for rec in recommendations %}
+                <button type="button"
+                        class="desktop-item-detail__recommendation-card"
+                        onclick="openItemModal({{ rec.id }})">
+                    <span class="desktop-item-detail__recommendation-thumb">
+                        {% if rec.image %}
+                        <img src="{{ rec.image|image_variant:'thumb' }}"
+                             alt="{{ rec.name }}"
+                             loading="lazy"
+                             decoding="async"
+                             width="160"
+                             height="160">
+                        {% else %}
+                        <span>{{ rec.category.icon|default:"Menu item" }}</span>
+                        {% endif %}
+                    </span>
+                    <span class="desktop-item-detail__recommendation-copy">
+                        <span class="desktop-item-detail__recommendation-name">{{ rec.name }}</span>
+                        <span class="desktop-item-detail__recommendation-price">£{{ rec.price }}</span>
+                    </span>
+                </button>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <div class="desktop-item-detail__main">
+        <div class="desktop-item-detail__body">
+            <div class="desktop-item-detail__heading">
+                <div>
+                    <h2 class="desktop-item-detail__title">{{ item.name }}</h2>
+                    {% if item.description %}
+                    <p class="desktop-item-detail__description">{{ item.description }}</p>
+                    {% endif %}
+                    {% if request.user.is_authenticated %}
+                    <form method="post" action="{% url 'accounts:toggle_favorite' item.id %}" style="margin-top:0.85rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'core:home' %}">
+                        <button type="submit" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1rem;border-radius:999px;border:1px solid var(--border-light);background:var(--bg);color:{% if is_favorite %}var(--brand){% else %}var(--text-secondary){% endif %};font-weight:800;cursor:pointer;">
+                            <i class="ph{% if is_favorite %}-fill{% endif %} ph-heart"></i>
+                            {% if is_favorite %}Saved to favourites{% else %}Save to favourites{% endif %}
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="desktop-item-detail__base-price">From £{{ item.price }}</div>
+            </div>
+
+            <section class="desktop-item-detail__section">
+                <div class="desktop-item-detail__section-heading">Add-ons</div>
+                {% if item.modifiers.exists %}
+                <div class="desktop-item-detail__modifier-list">
+                    {% for modifier in item.modifiers.all %}
+                    <label class="desktop-item-detail__modifier">
+                        <input type="checkbox"
+                               class="modifier-checkbox"
+                               value="{{ modifier.id }}"
+                               data-name="{{ modifier.name }}"
+                               data-price="{{ modifier.price_adjustment }}">
+                        <span class="desktop-item-detail__modifier-name">{{ modifier.name }}</span>
+                        {% if modifier.price_adjustment > 0 %}
+                        <span class="desktop-item-detail__modifier-price">+£{{ modifier.price_adjustment }}</span>
+                        {% else %}
+                        <span class="desktop-item-detail__modifier-price">Included</span>
+                        {% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="desktop-item-detail__empty">No add-ons available for this item.</div>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="desktop-item-detail__actions">
+            <div class="desktop-item-detail__quantity">
+                <span class="desktop-item-detail__quantity-label">Quantity</span>
+                <div class="quantity-control-desktop desktop-item-detail__quantity-control">
+                    <button class="qty-btn" type="button" data-change="-1" aria-label="Decrease quantity">-</button>
+                    <span id="modalQtyDisplay" class="qty-display">1</span>
+                    <button class="qty-btn" type="button" data-change="1" aria-label="Increase quantity">+</button>
+                </div>
+                <div class="desktop-item-detail__large-order" data-large-order-cue hidden>
+                    Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}">Request a large order</a>
+                </div>
+            </div>
+
+            <button id="modalAddBtn"
+                    type="button"
+                    class="modal-add-btn desktop-item-detail__add-btn"
+                    data-item-id="{{ item.id }}"
+                    data-base-price="{{ item.price }}">
+                <span>Add to Basket</span>
+                <span id="modalTotalPrice" class="desktop-item-detail__add-price">£{{ item.price }}</span>
+            </button>
+        </div>
     </div>
 </div>

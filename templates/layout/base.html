@@ -1,0 +1,314 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="{{ site_settings.theme_color|default:'#FF6B35' }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="description" content="{% block meta_description %}Order delicious food from {{ site_settings.shop_name }}. Fresh food available for pickup{% if delivery_enabled %} or delivery{% endif %}.{% endblock %}">
+
+    <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="{% url 'pwa:manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+    {% if site_settings.favicon %}
+    <link rel="icon" type="image/png" href="{{ site_settings.favicon.url }}">
+    {% else %}
+    <link rel="icon" type="image/png" href="{% static 'icons/icon-192.png' %}">
+    {% endif %}
+
+    <!-- Fonts & icons (self-hosted) -->
+    <link rel="preload" href="{% static 'fonts/inter-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'fonts/inter.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/phosphor/regular/style.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/phosphor/fill/style.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/phosphor/bold/style.css' %}">
+
+    <!-- Design system -->
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shell.css' %}">
+
+    <!-- HTMX (self-hosted) -->
+    <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="page-fade-in {% block body_class %}{% endblock %}">
+
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    {% block header %}
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <a href="{% url 'core:home' %}" class="logo">
+                    {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}">
+                    {% else %}
+                    <span class="logo-mark" aria-hidden="true"><i class="ph-fill ph-bowl-food"></i></span>
+                    {% endif %}
+                    <span class="logo-text">
+                        {{ site_settings.shop_name }}
+                        {% if site_settings.tagline %}
+                        <small>{{ site_settings.tagline }}</small>
+                        {% endif %}
+                    </span>
+                </a>
+
+                <nav class="main-nav" aria-label="Main navigation">
+                    <a href="{% url 'core:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Order</a>
+                    <a href="{% url 'menu:menu' %}" class="{% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">Menu</a>
+                    <a href="{% url 'offers:list' %}" class="{% if 'offers' in request.path %}active{% endif %}">Offers</a>
+                    <a href="{% url 'core:large_orders' %}" class="{% if request.resolver_match.url_name == 'large_orders' %}active{% endif %}">Large Orders</a>
+                    <a href="{% url 'loyalty:dashboard' %}" class="{% if 'rewards' in request.path %}active{% endif %}">Rewards</a>
+                    {% if site_settings.about_page_enabled %}
+                    <a href="{% url 'core:about' %}">About</a>
+                    {% endif %}
+                </nav>
+            </div>
+
+            <div class="header-right">
+                <button type="button" class="header-icon-btn" id="desktopCartButton" onclick="openCartDrawer()" aria-label="View cart{% if cart_count > 0 %}, {{ cart_count }} item{{ cart_count|pluralize }}{% endif %}">
+                    <i class="ph ph-shopping-cart"></i>
+                    <span class="cart-badge-desktop" {% if cart_count <= 0 %}hidden{% endif %}>{{ cart_count|default:0 }}</span>
+                </button>
+
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}" class="btn-account">
+                    <i class="ph ph-user-circle" style="font-size:1.25rem;"></i>
+                    {{ request.user.first_name|default:"Account" }}
+                </a>
+                {% else %}
+                <a href="{% url 'account_login' %}" class="btn-account">Sign In</a>
+                <a href="{% url 'account_signup' %}" class="btn-order">
+                    Order Now <i class="ph-bold ph-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    {% endblock %}
+
+    {% if messages %}
+    <div class="messages-strip">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert--error{% elif message.tags == 'warning' %}alert--warning{% else %}alert--success{% endif %}">
+            <i class="ph-fill {% if message.tags == 'error' %}ph-warning-circle{% elif message.tags == 'warning' %}ph-warning{% else %}ph-check-circle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block bottom_nav %}
+    <nav class="bottom-nav" aria-label="App navigation">
+        <a href="{% url 'core:home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <i class="ph-fill ph-house"></i>
+            <span>Order</span>
+        </a>
+        <a href="{% url 'offers:list' %}" class="nav-item {% if 'offers' in request.path %}active{% endif %}">
+            <i class="ph-bold ph-tag"></i>
+            <span>Offers</span>
+        </a>
+        <a href="{% url 'loyalty:dashboard' %}" class="nav-item {% if 'rewards' in request.path %}active{% endif %}">
+            <i class="ph-bold ph-gift"></i>
+            <span>Rewards</span>
+        </a>
+        <a href="{% url 'accounts:profile' %}" class="nav-item {% if 'profile' in request.path %}active{% endif %}">
+            <i class="ph-bold ph-user"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+    {% endblock %}
+
+    <!-- Item modal / bottom sheet -->
+    <div class="modal-overlay" id="itemModalDesktop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalDesktopTitle">Item Details</h3>
+                <button class="modal-close" onclick="closeItemModal()" aria-label="Close">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalDesktopContent">
+                <div class="loading-block">
+                    <div class="spinner"></div>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart drawer -->
+    <div class="cart-drawer-overlay" id="cartDrawerOverlay" onclick="closeCartDrawerOnOverlay(event)">
+        <aside class="cart-drawer" role="dialog" aria-label="Shopping cart">
+            <div id="cartDrawerContent">
+                <div class="loading-block">
+                    <div class="spinner"></div>
+                    <p>Loading your basket...</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Toasts -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    {% block basket_bar %}
+    {% if 'checkout' not in request.path and 'cart' not in request.path %}
+    <div class="sticky-cart-bar {% if cart_count > 0 %}visible{% endif %}" id="stickyCartBar" {% if cart_count <= 0 %}aria-hidden="true"{% endif %}>
+        <div class="sticky-cart-bar-count">
+            <i class="ph-fill ph-shopping-cart"></i>
+            <span id="stickyCartCount">{{ cart_count|default:0 }} item{{ cart_count|pluralize }}</span>
+        </div>
+        <div class="sticky-cart-bar-total" id="stickyCartTotal">£{{ cart_total|floatformat:2 }}</div>
+        <a href="{% url 'orders:checkout' %}" class="sticky-cart-bar-checkout">
+            Checkout <i class="ph-bold ph-arrow-right"></i>
+        </a>
+    </div>
+    {% endif %}
+    {% endblock %}
+
+    <button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top">
+        <i class="ph-bold ph-arrow-up"></i>
+    </button>
+
+    {% block footer %}
+    <footer class="site-footer">
+        <div class="footer-main">
+            <div class="footer-brand">
+                <a href="{% url 'core:home' %}" class="logo">
+                    {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}">
+                    {% endif %}
+                    {{ site_settings.shop_name }}
+                </a>
+                <p>{{ site_settings.shop_description|default:"Fresh food made with love. Order for pickup." }}{% if delivery_enabled %} Delivery is available too.{% endif %}</p>
+
+                <div class="footer-newsletter">
+                    <p>Get exclusive offers & updates</p>
+                    <form class="footer-newsletter-form" id="footerNewsletterForm"
+                          hx-post="{% url 'core:newsletter' %}"
+                          hx-target="#newsletterFeedback"
+                          hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <input type="email" name="email" placeholder="Your email" required aria-label="Email for newsletter">
+                        <button type="submit">Subscribe</button>
+                    </form>
+                    <div id="newsletterFeedback"></div>
+                </div>
+
+                <div class="footer-trust">
+                    <div class="footer-trust-badges">
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-shield-check"></i> Secure payments
+                        </span>
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-clock"></i> {% if delivery_enabled %}Fast delivery{% else %}Fresh pickup{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-col">
+                <h4>Order</h4>
+                <a href="{% url 'core:home' %}">Order Food</a>
+                <a href="{% url 'menu:menu' %}">Full Menu</a>
+                <a href="{% url 'offers:list' %}">Offers & Deals</a>
+                <a href="{% url 'core:large_orders' %}">Large Orders</a>
+                <a href="{% url 'orders:cart' %}">Your Basket</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Account</h4>
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}">My Profile</a>
+                <a href="{% url 'accounts:order_history' %}">Order History</a>
+                <a href="{% url 'loyalty:dashboard' %}">Rewards</a>
+                <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit">Sign Out</button>
+                </form>
+                {% else %}
+                <a href="{% url 'account_login' %}">Sign In</a>
+                <a href="{% url 'account_signup' %}">Create Account</a>
+                {% endif %}
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                {% if site_settings.address %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" target="_blank" rel="noopener">{{ site_settings.address }}</a>
+                {% endif %}
+                {% if site_settings.phone %}
+                <a href="tel:{{ site_settings.phone }}">{{ site_settings.phone }}</a>
+                {% endif %}
+                {% if site_settings.email %}
+                <a href="mailto:{{ site_settings.email }}">{{ site_settings.email }}</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-inner">
+                <span>&copy; {% now "Y" %} {{ site_settings.shop_name }}. All rights reserved.</span>
+                <div class="footer-social">
+                    {% if site_settings.facebook_url %}
+                    <a href="{{ site_settings.facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
+                        <i class="ph-fill ph-facebook-logo"></i>
+                    </a>
+                    {% endif %}
+                    {% if site_settings.instagram_url %}
+                    <a href="{{ site_settings.instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">
+                        <i class="ph-fill ph-instagram-logo"></i>
+                    </a>
+                    {% endif %}
+                    {% if site_settings.twitter_url %}
+                    <a href="{{ site_settings.twitter_url }}" target="_blank" rel="noopener" aria-label="Twitter">
+                        <i class="ph-fill ph-twitter-logo"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <!-- Cookie consent (GDPR / UK ICO) -->
+    <div class="cookie-consent-banner" id="cookieConsentBanner">
+        <div class="cookie-consent-content">
+            <div class="cookie-consent-text">
+                <h4>🍪 We use cookies</h4>
+                <p>We use essential cookies to make our site work, and analytics cookies to understand how you use it. See our <a href="#privacy">Privacy Policy</a>.</p>
+            </div>
+            <div class="cookie-consent-actions">
+                <button type="button" class="cookie-btn cookie-btn-accept" onclick="acceptCookies('all')">Accept All</button>
+                <button type="button" class="cookie-btn cookie-btn-essential" onclick="acceptCookies('essential')">Essential Only</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.APP_CONFIG = Object.assign({}, window.APP_CONFIG, {
+            deliveryEnabled: {{ delivery_enabled|yesno:"true,false" }},
+            maxCartItemQuantity: {{ max_cart_item_quantity|default:20 }},
+            serviceWorkerUrl: "{% url 'pwa:service_worker' %}",
+            pushSubscribeUrl: "{% url 'pwa:subscribe_push' %}",
+            vapidPublicKey: "{{ VAPID_PUBLIC_KEY|default:'' }}"
+        });
+    </script>
+    <script src="{% static 'js/app.js' %}" defer></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -69,10 +69,25 @@ def _checkout_message_response(request, message, *, status=200, extra=None):
         payload.update(extra)
 
     if request.headers.get("HX-Request"):
+        # Message plus an out-of-band refresh of the checkout totals, so
+        # voucher apply/remove updates the summary without a page reload.
+        summary = get_cart_summary(
+            request.session.get("cart", {}),
+            user=request.user,
+            voucher_code=request.session.get("voucher_code", ""),
+            offer_id=selected_offer_id(request),
+            reward_wallet_item_id=selected_reward_wallet_item_id(request),
+        )
         return render(
             request,
-            "orders/partials/voucher_message.html",
-            {"message": message, "is_error": status >= 400},
+            "orders/partials/voucher_response.html",
+            {
+                "message": message,
+                "is_error": status >= 400,
+                "subtotal": summary["subtotal"],
+                "discount": summary["discount"],
+                "total": summary["total"],
+            },
             status=status,
         )
 
@@ -242,8 +257,8 @@ def _selected_deal_modifiers(request, deal):
     return modifiers
 
 
-def cart_view(request):
-    """View cart contents."""
+def _cart_page_context(request):
+    """Shared context for the cart page and its HTMX-swapped partial."""
     active_offer_id = selected_offer_id(request)
     active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
     summary = get_cart_summary(
@@ -253,17 +268,7 @@ def cart_view(request):
         offer_id=active_offer_id,
         reward_wallet_item_id=active_reward_wallet_item_id,
     )
-    if active_offer_id and summary["offer_invalid"]:
-        clear_selected_offer(request)
-        if summary["offer_error"]:
-            messages.error(request, summary["offer_error"])
-        summary["selected_offer"] = None
-    if active_reward_wallet_item_id and summary["reward_wallet_invalid"]:
-        clear_reward_wallet_item(request)
-        if summary["reward_wallet_error"]:
-            messages.error(request, summary["reward_wallet_error"])
-        summary["reward_wallet_item"] = None
-    context = {
+    return summary, {
         "cart_items": summary["items"],
         "subtotal": summary["subtotal"],
         "discount": summary["discount"],
@@ -277,8 +282,34 @@ def cart_view(request):
         "reward_wallet_error": summary["reward_wallet_error"],
         "voucher_code": summary["voucher_code"],
     }
-    template = "desktop/orders/cart.html" if getattr(request, "is_desktop", True) else "orders/cart.html"
-    return render(request, template, context)
+
+
+def _cart_page_partial_response(request):
+    """Render the cart page partial with a cart-updated trigger (HTMX swaps)."""
+    _, context = _cart_page_context(request)
+    response = render(request, "orders/partials/cart_page.html", context)
+    response["HX-Trigger"] = json.dumps(
+        {"cart-updated": {"cart_count": context["cart_count"], "cart_total": f"{context['cart_total']:.2f}"}}
+    )
+    return response
+
+
+def cart_view(request):
+    """View cart contents."""
+    active_offer_id = selected_offer_id(request)
+    active_reward_wallet_item_id = selected_reward_wallet_item_id(request)
+    summary, context = _cart_page_context(request)
+    if active_offer_id and summary["offer_invalid"]:
+        clear_selected_offer(request)
+        if summary["offer_error"]:
+            messages.error(request, summary["offer_error"])
+        context["active_offer"] = None
+    if active_reward_wallet_item_id and summary["reward_wallet_invalid"]:
+        clear_reward_wallet_item(request)
+        if summary["reward_wallet_error"]:
+            messages.error(request, summary["reward_wallet_error"])
+        context["reward_wallet_item"] = None
+    return render(request, "orders/cart.html", context)
 
 
 def cart_drawer(request):
@@ -367,6 +398,8 @@ def update_cart_item(request, item_id):
     update_session_cart_item(request, item_id, quantity)
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse(_cart_state_payload(request))
+    if request.headers.get("HX-Target") == "cartPage":
+        return _cart_page_partial_response(request)
     return redirect("orders:cart")
 
 
@@ -377,6 +410,9 @@ def remove_from_cart(request, item_id):
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse(_cart_state_payload(request))
+
+    if request.headers.get("HX-Target") == "cartPage":
+        return _cart_page_partial_response(request)
 
     if request.headers.get("HX-Request"):
         active_offer_id = selected_offer_id(request)
@@ -489,8 +525,7 @@ def checkout(request):
         "delivery_time_options": available_fulfilment_options(Order.ServiceType.DELIVERY) if delivery_enabled() else [],
         **_default_delivery_address(request.user),
     }
-    template = "desktop/orders/checkout.html" if getattr(request, "is_desktop", True) else "orders/checkout.html"
-    return render(request, template, context)
+    return render(request, "orders/checkout.html", context)
 
 
 @require_POST
@@ -637,8 +672,7 @@ def apply_voucher(request):
 def order_confirmation(request, order_number):
     """Order confirmation page."""
     order = get_accessible_order_or_404(request, order_number)
-    template = "desktop/orders/confirmation.html" if getattr(request, "is_desktop", True) else "orders/confirmation.html"
-    return render(request, template, {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
+    return render(request, "orders/confirmation.html", {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
 
 
 @login_required
@@ -683,8 +717,7 @@ def pay_instore(request):
 def confirmation_instore(request, order_number):
     """Order confirmation page for pay in store orders."""
     order = get_accessible_order_or_404(request, order_number)
-    template = "desktop/orders/confirmation_instore.html" if getattr(request, "is_desktop", True) else "orders/confirmation_instore.html"
-    return render(request, template, {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
+    return render(request, "orders/confirmation_instore.html", {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
 
 
 def order_tracking(request, order_number):
@@ -700,10 +733,9 @@ def order_tracking(request, order_number):
         and request_has_order_token(request, order)
         and (not order.customer_email or order.customer_email.lower() == request.user.email.lower())
     )
-    template = "desktop/orders/tracking.html" if getattr(request, "is_desktop", True) else "orders/tracking.html"
     return render(
         request,
-        template,
+        "orders/tracking.html",
         {
             "order": order,
             "tracking_url": order_customer_url("orders:tracking", order),
@@ -763,5 +795,4 @@ def create_order_issue(request, order_number):
         "issue_types": OrderIssue.IssueType.choices,
         "tracking_url": order_customer_url("orders:tracking", order),
     }
-    template = "desktop/orders/create_issue.html" if getattr(request, "is_desktop", True) else "orders/create_issue.html"
-    return render(request, template, context)
+    return render(request, "orders/create_issue.html", context)

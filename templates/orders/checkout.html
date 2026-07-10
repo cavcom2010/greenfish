@@ -1,807 +1,393 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 {% load static %}
 
 {% block title %}Checkout - {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}Checkout{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/checkout.css' %}">
 <link rel="stylesheet" href="{% static 'css/checkout-delivery.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <form method="post" action="{% url 'payments:create' %}" id="checkoutForm">
-        {% csrf_token %}
-        <input type="hidden" name="service_type" id="serviceTypeInput" value="{{ service_type }}">
 
-        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Fulfilment</h3>
-            <div class="service-toggle" style="margin: 0 0 12px;">
-                <button type="button" class="toggle-option {% if service_type == 'pickup' %}active{% endif %}" data-service="pickup" onclick="updateServiceType('pickup')">Pickup</button>
-                {% if delivery_enabled %}
-                <button type="button" class="toggle-option {% if service_type == 'delivery' %}active{% endif %}" data-service="delivery" onclick="updateServiceType('delivery')">Delivery</button>
-                {% endif %}
-            </div>
-            <p id="serviceSummary" style="font-size: 13px; color: var(--text-secondary); margin: 0;">
-                {% if delivery_enabled and service_type == 'delivery' %}
-                Delivered to your address after the kitchen confirms your order.
-                {% else %}
-                Collect from the shop when your order is ready.
-                {% endif %}
-            </p>
-        </div>
+<section class="section" style="padding-top:2rem;">
+    <div class="container">
+        <h1 style="margin-bottom:0.5rem;">Checkout</h1>
+        <p style="margin-bottom:1rem;">Complete your order details below.</p>
 
-        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Your Details</h3>
+        <div class="checkout-layout">
+            <!-- Left: Form -->
+            <div>
+                <form method="post" action="{% url 'payments:create' %}" id="checkoutForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="service_type" id="desktopServiceType" value="{{ service_type }}">
 
-            <div class="form-group">
-                <label class="form-label">Full Name *</label>
-                <input type="text" name="customer_name" class="form-input" required value="{{ default_customer_name }}">
-            </div>
+                    <!-- Service Type -->
+                    <div class="checkout-form-section">
+                        <h3><i class="ph ph-storefront"></i> Fulfilment Method</h3>
+                        <div class="service-toggle-desktop" style="display:inline-flex;">
+                            <button type="button" data-desktop-service="pickup" class="{% if service_type == 'pickup' %}active{% endif %}">
+                                <i class="ph ph-storefront" style="margin-right:6px;"></i>Pickup
+                            </button>
+                            {% if delivery_enabled %}
+                            <button type="button" data-desktop-service="delivery" class="{% if service_type == 'delivery' %}active{% endif %}">
+                                <i class="ph ph-moped" style="margin-right:6px;"></i>Delivery
+                            </button>
+                            {% endif %}
+                        </div>
+                        <p id="serviceSummary" class="checkout-section-note">
+                            {% if delivery_enabled and service_type == 'delivery' %}
+                            Delivered to your address after the kitchen confirms your order.
+                            {% else %}
+                            Collect from the shop when your order is ready.
+                            {% endif %}
+                        </p>
+                    </div>
 
-            <div class="form-group">
-                <label class="form-label">Phone Number *</label>
-                <input type="tel" name="customer_phone" class="form-input" required value="{{ default_customer_phone }}">
-            </div>
+                    <!-- Your Details -->
+                    <div class="checkout-form-section">
+                        <h3><i class="ph ph-user"></i> Your Details</h3>
 
-            <div class="form-group">
-                <label class="form-label">Email (optional)</label>
-                <input type="email" name="customer_email" class="form-input" value="{{ default_customer_email }}">
-            </div>
-        </div>
+                        <div class="form-group-desktop">
+                            <label for="customerName">Full Name *</label>
+                            <input type="text" id="customerName" name="customer_name" required autocomplete="name" value="{{ default_customer_name }}">
+                        </div>
 
-        {% if delivery_enabled %}
-        <div id="deliveryAddressCard" class="delivery-precision-card" style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);" {% if service_type != 'delivery' %}hidden{% endif %}>
-            <input type="hidden" name="delivery_formatted_address" id="deliveryFormattedAddress" value="{{ checkout_form.delivery_formatted_address|default:delivery_formatted_address }}">
-            <input type="hidden" name="delivery_place_id" id="deliveryPlaceId" value="{{ checkout_form.delivery_place_id|default:delivery_place_id }}">
-            <input type="hidden" name="delivery_latitude" id="deliveryLatitude" value="{{ checkout_form.delivery_latitude|default:delivery_latitude }}">
-            <input type="hidden" name="delivery_longitude" id="deliveryLongitude" value="{{ checkout_form.delivery_longitude|default:delivery_longitude }}">
-            <input type="hidden" name="delivery_distance_miles" id="deliveryDistanceMiles" value="{{ checkout_form.delivery_distance_miles|default:'' }}">
+                        <div class="form-row">
+                            <div class="form-group-desktop">
+                                <label for="customerPhone">Phone Number *</label>
+                                <input type="tel" id="customerPhone" name="customer_phone" required autocomplete="tel" inputmode="tel" value="{{ default_customer_phone }}">
+                            </div>
+                            <div class="form-group-desktop">
+                                <label for="customerEmail">Email (optional)</label>
+                                <input type="email" id="customerEmail" name="customer_email" autocomplete="email" value="{{ default_customer_email }}">
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="delivery-card-header">
-                <div>
-                    <div class="delivery-card-kicker"><i class="ph ph-crosshair"></i> Live delivery check</div>
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Delivery Address</h3>
-                    <p class="delivery-card-copy">
+                    {% if delivery_enabled %}
+                    <!-- Delivery Address -->
+                    <div class="checkout-form-section delivery-precision-card" id="deliveryAddressCard" {% if service_type != 'delivery' %}hidden{% endif %}>
+                        <input type="hidden" name="delivery_formatted_address" id="deliveryFormattedAddress" value="{{ checkout_form.delivery_formatted_address|default:delivery_formatted_address }}">
+                        <input type="hidden" name="delivery_place_id" id="deliveryPlaceId" value="{{ checkout_form.delivery_place_id|default:delivery_place_id }}">
+                        <input type="hidden" name="delivery_latitude" id="deliveryLatitude" value="{{ checkout_form.delivery_latitude|default:delivery_latitude }}">
+                        <input type="hidden" name="delivery_longitude" id="deliveryLongitude" value="{{ checkout_form.delivery_longitude|default:delivery_longitude }}">
+                        <input type="hidden" name="delivery_distance_miles" id="deliveryDistanceMiles" value="{{ checkout_form.delivery_distance_miles|default:'' }}">
+
+                        <div class="delivery-card-header">
+                            <div>
+                                <div class="delivery-card-kicker"><i class="ph ph-crosshair"></i> Live delivery check</div>
+                                <h3><i class="ph ph-map-pin"></i> Delivery Address</h3>
+                                <p class="delivery-card-copy">
+                                    {% if delivery_map.configured %}
+                                    Start typing your address and choose the exact result. We will confirm it is inside the delivery zone before payment.
+                                    {% else %}
+                                    Add the delivery address manually. The shop will confirm the final delivery details before preparation.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <span class="delivery-radius-pill"><i class="ph ph-map-pin-area"></i> {{ delivery_map.radius_miles|floatformat:1 }} mile zone</span>
+                        </div>
+
+                        <div id="deliveryMinimumNotice" class="delivery-minimum-panel {% if delivery_minimum_met %}is-met{% else %}is-short{% endif %}">
+                            <i class="ph ph-basket"></i>
+                            <span>
+                                Delivery minimum is £{{ delivery_minimum_order_amount|floatformat:2 }} before discounts.
+                                {% if delivery_minimum_met %}
+                                Your basket qualifies for delivery.
+                                {% else %}
+                                Add £{{ delivery_minimum_remaining|floatformat:2 }} more or choose pickup.
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div id="deliveryQuoteNotice" class="delivery-quote-panel" data-state="neutral" {% if service_type != 'delivery' %}hidden{% endif %}>
+                            <i class="ph ph-truck"></i>
+                            <span>Choose delivery details to calculate the delivery fee.</span>
+                        </div>
+
                         {% if delivery_map.configured %}
-                        Start typing your address and choose the exact result. We will confirm it is inside the delivery zone before payment.
+                        <div class="delivery-map-grid">
+                            <div class="delivery-search-panel">
+                                <div class="form-group-desktop">
+                                    <label for="deliveryAddressSearch">Find your address *</label>
+                                    <input type="search" id="deliveryAddressSearch" class="delivery-search-input" placeholder="Start typing your street and postcode" autocomplete="off">
+                                </div>
+                                <div id="deliveryMapStatus" class="delivery-map-status" data-state="neutral">
+                                    Choose an address to check delivery availability.
+                                </div>
+                            </div>
+                            <div id="deliveryMapShell" class="delivery-map-shell">
+                                <div id="deliveryMap" class="delivery-map-canvas"></div>
+                            </div>
+                        </div>
                         {% else %}
-                        Add the delivery address manually. The shop will confirm the final delivery details before preparation.
+                        <div class="delivery-manual-panel">
+                            <i class="ph ph-info" style="vertical-align: middle;"></i>
+                            Live map verification is not configured yet. Manual delivery entry is available and staff will confirm the details.
+                        </div>
                         {% endif %}
-                    </p>
-                </div>
-                <span class="delivery-radius-pill"><i class="ph ph-map-pin-area"></i> {{ delivery_map.radius_miles|floatformat:1 }} mile zone</span>
-            </div>
 
-            <div id="deliveryMinimumNotice" class="delivery-minimum-panel {% if delivery_minimum_met %}is-met{% else %}is-short{% endif %}">
-                <i class="ph ph-basket"></i>
-                <span>
-                    Delivery minimum is £{{ delivery_minimum_order_amount|floatformat:2 }} before discounts.
-                    {% if delivery_minimum_met %}
-                    Your basket qualifies for delivery.
-                    {% else %}
-                    Add £{{ delivery_minimum_remaining|floatformat:2 }} more or choose pickup.
-                    {% endif %}
-                </span>
-            </div>
-            <div id="deliveryQuoteNotice" class="delivery-quote-panel" data-state="neutral" {% if service_type != 'delivery' %}hidden{% endif %}>
-                <i class="ph ph-truck"></i>
-                <span>Choose delivery details to calculate the delivery fee.</span>
-            </div>
+                        <div class="delivery-address-grid">
+                            <div class="form-group-desktop full-span">
+                                <label for="addressLine1">Address Line 1 *</label>
+                                <input type="text" id="addressLine1" name="delivery_address_line1" autocomplete="address-line1" value="{{ checkout_form.delivery_address_line1|default:delivery_address_line1 }}">
+                            </div>
 
-            {% if delivery_map.configured %}
-            <div class="delivery-map-grid">
-                <div class="delivery-search-panel">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Find your address *</label>
-                        <input type="search" id="deliveryAddressSearch" class="form-input delivery-search-input" placeholder="Start typing your street and postcode" autocomplete="off">
-                    </div>
-                    <div id="deliveryMapStatus" class="delivery-map-status" data-state="neutral">
-                        Choose an address to check delivery availability.
-                    </div>
-                </div>
-                <div id="deliveryMapShell" class="delivery-map-shell">
-                    <div id="deliveryMap" class="delivery-map-canvas"></div>
-                </div>
-            </div>
-            {% else %}
-            <div class="delivery-manual-panel">
-                <i class="ph ph-info" style="vertical-align: middle;"></i>
-                Live map verification is not configured yet. Manual delivery entry is available and staff will confirm the details.
-            </div>
-            {% endif %}
+                            <div class="form-group-desktop full-span">
+                                <label for="addressLine2">Address Line 2</label>
+                                <input type="text" id="addressLine2" name="delivery_address_line2" autocomplete="address-line2" value="{{ checkout_form.delivery_address_line2|default:delivery_address_line2 }}">
+                            </div>
 
-            <div class="delivery-address-grid">
-            <div class="form-group full-span">
-                <label class="form-label">Address Line 1 *</label>
-                <input type="text" name="delivery_address_line1" id="addressLine1" class="form-input" value="{{ checkout_form.delivery_address_line1|default:delivery_address_line1 }}">
-            </div>
-
-            <div class="form-group full-span">
-                <label class="form-label">Address Line 2</label>
-                <input type="text" name="delivery_address_line2" id="addressLine2" class="form-input" value="{{ checkout_form.delivery_address_line2|default:delivery_address_line2 }}">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">City / Town *</label>
-                <input type="text" name="delivery_city" id="deliveryCity" class="form-input" value="{{ checkout_form.delivery_city|default:delivery_city }}">
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label">Postcode *</label>
-                <input type="text" name="delivery_postcode" id="deliveryPostcode" class="form-input" value="{{ checkout_form.delivery_postcode|default:delivery_postcode }}" style="text-transform: uppercase;">
-            </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Order Summary</h3>
-
-            <div style="display: flex; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
-                <span style="color: var(--text-secondary);">Service</span>
-                <span id="serviceSummaryValue" style="font-weight: 600;">{% if delivery_enabled and service_type == 'delivery' %}Delivery{% else %}Pickup{% endif %}</span>
-            </div>
-
-            {% for item in cart_items %}
-            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
-                <div>
-                    <span style="font-weight: 600;">{{ item.name }}</span>
-                    {% if item.modifiers %}
-                    <div style="font-size: 12px; color: var(--text-secondary);">
-                        {% for mod in item.modifiers %}+ {{ mod.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                    </div>
-                    {% endif %}
-                    <div style="font-size: 13px; color: var(--text-secondary);">x{{ item.quantity }}</div>
-                </div>
-                <span style="font-weight: 600;">£{{ item.line_total|floatformat:2 }}</span>
-            </div>
-            {% endfor %}
-
-            <div style="margin: 16px 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-                {% if reward_wallet_item %}
-                <div style="margin-bottom: 12px; padding: 12px; border-radius: 12px; background: var(--bg); border-left: 4px solid var(--brand);">
-                    <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <div>
-                            <div style="font-weight: 700;">Active Reward</div>
-                            <div style="font-size: 13px; color: var(--text-secondary);">{{ reward_wallet_item.title }}</div>
+                            <div class="form-row full-span">
+                                <div class="form-group-desktop">
+                                    <label for="deliveryCity">City / Town *</label>
+                                    <input type="text" id="deliveryCity" name="delivery_city" autocomplete="address-level2" value="{{ checkout_form.delivery_city|default:delivery_city }}">
+                                </div>
+                                <div class="form-group-desktop">
+                                    <label for="deliveryPostcode">Postcode *</label>
+                                    <input type="text" id="deliveryPostcode" name="delivery_postcode" autocomplete="postal-code" value="{{ checkout_form.delivery_postcode|default:delivery_postcode }}" style="text-transform:uppercase;">
+                                </div>
+                            </div>
                         </div>
-                        <form method="post" action="{% url 'loyalty:clear_wallet_item' %}" style="margin: 0;">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <button type="submit" class="btn btn-secondary" style="width: auto; padding: 10px 16px; margin: 0;">Remove</button>
-                        </form>
                     </div>
-                    {% if reward_wallet_error %}
-                    <p style="color: var(--error); font-size: 13px; margin-top: 8px;">{{ reward_wallet_error }}</p>
-                    {% elif discount > 0 and not voucher_code %}
-                    <p style="color: var(--success); font-size: 13px; margin-top: 8px;">Reward applied: -£{{ discount|floatformat:2 }}</p>
                     {% endif %}
-                </div>
-                {% elif active_offer %}
-                <div style="margin-bottom: 12px; padding: 12px; border-radius: 12px; background: var(--bg);">
-                    <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <div>
-                            <div style="font-weight: 700;">Active Offer</div>
-                            <div style="font-size: 13px; color: var(--text-secondary);">{{ active_offer.name }}</div>
+
+                    <!-- Service Time -->
+                    <div class="checkout-form-section">
+                        <h3 id="serviceTimeHeading"><i class="ph ph-clock"></i> {% if delivery_enabled and service_type == 'delivery' %}Delivery{% else %}Pickup{% endif %} Time</h3>
+                        <p id="serviceTimeDescription" class="checkout-section-lede">
+                            {% if delivery_enabled and service_type == 'delivery' %}
+                            When should we aim to arrive with your order?
+                            {% else %}
+                            When would you like to collect your order?
+                            {% endif %}
+                        </p>
+
+                        <input type="hidden" name="pickup_time" value="15">
+                        <div data-time-options="pickup" style="display:{% if delivery_enabled and service_type == 'delivery' %}none{% else %}block{% endif %};">
+                            {% if pickup_time_options %}
+                            <select name="fulfilment_time" class="fulfilment-time-select" {% if service_type == 'delivery' %}disabled{% endif %} aria-label="Pickup time">
+                                {% for option in pickup_time_options %}
+                                <option value="{{ option.value }}" data-summary="{{ option.summary }}"{% if forloop.first %} selected{% endif %}>
+                                    {{ option.primary }}{% if option.asap %} - {{ option.secondary }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div data-time-summary class="fulfilment-time-summary">{{ pickup_time_options.0.summary }}</div>
+                            {% else %}
+                            <div class="fulfilment-time-empty">No pickup times are available today.</div>
+                            {% endif %}
                         </div>
-                        <form method="post" action="{% url 'offers:clear' %}" style="margin: 0;">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <button type="submit" class="btn btn-secondary" style="width: auto; padding: 10px 16px; margin: 0;">Remove</button>
-                        </form>
+                        <div data-time-options="delivery" style="display:{% if delivery_enabled and service_type == 'delivery' %}block{% else %}none{% endif %};">
+                            {% if delivery_time_options %}
+                            <select name="fulfilment_time" class="fulfilment-time-select" {% if service_type != 'delivery' %}disabled{% endif %} aria-label="Delivery time">
+                                {% for option in delivery_time_options %}
+                                <option value="{{ option.value }}" data-summary="{{ option.summary }}"{% if forloop.first %} selected{% endif %}>
+                                    {{ option.primary }}{% if option.asap %} - {{ option.secondary }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div data-time-summary class="fulfilment-time-summary">{{ delivery_time_options.0.summary }}</div>
+                            {% else %}
+                            <div class="fulfilment-time-empty">No delivery times are available today.</div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% if offer_error %}
-                    <p style="color: var(--error); font-size: 13px; margin-top: 8px;">{{ offer_error }}</p>
-                    {% elif discount > 0 and not voucher_code %}
-                    <p style="color: var(--success); font-size: 13px; margin-top: 8px;">Offer applied automatically: -£{{ discount|floatformat:2 }}</p>
-                    {% endif %}
+
+                    <!-- Special Instructions -->
+                    <div class="checkout-form-section">
+                        <h3><i class="ph ph-notepad"></i> Special Instructions</h3>
+                        <div class="form-group-desktop" style="margin-bottom:0;">
+                            <textarea name="special_instructions" rows="3" placeholder="Any allergies, access notes, or special requests?">{{ checkout_form.special_instructions|default:'' }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="checkout-form-section">
+                        <h3><i class="ph ph-credit-card"></i> Payment Method</h3>
+
+                        <div class="payment-options">
+                            <label class="payment-option {% if online_payment_available %}active{% endif %}" id="onlinePaymentOption">
+                                <input type="radio" name="payment_method" value="online" {% if online_payment_available %}checked{% else %}disabled{% endif %}>
+                                <i class="ph ph-credit-card"></i>
+                                <div class="payment-option-info">
+                                    <strong>Pay Online</strong>
+                                    <span>{% if online_payment_available %}Secure card payment now{% else %}Unavailable right now{% endif %}</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        {% if not online_payment_available or payment_fallback_prompt %}
+                        <div class="alert alert--warning payment-fallback-panel" style="display:block;">
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+                                <i class="ph-fill ph-warning-circle"></i>
+                                <span>
+                                    {% if payment_fallback_prompt %}
+                                    {{ payment_fallback_prompt.message }}
+                                    {% else %}
+                                    Online card payments are unavailable right now. You can still place the order, but you must call or visit the shop to pay within {{ payment_fallback_hold_minutes }} minutes. The kitchen will not start until payment is received.
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if payment_fallback_available %}
+                            {% if site_settings.phone %}
+                            <div style="display:flex;flex-wrap:wrap;gap:0.65rem;margin-top:0.85rem;">
+                                <a href="tel:{{ site_settings.phone }}" class="btn btn--primary btn--sm"><i class="ph-bold ph-phone"></i> Call store</a>
+                            </div>
+                            {% endif %}
+                            <label class="payment-fallback-ack">
+                                <input type="checkbox" name="payment_fallback_acknowledged" value="1" {% if not online_payment_available %}required{% endif %}>
+                                <span>I understand I must pay the shop within {{ payment_fallback_hold_minutes }} minutes or the order will be cancelled.</span>
+                            </label>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right: Order Summary -->
+            <div class="order-summary-sidebar">
+                <h3>Order Summary</h3>
+
+                {% for item in cart_items %}
+                <div class="order-summary-item">
+                    <div>
+                        <div class="order-summary-item-name">{{ item.name }}</div>
+                        <div class="order-summary-item-qty">x{{ item.quantity }}</div>
+                        {% if item.modifiers %}
+                        <div class="order-summary-item-qty">
+                            {% for mod in item.modifiers %}
+                            + {{ mod.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="order-summary-item-price">£{{ item.line_total|floatformat:2 }}</div>
                 </div>
-                {% endif %}
-                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Voucher Code</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" name="voucher_code_input" class="form-input" placeholder="Enter code" value="{{ voucher_code }}" style="flex: 1; text-transform: uppercase;">
-                    <button type="button" onclick="applyVoucher()" class="btn btn-secondary" style="width: auto; padding: 14px 20px; margin: 0;">
-                        Apply
+                {% endfor %}
+
+                <!-- Voucher / rewards -->
+                <div class="voucher-block">
+                    {% if reward_wallet_item %}
+                    <div class="cart-promo-card cart-promo-card--reward">
+                        <div class="cart-promo-card-row">
+                            <div>
+                                <div class="cart-promo-card-title">Active Reward</div>
+                                <div class="cart-promo-card-sub">{{ reward_wallet_item.title }}</div>
+                            </div>
+                            <form method="post" action="{% url 'loyalty:clear_wallet_item' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn--secondary btn--sm">Remove</button>
+                            </form>
+                        </div>
+                        {% if reward_wallet_error %}
+                        <p class="cart-promo-card-error">{{ reward_wallet_error }}</p>
+                        {% elif discount > 0 and not voucher_code %}
+                        <p class="cart-promo-card-success">Reward applied: -£{{ discount|floatformat:2 }}</p>
+                        {% endif %}
+                    </div>
+                    {% elif active_offer %}
+                    <div class="cart-promo-card">
+                        <div class="cart-promo-card-row">
+                            <div>
+                                <div class="cart-promo-card-title">Active Offer</div>
+                                <div class="cart-promo-card-sub">{{ active_offer.name }}</div>
+                            </div>
+                            <form method="post" action="{% url 'offers:clear' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn--secondary btn--sm">Remove</button>
+                            </form>
+                        </div>
+                        {% if offer_error %}
+                        <p class="cart-promo-card-error">{{ offer_error }}</p>
+                        {% elif discount > 0 and not voucher_code %}
+                        <p class="cart-promo-card-success">Offer applied automatically: -£{{ discount|floatformat:2 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <label for="voucherInput">Voucher Code</label>
+                    <form class="voucher-form" id="voucherForm"
+                          hx-post="{% url 'orders:apply_voucher' %}"
+                          hx-target="#voucherFeedback"
+                          hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <input type="text" id="voucherInput" name="code" placeholder="Enter code" value="{{ voucher_code }}" autocomplete="off">
+                        <button type="submit">Apply</button>
+                    </form>
+                    {% if voucher_code %}
+                    <button type="button" class="voucher-remove-btn"
+                            style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;font-weight:600;margin-top:0.5rem;cursor:pointer;text-decoration:underline;"
+                            hx-post="{% url 'orders:apply_voucher' %}"
+                            hx-vals='{"code": ""}'
+                            hx-target="#voucherFeedback"
+                            hx-swap="innerHTML"
+                            hx-include="#voucherForm [name=csrfmiddlewaretoken]">
+                        Remove voucher "{{ voucher_code }}"
                     </button>
-                </div>
-                <div id="voucherFeedback"></div>
-                {% if voucher_error %}
-                <p style="color: var(--error); font-size: 13px; margin-top: 8px;">{{ voucher_error }}</p>
-                {% endif %}
-                {% if discount > 0 %}
-                <p style="color: var(--success); font-size: 13px; margin-top: 8px;">Discount applied: -£{{ discount|floatformat:2 }}</p>
-                {% endif %}
-            </div>
-
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: var(--text-secondary);">Subtotal</span>
-                <span>£{{ subtotal|floatformat:2 }}</span>
-            </div>
-            {% if discount > 0 %}
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--success);">
-                <span>Discount</span>
-                <span>-£{{ discount|floatformat:2 }}</span>
-            </div>
-            {% endif %}
-            <div id="deliveryFeeRow" style="display: none; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: var(--text-secondary);">Delivery fee</span>
-                <span id="deliveryFeeValue">£0.00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--border);">
-                <span>Total</span>
-                <span id="checkoutTotalValue">£{{ total|floatformat:2 }}</span>
-            </div>
-        </div>
-
-        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
-            <h3 id="serviceTimeHeading" style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
-                <i class="ph ph-clock" style="color: var(--brand);"></i>
-                {% if delivery_enabled and service_type == 'delivery' %}Delivery Time{% else %}Pickup Time{% endif %}
-            </h3>
-            <p id="serviceTimeDescription" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
-                {% if delivery_enabled and service_type == 'delivery' %}
-                When should we aim to arrive with your order?
-                {% else %}
-                When would you like to collect your order?
-                {% endif %}
-            </p>
-
-            <input type="hidden" name="pickup_time" value="15">
-            <div data-time-options="pickup" style="display: {% if delivery_enabled and service_type == 'delivery' %}none{% else %}block{% endif %};">
-                {% if pickup_time_options %}
-                <select name="fulfilment_time" class="form-input fulfilment-time-select" {% if service_type == 'delivery' %}disabled{% endif %} aria-label="Pickup time">
-                    {% for option in pickup_time_options %}
-                    <option value="{{ option.value }}" data-summary="{{ option.summary }}"{% if forloop.first %} selected{% endif %}>
-                        {{ option.primary }}{% if option.asap %} - {{ option.secondary }}{% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-                <div class="fulfilment-time-summary" data-time-summary style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">{{ pickup_time_options.0.summary }}</div>
-                {% else %}
-                <div style="font-size: 14px; color: var(--text-secondary);">No pickup times are available today.</div>
-                {% endif %}
-            </div>
-            <div data-time-options="delivery" style="display: {% if delivery_enabled and service_type == 'delivery' %}block{% else %}none{% endif %};">
-                {% if delivery_time_options %}
-                <select name="fulfilment_time" class="form-input fulfilment-time-select" {% if service_type != 'delivery' %}disabled{% endif %} aria-label="Delivery time">
-                    {% for option in delivery_time_options %}
-                    <option value="{{ option.value }}" data-summary="{{ option.summary }}"{% if forloop.first %} selected{% endif %}>
-                        {{ option.primary }}{% if option.asap %} - {{ option.secondary }}{% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-                <div class="fulfilment-time-summary" data-time-summary style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">{{ delivery_time_options.0.summary }}</div>
-                {% else %}
-                <div style="font-size: 14px; color: var(--text-secondary);">No delivery times are available today.</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Special Instructions</h3>
-            <textarea name="special_instructions" class="form-input" rows="3" placeholder="Any allergies, access notes, or special requests?">{{ checkout_form.special_instructions|default:'' }}</textarea>
-        </div>
-
-        <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Payment Method</h3>
-
-            <label id="onlinePaymentOption" style="display: flex; align-items: center; padding: 16px; border: 2px solid {% if online_payment_available %}var(--brand){% else %}var(--border){% endif %}; border-radius: 12px; margin-bottom: 12px; cursor: {% if online_payment_available %}pointer{% else %}not-allowed{% endif %}; background: {% if online_payment_available %}rgba(255,107,53,0.05){% else %}var(--bg){% endif %}; opacity: {% if online_payment_available %}1{% else %}0.6{% endif %};">
-                <input type="radio" name="payment_method" value="online" {% if online_payment_available %}checked{% else %}disabled{% endif %} style="margin-right: 12px; width: 20px; height: 20px; accent-color: var(--brand);">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600;">
-                        <i class="ph ph-credit-card" style="margin-right: 8px; color: var(--brand);"></i>
-                        Pay Online
-                    </div>
-                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
-                        {% if online_payment_available %}Secure card payment now{% else %}Unavailable right now{% endif %}
-                    </div>
-                </div>
-            </label>
-
-            <div id="paymentAvailabilityAlert" class="alert {% if online_payment_available %}alert-error{% else %}alert-warning{% endif %}" style="margin: 12px 0 0; {% if online_payment_available and not payment_fallback_prompt %}display: none;{% endif %}">
-                <span id="paymentAvailabilityMessage">
-                    {% if payment_fallback_prompt %}
-                    {{ payment_fallback_prompt.message }}
-                    {% else %}
-                    Online card payments are unavailable right now. You can still place the order, but you must call or visit the shop to pay within {{ payment_fallback_hold_minutes }} minutes. The kitchen will not start until payment is received.
                     {% endif %}
-                </span>
-                {% if payment_fallback_available %}
-                {% if site_settings.phone %}
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;">
-                    <a href="tel:{{ site_settings.phone }}" class="btn btn-brand" style="padding: 12px;"><i class="ph ph-phone" style="vertical-align: middle;"></i> Call store</a>
+                    <div id="voucherFeedback"></div>
+                    {% if voucher_error %}
+                    <p class="voucher-note-error">{{ voucher_error }}</p>
+                    {% endif %}
+                    {% if discount > 0 %}
+                    <p class="voucher-note-success">✓ Discount applied: -£{{ discount|floatformat:2 }}</p>
+                    {% endif %}
                 </div>
-                {% endif %}
-                <label style="display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-weight: 700;">
-                    <input type="checkbox" name="payment_fallback_acknowledged" value="1" {% if not online_payment_available %}required{% endif %} style="margin-top: 3px; width: 18px; height: 18px;">
-                    <span>I understand I must pay the shop within {{ payment_fallback_hold_minutes }} minutes or the order will be cancelled.</span>
-                </label>
-                {% endif %}
+
+                {% include "orders/partials/checkout_totals.html" %}
+
+                <button type="submit" id="submitBtn" form="checkoutForm" class="btn btn--primary btn--block btn--lg" style="margin-top:1.25rem;" {% if not online_payment_available and not payment_fallback_available %}disabled{% endif %}>
+                    {% if online_payment_available %}
+                    Pay £{{ total|floatformat:2 }}
+                    {% elif payment_fallback_available %}
+                    Place Order - Pay Shop
+                    {% else %}
+                    Online Payment Unavailable
+                    {% endif %}
+                </button>
+
+                <p id="paymentNote" class="checkout-submit-note">
+                    {% if online_payment_available %}
+                    <i class="ph ph-lock-key"></i> Secure payment
+                    {% elif payment_fallback_available %}
+                    <i class="ph ph-warning-circle"></i> Pay the shop within {{ payment_fallback_hold_minutes }} minutes. Preparation starts after payment.
+                    {% else %}
+                    <i class="ph ph-warning-circle"></i> Online payment is unavailable right now.
+                    {% endif %}
+                </p>
             </div>
         </div>
+    </div>
+</section>
 
-        <button type="submit" id="submitBtn" class="btn btn-brand" style="width: 100%; margin-bottom: 12px; {% if not online_payment_available and not payment_fallback_available %}opacity: 0.6; cursor: not-allowed;{% endif %}" {% if not online_payment_available and not payment_fallback_available %}disabled{% endif %}>
-            <span id="btnText">
-                {% if online_payment_available %}
-                Pay £{{ total|floatformat:2 }}
-                {% elif payment_fallback_available %}
-                Place Order - Pay Shop
-                {% else %}
-                Online Payment Unavailable
-                {% endif %}
-            </span>
-        </button>
-
-        <p id="paymentNote" style="text-align: center; font-size: 13px; color: var(--text-secondary);">
-            {% if online_payment_available %}
-            <i class="ph ph-lock-key" style="vertical-align: middle;"></i>
-            Secure payment powered by Mollie
-            {% elif payment_fallback_available %}
-            <i class="ph ph-warning-circle" style="vertical-align: middle;"></i>
-            Pay the shop within {{ payment_fallback_hold_minutes }} minutes. Preparation starts after payment.
-            {% else %}
-            <i class="ph ph-warning-circle" style="vertical-align: middle;"></i>
-            Online payment is unavailable right now.
-            {% endif %}
-        </p>
-    </form>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/checkout-delivery-map.js' %}"></script>
 <script>
-const onlinePaymentAvailable = {{ online_payment_available|yesno:"true,false" }};
-const paymentFallbackAvailable = {{ payment_fallback_available|yesno:"true,false" }};
-const paymentFallbackPromptActive = {{ payment_fallback_prompt|yesno:"true,false" }};
-const paymentFallbackHoldMinutes = {{ payment_fallback_hold_minutes }};
-const deliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
-const checkoutForm = document.getElementById('checkoutForm');
-const serviceTypeInput = document.getElementById('serviceTypeInput');
-const deliveryAddressCard = document.getElementById('deliveryAddressCard');
-const serviceSummary = document.getElementById('serviceSummary');
-const serviceSummaryValue = document.getElementById('serviceSummaryValue');
-const serviceTimeHeading = document.getElementById('serviceTimeHeading');
-const serviceTimeDescription = document.getElementById('serviceTimeDescription');
-const submitBtn = document.getElementById('submitBtn');
-const btnText = document.getElementById('btnText');
-const paymentNote = document.getElementById('paymentNote');
-const paymentAlert = document.getElementById('paymentAvailabilityAlert');
-const paymentAlertMessage = document.getElementById('paymentAvailabilityMessage');
-const onlineRadio = document.querySelector('input[name="payment_method"][value="online"]');
-const baseTotalLabel = '£{{ total|floatformat:2 }}';
-let checkoutTotalLabel = baseTotalLabel;
-const deliveryMinimumAmount = {{ delivery_minimum_order_amount|floatformat:2 }};
-const deliveryMinimumRemaining = {{ delivery_minimum_remaining|floatformat:2 }};
-const deliveryMinimumMet = {{ delivery_minimum_met|yesno:"true,false" }};
-const deliveryQuoteUrl = '{% url "orders:delivery_quote" %}';
-const deliveryFeeRow = document.getElementById('deliveryFeeRow');
-const deliveryFeeValue = document.getElementById('deliveryFeeValue');
-const checkoutTotalValue = document.getElementById('checkoutTotalValue');
-const deliveryQuoteNotice = document.getElementById('deliveryQuoteNotice');
-const checkoutDeliveryConfig = {
-    configured: {{ delivery_map.configured|yesno:"true,false" }},
-    apiKey: '{{ delivery_map.api_key|escapejs }}',
-    shopLat: {{ delivery_map.shop_lat|default:"null" }},
-    shopLng: {{ delivery_map.shop_lng|default:"null" }},
-    radiusMiles: {{ delivery_map.radius_miles|default:"3"|floatformat:2 }},
-    mapId: '{{ delivery_map.map_id|escapejs }}',
-    shopName: '{{ site_settings.shop_name|escapejs }}',
-    serviceInputId: 'serviceTypeInput'
+window.CHECKOUT_CONFIG = {
+    onlinePaymentAvailable: {{ online_payment_available|yesno:"true,false" }},
+    paymentFallbackAvailable: {{ payment_fallback_available|yesno:"true,false" }},
+    paymentFallbackHoldMinutes: {{ payment_fallback_hold_minutes }},
+    deliveryMinimumAmount: {{ delivery_minimum_order_amount|floatformat:2 }},
+    deliveryMinimumRemaining: {{ delivery_minimum_remaining|floatformat:2 }},
+    deliveryMinimumMet: {{ delivery_minimum_met|yesno:"true,false" }},
+    deliveryQuoteUrl: '{% url "orders:delivery_quote" %}',
+    deliveryMap: {
+        configured: {{ delivery_map.configured|yesno:"true,false" }},
+        apiKey: '{{ delivery_map.api_key|escapejs }}',
+        shopLat: {{ delivery_map.shop_lat|default:"null" }},
+        shopLng: {{ delivery_map.shop_lng|default:"null" }},
+        radiusMiles: {{ delivery_map.radius_miles|default:"3"|floatformat:2 }},
+        mapId: '{{ delivery_map.map_id|escapejs }}',
+        shopName: '{{ site_settings.shop_name|escapejs }}',
+        serviceInputId: 'desktopServiceType'
+    }
 };
-let deliveryPlaceIsValid = !checkoutDeliveryConfig.configured || Boolean(document.getElementById('deliveryLatitude')?.value && document.getElementById('deliveryLongitude')?.value);
-let deliveryQuoteReady = false;
-let deliveryQuoteRequestId = 0;
-let checkoutDeliveryController;
-
-function normalizeServiceType(service) {
-    return service === 'delivery' && !deliveryEnabled ? 'pickup' : service;
-}
-
-function deliveryIsSelected() {
-    return serviceTypeInput?.value === 'delivery' && deliveryEnabled;
-}
-
-function applyDeliveryLocationGate() {
-    if (!checkoutDeliveryConfig.configured || !deliveryIsSelected() || deliveryPlaceIsValid) {
-        return;
-    }
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.6';
-    submitBtn.style.cursor = 'not-allowed';
-    btnText.textContent = 'Choose Delivery Address';
-    paymentNote.innerHTML = '<i class="ph ph-map-pin" style="vertical-align: middle;"></i> Select an address from the suggestions before placing a delivery order.';
-}
-
-function applyDeliveryMinimumGate() {
-    if (!deliveryIsSelected() || deliveryMinimumMet) {
-        return;
-    }
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.6';
-    submitBtn.style.cursor = 'not-allowed';
-    btnText.textContent = 'Add More for Delivery';
-    paymentNote.innerHTML = `<i class="ph ph-basket" style="vertical-align: middle;"></i> Delivery starts at £${deliveryMinimumAmount.toFixed(2)} before discounts. Add £${deliveryMinimumRemaining.toFixed(2)} more or choose pickup.`;
-}
-
-function applyDeliveryQuoteGate() {
-    if (!deliveryIsSelected() || !deliveryMinimumMet || deliveryQuoteReady) {
-        return;
-    }
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.6';
-    submitBtn.style.cursor = 'not-allowed';
-    btnText.textContent = 'Confirm Delivery Fee';
-    paymentNote.innerHTML = '<i class="ph ph-truck" style="vertical-align: middle;"></i> Delivery fee must be confirmed before payment.';
-}
-
-function syncCheckoutSubmitState() {
-    applySelectedPaymentMethod();
-    applyDeliveryMinimumGate();
-    applyDeliveryQuoteGate();
-    applyDeliveryLocationGate();
-}
-
-function setDeliveryQuoteNotice(state, message) {
-    if (!deliveryQuoteNotice) return;
-    deliveryQuoteNotice.hidden = !deliveryIsSelected();
-    deliveryQuoteNotice.dataset.state = state || 'neutral';
-    const text = deliveryQuoteNotice.querySelector('span');
-    if (text) text.textContent = message;
-}
-
-function resetDeliveryQuote(message) {
-    deliveryQuoteReady = !deliveryIsSelected();
-    checkoutTotalLabel = baseTotalLabel;
-    if (checkoutTotalValue) checkoutTotalValue.textContent = baseTotalLabel;
-    if (deliveryFeeRow) deliveryFeeRow.style.display = 'none';
-    if (deliveryFeeValue) deliveryFeeValue.textContent = '£0.00';
-    if (deliveryIsSelected()) {
-        setDeliveryQuoteNotice('neutral', message || 'Choose delivery details to calculate the delivery fee.');
-    } else if (deliveryQuoteNotice) {
-        deliveryQuoteNotice.hidden = true;
-    }
-}
-
-function applyDeliveryQuote(data) {
-    if (!data.quote_ready) {
-        resetDeliveryQuote(data.error || data.message || 'Choose delivery details to calculate the delivery fee.');
-        if (data.error) setDeliveryQuoteNotice('error', data.error);
-        syncCheckoutSubmitState();
-        return;
-    }
-
-    deliveryQuoteReady = true;
-    const fee = parseFloat(data.delivery_fee || '0') || 0;
-    const total = parseFloat(data.total || '{{ total|floatformat:2 }}') || 0;
-    checkoutTotalLabel = `£${total.toFixed(2)}`;
-    if (deliveryFeeRow) deliveryFeeRow.style.display = 'flex';
-    if (deliveryFeeValue) deliveryFeeValue.textContent = `£${fee.toFixed(2)}`;
-    if (checkoutTotalValue) checkoutTotalValue.textContent = checkoutTotalLabel;
-    const distanceInput = document.getElementById('deliveryDistanceMiles');
-    if (distanceInput && data.delivery_distance_miles) {
-        distanceInput.value = data.delivery_distance_miles;
-    }
-    const detailParts = [`Delivery fee £${fee.toFixed(2)}`];
-    if (data.delivery_zone_name) detailParts.push(data.delivery_zone_name);
-    if (data.delivery_eta_minutes) detailParts.push(`~${data.delivery_eta_minutes} mins`);
-    setDeliveryQuoteNotice('success', detailParts.join(' · '));
-    syncCheckoutSubmitState();
-}
-
-function requestDeliveryQuote() {
-    if (!deliveryIsSelected()) {
-        resetDeliveryQuote();
-        syncCheckoutSubmitState();
-        return;
-    }
-    if (!deliveryMinimumMet) {
-        resetDeliveryQuote(`Delivery starts at £${deliveryMinimumAmount.toFixed(2)} before discounts.`);
-        syncCheckoutSubmitState();
-        return;
-    }
-    if (checkoutDeliveryConfig.configured && !deliveryPlaceIsValid) {
-        resetDeliveryQuote('Choose your delivery address to calculate the delivery fee.');
-        syncCheckoutSubmitState();
-        return;
-    }
-
-    const requestId = ++deliveryQuoteRequestId;
-    setDeliveryQuoteNotice('loading', 'Calculating delivery fee...');
-    fetch(deliveryQuoteUrl, {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: new FormData(checkoutForm)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (requestId !== deliveryQuoteRequestId) return;
-        applyDeliveryQuote(data);
-    })
-    .catch(() => {
-        if (requestId !== deliveryQuoteRequestId) return;
-        deliveryQuoteReady = false;
-        setDeliveryQuoteNotice('error', 'Could not calculate delivery fee. Please try again.');
-        syncCheckoutSubmitState();
-    });
-}
-
-function setVoucherFeedback(message, isError) {
-    const feedback = document.getElementById('voucherFeedback');
-    if (!feedback) {
-        return;
-    }
-
-    feedback.innerHTML = '';
-    if (!message) {
-        return;
-    }
-
-    const paragraph = document.createElement('p');
-    paragraph.style.color = isError ? 'var(--error)' : 'var(--success)';
-    paragraph.style.fontSize = '13px';
-    paragraph.style.marginTop = '8px';
-    paragraph.textContent = message;
-    feedback.appendChild(paragraph);
-}
-
-function applyVoucher() {
-    const code = document.querySelector('input[name="voucher_code_input"]').value;
-
-    fetch('{% url "orders:apply_voucher" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `code=${encodeURIComponent(code)}`
-    })
-    .then(async response => {
-        const data = await response.json().catch(() => ({}));
-        if (response.ok) {
-            window.location.reload();
-            return;
-        }
-
-        setVoucherFeedback(data.error || data.message || 'Could not apply voucher right now.', true);
-    })
-    .catch(() => {
-        setVoucherFeedback('Could not apply voucher right now.', true);
-    });
-}
-
-function persistServiceType(service) {
-    return fetch('{% url "orders:set_service_type" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `service_type=${encodeURIComponent(service)}`
-    }).catch(() => null);
-}
-
-function updateServiceButtons(service) {
-    document.querySelectorAll('.toggle-option').forEach(button => {
-        button.classList.toggle('active', button.dataset.service === service);
-    });
-}
-
-function updateServiceCopy(service) {
-    const isDelivery = service === 'delivery' && deliveryEnabled;
-    if (serviceSummary) {
-        {% if delivery_enabled %}
-        serviceSummary.textContent = isDelivery
-            ? 'Delivered to your address after the kitchen confirms your order.'
-            : 'Collect from the shop when your order is ready.';
-        {% else %}
-        serviceSummary.textContent = 'Collect from the shop when your order is ready.';
-        {% endif %}
-    }
-    if (serviceSummaryValue) {
-        serviceSummaryValue.textContent = isDelivery ? 'Delivery' : 'Pickup';
-    }
-    if (serviceTimeHeading) {
-        {% if delivery_enabled %}
-        serviceTimeHeading.innerHTML = `<i class="ph ph-clock" style="color: var(--brand);"></i> ${isDelivery ? 'Delivery Time' : 'Pickup Time'}`;
-        {% else %}
-        serviceTimeHeading.innerHTML = '<i class="ph ph-clock" style="color: var(--brand);"></i> Pickup Time';
-        {% endif %}
-    }
-    if (serviceTimeDescription) {
-        {% if delivery_enabled %}
-        serviceTimeDescription.textContent = isDelivery
-            ? 'When should we aim to arrive with your order?'
-            : 'When would you like to collect your order?';
-        {% else %}
-        serviceTimeDescription.textContent = 'When would you like to collect your order?';
-        {% endif %}
-    }
-    if (deliveryAddressCard) {
-        deliveryAddressCard.hidden = !isDelivery;
-        checkoutDeliveryController?.setServiceSelected(isDelivery);
-    }
-    syncFulfilmentTimeOptions(isDelivery ? 'delivery' : 'pickup');
-
-    ['delivery_address_line1', 'delivery_city', 'delivery_postcode'].forEach(name => {
-        const input = document.querySelector(`[name="${name}"]`);
-        if (input) {
-            input.required = isDelivery;
-        }
-    });
-}
-
-function syncFulfilmentTimeOptions(service) {
-    document.querySelectorAll('[data-time-options]').forEach(group => {
-        const isActive = group.dataset.timeOptions === service;
-        group.style.display = isActive ? 'block' : 'none';
-        group.querySelectorAll('select[name="fulfilment_time"]').forEach(select => {
-            select.disabled = !isActive;
-            if (isActive && !select.value && select.options.length) {
-                select.selectedIndex = 0;
-            }
-        });
-        updateFulfilmentTimeSummary(group);
-    });
-}
-
-function updateFulfilmentTimeSummary(group) {
-    const select = group.querySelector('select[name="fulfilment_time"]');
-    const summary = group.querySelector('[data-time-summary]');
-    if (!select || !summary) return;
-    const selectedOption = select.options[select.selectedIndex];
-    summary.textContent = selectedOption?.dataset.summary || '';
-}
-
-function updatePaymentOptionStyles() {
-    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-        const label = radio.closest('label');
-        if (radio.disabled) {
-            label.style.borderColor = 'var(--border)';
-            label.style.background = 'var(--bg)';
-            label.style.opacity = '0.6';
-            label.style.cursor = 'not-allowed';
-            return;
-        }
-
-        label.style.opacity = '1';
-        label.style.cursor = 'pointer';
-        if (radio.checked) {
-            label.style.borderColor = 'var(--brand)';
-            label.style.background = 'rgba(255,107,53,0.05)';
-        } else {
-            label.style.borderColor = 'var(--border)';
-            label.style.background = 'transparent';
-        }
-    });
-}
-
-function applySelectedPaymentMethod() {
-    if (paymentFallbackPromptActive || !onlineRadio || !onlineRadio.checked || !onlinePaymentAvailable) {
-        if (paymentFallbackAvailable) {
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            submitBtn.style.cursor = 'pointer';
-            btnText.textContent = `Place Order - Pay within ${paymentFallbackHoldMinutes} mins`;
-            paymentNote.innerHTML = '<i class="ph ph-warning-circle" style="vertical-align: middle;"></i> The kitchen starts only after the shop receives payment.';
-            checkoutForm.action = '{% url "payments:create" %}';
-            return;
-        }
-        submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.6';
-        submitBtn.style.cursor = 'not-allowed';
-        btnText.textContent = 'Online Payment Unavailable';
-        paymentNote.innerHTML = '<i class="ph ph-warning-circle" style="vertical-align: middle;"></i> Online payment is unavailable right now.';
-        return;
-    }
-
-    submitBtn.disabled = false;
-    submitBtn.style.opacity = '1';
-    submitBtn.style.cursor = 'pointer';
-
-    btnText.textContent = `Pay ${checkoutTotalLabel}`;
-    paymentNote.innerHTML = '<i class="ph ph-lock-key" style="vertical-align: middle;"></i> Secure payment powered by Mollie';
-    checkoutForm.action = '{% url "payments:create" %}';
-}
-
-function syncPaymentState() {
-    onlineRadio.disabled = !onlinePaymentAvailable || paymentFallbackPromptActive;
-    if (onlinePaymentAvailable && !paymentFallbackPromptActive) {
-        onlineRadio.checked = true;
-        paymentAlert.style.display = 'none';
-    } else {
-        onlineRadio.checked = false;
-        paymentAlert.style.display = 'block';
-        if (paymentAlertMessage && !paymentFallbackPromptActive) {
-            paymentAlertMessage.textContent = `Online card payments are unavailable. You can place the order and pay the shop within ${paymentFallbackHoldMinutes} minutes before preparation starts.`;
-        }
-    }
-
-    updatePaymentOptionStyles();
-    syncCheckoutSubmitState();
-}
-
-function updateServiceType(service, persist = true) {
-    service = normalizeServiceType(service);
-    serviceTypeInput.value = service;
-    localStorage.setItem('service_type', service);
-    updateServiceButtons(service);
-    updateServiceCopy(service);
-    syncPaymentState();
-    requestDeliveryQuote();
-    syncCheckoutSubmitState();
-    if (persist) {
-        persistServiceType(service);
-    }
-}
-
-document.querySelectorAll('select[name="fulfilment_time"]').forEach(select => {
-    select.addEventListener('change', function() {
-        updateFulfilmentTimeSummary(this.closest('[data-time-options]'));
-    });
-});
-
-document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        updatePaymentOptionStyles();
-        syncCheckoutSubmitState();
-    });
-});
-
-document.addEventListener('checkout-delivery:validity', event => {
-    deliveryPlaceIsValid = Boolean(event.detail.valid);
-    requestDeliveryQuote();
-    syncCheckoutSubmitState();
-});
-
-['delivery_address_line1', 'delivery_city', 'delivery_postcode'].forEach(name => {
-    document.querySelector(`[name="${name}"]`)?.addEventListener('input', () => {
-        if (!checkoutDeliveryConfig.configured) requestDeliveryQuote();
-    });
-});
-
-document.querySelector('input[name="customer_phone"]').addEventListener('blur', function() {
-    const phone = this.value.replace(/\s/g, '');
-    const ukRegex = /^(07\d{9}|\+447\d{9})$/;
-    if (phone && !ukRegex.test(phone)) {
-        this.style.borderColor = 'var(--error)';
-        const existingError = this.parentElement.querySelector('.phone-error');
-        if (existingError) existingError.remove();
-
-        const errorMsg = document.createElement('p');
-        errorMsg.className = 'phone-error';
-        errorMsg.style.cssText = 'color: var(--error); font-size: 13px; margin-top: 8px;';
-        errorMsg.textContent = 'Please enter a valid UK mobile number (e.g., 07747055935)';
-        this.parentElement.appendChild(errorMsg);
-    } else {
-        this.style.borderColor = '';
-        const existingError = this.parentElement.querySelector('.phone-error');
-        if (existingError) existingError.remove();
-    }
-});
-
-checkoutForm.addEventListener('submit', function(event) {
-    if (checkoutDeliveryConfig.configured && deliveryIsSelected() && !deliveryPlaceIsValid) {
-        event.preventDefault();
-        document.getElementById('deliveryAddressSearch')?.focus();
-        syncCheckoutSubmitState();
-    }
-});
-
-checkoutDeliveryController = window.CheckoutDeliveryMap?.init(checkoutDeliveryConfig);
-requestDeliveryQuote();
-
-const savedServiceType = localStorage.getItem('service_type');
-if (savedServiceType === 'pickup' || savedServiceType === 'delivery') {
-    const nextServiceType = normalizeServiceType(savedServiceType);
-    updateServiceType(nextServiceType, nextServiceType !== serviceTypeInput.value || nextServiceType !== savedServiceType);
-} else {
-    updateServiceType(serviceTypeInput.value, false);
-}
 </script>
+<script src="{% static 'js/checkout-delivery-map.js' %}" defer></script>
+<script src="{% static 'js/checkout.js' %}" defer></script>
 {% endblock %}

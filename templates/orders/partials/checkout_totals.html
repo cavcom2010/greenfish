@@ -1,0 +1,22 @@
+{# Checkout totals block. Re-rendered out-of-band after voucher apply/remove. #}
+{# The delivery fee row is managed client-side by checkout.js.               #}
+<div id="checkoutTotals" {% if oob %}hx-swap-oob="true"{% endif %}>
+    <div class="summary-row">
+        <span>Subtotal</span>
+        <span>£{{ subtotal|floatformat:2 }}</span>
+    </div>
+    {% if discount > 0 %}
+    <div class="summary-row summary-row--discount">
+        <span>Discount</span>
+        <span>-£{{ discount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    <div id="deliveryFeeRow" class="summary-row" style="display:none;">
+        <span>Delivery fee</span>
+        <span id="deliveryFeeValue">£0.00</span>
+    </div>
+    <div class="summary-total">
+        <span>Total</span>
+        <span id="checkoutTotalValue" data-base-total="{{ total|floatformat:2 }}">£{{ total|floatformat:2 }}</span>
+    </div>
+</div>

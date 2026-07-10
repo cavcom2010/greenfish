@@ -18,3 +18,7 @@ db.sqlite3
 .home_nginx/logs/
 .home_nginx/run/
 .production/
+
+# Local tool artifacts
+dump.rdb
+.kombai/

@@ -113,8 +113,7 @@ def service_worker(request):
 @require_GET
 def offline(request):
     """Offline page."""
-    template = "desktop/pwa/offline.html" if getattr(request, "is_desktop", True) else "pwa/offline.html"
-    return render(request, template)
+    return render(request, "pwa/offline.html")
 
 
 @require_POST

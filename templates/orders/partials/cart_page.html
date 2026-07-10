@@ -1,0 +1,156 @@
+{# Cart page content — swapped wholesale by HTMX on quantity/remove updates. #}
+<div id="cartPage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% if cart_items %}
+    <div class="cart-layout">
+        <!-- Cart Items -->
+        <div>
+            <div class="cart-table-header">
+                <div class="cart-col-item">Item</div>
+                <div class="cart-col-price">Price</div>
+                <div class="cart-col-qty">Qty</div>
+                <div class="cart-col-total">Total</div>
+                <div class="cart-col-action"><span class="sr-only">Remove</span></div>
+            </div>
+
+            {% for item in cart_items %}
+            <div class="cart-table-row">
+                <div class="cart-col-item">
+                    <div class="cart-item-name">{{ item.name }}</div>
+                    {% if item.modifiers %}
+                    <div class="cart-item-modifiers">
+                        {% for mod in item.modifiers %}
+                        + {{ mod.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="cart-item-price-mobile">£{{ item.line_total|floatformat:2 }}</div>
+                </div>
+
+                <div class="cart-col-price">
+                    £{{ item.line_total|floatformat:2 }}
+                </div>
+
+                <div class="cart-col-qty">
+                    <div class="cart-qty-controls">
+                        <button type="button" class="cart-qty-btn"
+                                hx-post="{% url 'orders:update_cart_item' item.id %}"
+                                hx-vals='{"quantity": {{ item.quantity|add:"-1" }}}'
+                                hx-target="#cartPage" hx-swap="outerHTML"
+                                aria-label="Decrease quantity of {{ item.name }}">−</button>
+                        <span class="cart-qty-value">{{ item.quantity }}</span>
+                        <button type="button" class="cart-qty-btn"
+                                hx-post="{% url 'orders:update_cart_item' item.id %}"
+                                hx-vals='{"quantity": {{ item.quantity|add:"1" }}}'
+                                hx-target="#cartPage" hx-swap="outerHTML"
+                                {% if item.quantity >= max_cart_item_quantity %}disabled{% endif %}
+                                aria-label="Increase quantity of {{ item.name }}">+</button>
+                    </div>
+                    {% if item.quantity >= max_cart_item_quantity %}
+                    <div class="cart-large-order-hint">
+                        Need more than {{ max_cart_item_quantity }}? <a href="{% url 'core:large_orders' %}">Request a large order</a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="cart-col-total">
+                    £{{ item.line_total|floatformat:2 }}
+                </div>
+
+                <div class="cart-col-action">
+                    <button type="button" class="cart-remove-btn"
+                            hx-post="{% url 'orders:remove_from_cart' item.id %}"
+                            hx-target="#cartPage" hx-swap="outerHTML"
+                            aria-label="Remove {{ item.name }} from basket">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Order Summary -->
+        <div class="cart-summary">
+            <h3>Order Summary</h3>
+
+            {% if reward_wallet_item %}
+            <div class="cart-promo-card cart-promo-card--reward">
+                <div class="cart-promo-card-row">
+                    <div>
+                        <div class="cart-promo-card-title">Active Reward</div>
+                        <div class="cart-promo-card-sub">{{ reward_wallet_item.title }}</div>
+                    </div>
+                    <form method="post" action="{% url 'loyalty:clear_wallet_item' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn btn--secondary btn--sm">Remove</button>
+                    </form>
+                </div>
+                {% if reward_wallet_error %}
+                <p class="cart-promo-card-error">{{ reward_wallet_error }}</p>
+                {% elif discount > 0 and not voucher_code %}
+                <p class="cart-promo-card-success">Reward applied: -£{{ discount|floatformat:2 }}</p>
+                {% endif %}
+            </div>
+            {% elif active_offer %}
+            <div class="cart-promo-card">
+                <div class="cart-promo-card-row">
+                    <div>
+                        <div class="cart-promo-card-title">Active Offer</div>
+                        <div class="cart-promo-card-sub">{{ active_offer.name }}</div>
+                    </div>
+                    <form method="post" action="{% url 'offers:clear' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn btn--secondary btn--sm">Remove</button>
+                    </form>
+                </div>
+                {% if offer_error %}
+                <p class="cart-promo-card-error">{{ offer_error }}</p>
+                {% elif discount > 0 and not voucher_code %}
+                <p class="cart-promo-card-success">Offer applied automatically: -£{{ discount|floatformat:2 }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="summary-row">
+                <span>Subtotal</span>
+                <span>£{{ subtotal|floatformat:2 }}</span>
+            </div>
+
+            {% if discount > 0 %}
+            <div class="summary-row summary-row--discount">
+                <span>Discount</span>
+                <span>-£{{ discount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+
+            <div class="summary-total">
+                <span>Total</span>
+                <span>£{{ cart_total|floatformat:2 }}</span>
+            </div>
+
+            <a href="{% url 'orders:checkout' %}" class="btn btn--primary btn--block btn--lg" style="margin-top:1.25rem;">
+                Proceed to Checkout <i class="ph-bold ph-arrow-right"></i>
+            </a>
+
+            <a href="{% url 'menu:menu' %}" class="cart-continue-link">
+                <i class="ph ph-arrow-left"></i>
+                Continue Shopping
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="card card--padded">
+        <div class="empty-state">
+            <i class="ph ph-shopping-cart"></i>
+            <h3>Your basket is empty</h3>
+            <p>Add some delicious items from our menu to get started.</p>
+            <a href="{% url 'menu:menu' %}" class="btn btn--primary">
+                <i class="ph-bold ph-fork-knife"></i>
+                Browse Menu
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>

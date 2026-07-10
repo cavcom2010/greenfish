@@ -156,13 +156,14 @@ class PublicRouteTests(TestCase):
         self.assertContains(html_response, 'class="desktop-item-detail"')
         self.assertContains(html_response, "Request a large order")
 
+        # Phones get the same unified partial (rendered as a bottom sheet).
         mobile_html_response = self.client.get(
             reverse("menu:item_detail", args=[self.menu_item.pk]),
             HTTP_HX_REQUEST="true",
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
         )
         self.assertEqual(mobile_html_response.status_code, 200)
-        self.assertContains(mobile_html_response, 'id="modal-add-btn"')
+        self.assertContains(mobile_html_response, 'id="modalAddBtn"')
         self.assertContains(mobile_html_response, "Request a large order")
 
         json_response = self.client.get(
@@ -181,6 +182,8 @@ class PublicRouteTests(TestCase):
             is_popular=False,
         )
 
+        # Menu page is unified: phones get the same responsive template with
+        # server-side category filtering and the shared item modal.
         response = self.client.get(
             reverse("menu:menu"),
             {"category": category.id},
@@ -188,14 +191,21 @@ class PublicRouteTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="menu-filters-sticky"')
-        self.assertContains(response, 'data-menu-category=""')
         self.assertContains(response, 'id="menuGrid"')
-        self.assertContains(response, f'data-category-id="{self.menu_item.category_id}"')
-        self.assertContains(response, f'data-category-id="{side_item.category_id}"')
-        self.assertContains(response, "function addToCartFromModal")
-        self.assertContains(response, "modal-add-btn")
-        self.assertContains(response, ".modal-item-actions")
+        self.assertContains(response, side_item.name)
+        self.assertNotContains(response, self.menu_item.name)
+        self.assertContains(response, "openItemModal")
+        self.assertContains(response, "quickAddToCart")
+
+        # Home carries the client-side category/dietary filter contract.
+        home_response = self.client.get(
+            reverse("core:home"),
+            HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+        )
+        self.assertEqual(home_response.status_code, 200)
+        self.assertContains(home_response, 'data-menu-category=""')
+        self.assertContains(home_response, f'data-category-id="{self.menu_item.category_id}"')
+        self.assertContains(home_response, f'data-category-id="{side_item.category_id}"')
 
     def test_category_fragment_renders(self):
         response = self.client.get(
@@ -271,20 +281,20 @@ class PublicRouteTests(TestCase):
         android_tablet_ua = "Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 Chrome/124 Safari/537.36"
         ipad_ua = "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1"
 
-        for ua in [phone_ua, android_phone_ua]:
-            with self.subTest(device="phone", ua=ua):
+        # Home and offline are unified responsive templates: every device gets
+        # the same shell (bottom nav is shown/hidden with CSS). The middleware
+        # flag itself is still exercised below until it is fully removed.
+        for ua, expected_desktop in [
+            (phone_ua, False),
+            (android_phone_ua, False),
+            (android_tablet_ua, True),
+            (ipad_ua, True),
+        ]:
+            with self.subTest(ua=ua):
                 response = self.client.get(home_url, HTTP_USER_AGENT=ua)
-                self.assertFalse(response.wsgi_request.is_desktop)
-                self.assertContains(response, 'class="mobile-container"')
-                self.assertNotContains(response, 'class="site-header"')
-                offline_response = self.client.get(offline_url, HTTP_USER_AGENT=ua)
-                self.assertContains(offline_response, 'class="mobile-container"')
-
-        for ua in [android_tablet_ua, ipad_ua]:
-            with self.subTest(device="tablet", ua=ua):
-                response = self.client.get(home_url, HTTP_USER_AGENT=ua)
-                self.assertTrue(response.wsgi_request.is_desktop)
+                self.assertEqual(response.wsgi_request.is_desktop, expected_desktop)
                 self.assertContains(response, 'class="site-header"')
+                self.assertContains(response, 'class="bottom-nav"')
                 self.assertNotContains(response, 'class="mobile-container"')
                 offline_response = self.client.get(offline_url, HTTP_USER_AGENT=ua)
                 self.assertContains(offline_response, 'class="site-header"')

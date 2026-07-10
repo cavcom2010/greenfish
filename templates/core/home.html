@@ -1,976 +1,394 @@
-{% extends "base.html" %}
-{% load media_tags %}
+{% extends "layout/base.html" %}
+{% load static media_tags %}
 
-{% block title %}{{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}Order{% endblock %}
+{% block title %}{{ site_settings.shop_name }} — Order Online{% endblock %}
 
 {% block extra_css %}
-<style>
-@media (max-width: 768px) {
-    .menu-filters-sticky {
-        position: sticky;
-        top: calc(var(--home-menu-filters-top, 108px) + env(safe-area-inset-top));
-        z-index: 90;
-        background: rgba(250, 250, 250, 0.98);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border-bottom: 1px solid var(--border);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
-    }
-
-    #menu-section {
-        scroll-margin-top: calc(var(--home-menu-filters-top, 108px) + env(safe-area-inset-top) + 12px);
-    }
-
-    .menu-dietary-filters {
-        display: flex;
-        gap: 8px;
-        padding: 0 16px 16px;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-    }
-
-    .menu-dietary-filters::-webkit-scrollbar {
-        display: none;
-    }
-
-    .menu-filters-sticky .category-pill,
-    .menu-filters-sticky .dietary-pill {
-        appearance: none;
-        -webkit-appearance: none;
-    }
-
-    .food-card.is-hidden {
-        display: none !important;
-    }
-}
-</style>
+<link rel="stylesheet" href="{% static 'css/pages/home.css' %}">
 {% endblock %}
 
 {% block content %}
-<!-- Service Toggle -->
-<div class="service-toggle">
-    <button type="button" class="toggle-option {% if service_type == 'pickup' %}active{% endif %}" data-service="pickup" onclick="switchService('pickup')">Pickup</button>
-    {% if delivery_enabled %}
-    <button type="button" class="toggle-option {% if service_type == 'delivery' %}active{% endif %}" data-service="delivery" onclick="switchService('delivery')">Delivery</button>
-    {% endif %}
-</div>
 
-<!-- Hero Banner -->
-{% if hero_offers %}
-{% with offer=hero_offers.0 %}
-<div class="hero">
-    <div class="hero-content">
-        <h3>{{ offer.hero_title|default:offer.name }}</h3>
-        <p>{{ offer.hero_subtitle|default:offer.description }}</p>
-        <a href="#menu-section" class="hero-btn">
-            Order Now <i class="ph-bold ph-arrow-right"></i>
-        </a>
+<!-- ═══ HERO ═══ -->
+<section class="hero-section">
+    <div class="hero-card {% if site_settings.hero_image %}has-restaurant-image{% endif %}"{% if site_settings.hero_image %} style="--hero-bg-image: url('{{ site_settings.hero_image.url }}');"{% endif %}>
+        <div class="hero-copy">
+            <div class="hero-text">
+                {% if hero_offers %}
+                {% with offer=hero_offers.0 %}
+                <div class="hero-badge">
+                    <i class="ph-fill ph-fire"></i>
+                    {{ offer.name }}
+                </div>
+                <h1>{{ offer.hero_title|default:offer.name }}</h1>
+                <p>{{ offer.hero_subtitle|default:offer.description }}</p>
+                {% endwith %}
+                {% else %}
+                <div class="hero-badge">
+                    <i class="ph-fill ph-fire"></i>
+                    {{ site_settings.tagline|default:"Fresh & Made to Order" }}
+                </div>
+                <h1>{{ site_settings.shop_name }} <span>Online</span></h1>
+                <p>{{ site_settings.shop_description|default:"Your favourite dishes, freshly prepared." }} Ready for pickup{% if delivery_enabled %} or delivered to your door{% endif %}.</p>
+                {% endif %}
+
+                <div class="hero-actions">
+                    <a href="#menu-section" class="hero-btn-primary">
+                        <i class="ph-bold ph-fork-knife"></i>
+                        Order Now
+                    </a>
+                    <a href="{% url 'menu:menu' %}" class="hero-btn-secondary">
+                        View Full Menu
+                    </a>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">Fresh</div>
+                        <div class="hero-stat-label">Made to Order</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">Local</div>
+                        <div class="hero-stat-label">Independent Kitchen</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">{% if delivery_enabled %}Delivery{% else %}Pickup{% endif %}</div>
+                        <div class="hero-stat-label">Available Today</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-plate" aria-hidden="true">
+            <div class="plate-glow"></div>
+            <div class="plate">
+                <div class="plate-food">
+                    {% if popular_items.0.image %}
+                    <img src="{{ popular_items.0.image|image_variant:'card' }}" alt="">
+                    {% else %}
+                    <span>{{ popular_items.0.category.icon|default:"🍲" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if popular_items %}
+            <div class="floating-chip">
+                <strong>Popular this week</strong>
+                <span>{{ popular_items.0.name }} · £{{ popular_items.0.price }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SERVICE TOGGLE ═══ -->
+<div class="service-bar">
+    <div class="service-bar-inner">
+        <div class="service-toggle-desktop">
+            <button type="button" data-desktop-service="pickup" class="{% if service_type == 'pickup' %}active{% endif %}">
+                <i class="ph ph-storefront" style="margin-right:6px;"></i>Pickup
+            </button>
+            {% if delivery_enabled %}
+            <button type="button" data-desktop-service="delivery" class="{% if service_type == 'delivery' %}active{% endif %}">
+                <i class="ph ph-moped" style="margin-right:6px;"></i>Delivery
+            </button>
+            {% endif %}
+        </div>
+        <div class="service-info">
+            <i class="ph-fill ph-check-circle"></i>
+            <span id="serviceInfoText">
+                {% if delivery_enabled and service_type == 'delivery' %}
+                Delivered to your door
+                {% else %}
+                Collect from the shop
+                {% endif %}
+            </span>
+        </div>
+        <input type="hidden" id="desktopServiceType" value="{{ service_type }}">
     </div>
 </div>
-{% endwith %}
-{% else %}
-<div class="hero">
-    <div class="hero-content">
-        <h3>Authentic Zimbabwean Cuisine!</h3>
-        <p>Sadza, Nyama, Muriwo & more. Taste of home.</p>
-        <a href="#menu-section" class="hero-btn">
-            Order Now <i class="ph-bold ph-arrow-right"></i>
-        </a>
-    </div>
-</div>
-{% endif %}
 
 {% if recent_orders %}
-<!-- Order Again -->
-<h2 class="section-title">Order Again</h2>
-<div class="menu-list" style="padding: 0; margin-bottom: 24px;">
-    {% for order in recent_orders %}
-    <form method="post" action="{% url 'accounts:reorder' order.id %}" class="list-item" style="margin-bottom: 10px;">
-        {% csrf_token %}
-        <i class="ph ph-clock-counter-clockwise" style="font-size: 24px; margin-right: 14px; color: var(--brand);"></i>
-        <div class="list-content">
-            <div class="list-title">{{ order.order_number }} · £{{ order.total_amount }}</div>
-            <div class="list-desc">{{ order.item_count }} item{{ order.item_count|pluralize }} · {{ order.created_at|date:"d M" }}</div>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Order <span>Again</span></h2>
+                <p>Your recent favourites, ready to add back to your basket.</p>
+            </div>
+            <a href="{% url 'accounts:order_history' %}" class="section-link">
+                Order History <i class="ph-bold ph-arrow-right"></i>
+            </a>
         </div>
-        <button type="submit" class="btn btn-brand" style="width: auto; padding: 10px 14px; border-radius: 999px; font-size: 13px;">Reorder</button>
-    </form>
-    {% endfor %}
-</div>
+
+        <div class="reorder-grid">
+            {% for order in recent_orders %}
+            <form method="post" action="{% url 'accounts:reorder' order.id %}" class="reorder-card">
+                {% csrf_token %}
+                <div class="reorder-card-head">
+                    <span class="reorder-card-icon">
+                        <i class="ph ph-clock-counter-clockwise"></i>
+                    </span>
+                    <div>
+                        <div class="reorder-card-number">{{ order.order_number }}</div>
+                        <div class="reorder-card-date">{{ order.created_at|date:"d M Y" }}</div>
+                    </div>
+                </div>
+                <div class="reorder-card-meta">
+                    <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>
+                    <strong class="reorder-card-total">£{{ order.total_amount }}</strong>
+                </div>
+                <button type="submit" class="btn btn--primary btn--block">Reorder</button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+</section>
 {% endif %}
 
 {% if favorite_items %}
-<!-- Saved Favourites -->
-<h2 class="section-title">Your Favourites</h2>
-<div class="menu-grid">
-    {% for item in favorite_items %}
-    <div class="food-card" onclick="openItemModal({{ item.id }})">
-        <div class="food-image">
-            {% if item.image %}
-            <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-            {% else %}
-            <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
-            {% endif %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Your <span>Favourites</span></h2>
+                <p>Saved dishes for faster repeat ordering.</p>
+            </div>
+            <a href="{% url 'menu:menu' %}" class="section-link">
+                Browse Menu <i class="ph-bold ph-arrow-right"></i>
+            </a>
         </div>
-        <div class="food-name">{{ item.name }}</div>
-        <div class="food-price">£{{ item.price }}</div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
 
-<!-- Popular Items (Quick Picks) -->
-<h2 class="section-title">Popular Now</h2>
-<div class="menu-grid">
-    {% for item in popular_items %}
-    <div class="food-card" onclick="openItemModal({{ item.id }})">
-        <div class="food-image">
-            {% if item.image %}
-            <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-            {% else %}
-            <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
-            {% endif %}
-        </div>
-        <div class="food-name">{{ item.name }}</div>
-        <div class="food-price">£{{ item.price }}</div>
-    </div>
-    {% empty %}
-    <p style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 20px;">
-        No popular items yet.
-    </p>
-    {% endfor %}
-</div>
-
-<!-- Full Menu Section -->
-<div id="menu-section">
-    <!-- Categories -->
-    <h2 class="section-title" id="menuSectionTitle">
-        {% if active_category %}
-            {{ active_category.name }}
-        {% else %}
-            Full Menu
-        {% endif %}
-    </h2>
-    <div class="menu-filters-sticky" id="menuFiltersSticky">
-        <!-- Categories -->
-        <div class="categories">
-            <button type="button" class="category-pill {% if not active_category %}active{% endif %}" data-menu-category="" data-menu-label="Full Menu" aria-pressed="{% if not active_category %}true{% else %}false{% endif %}">All</button>
-            {% for category in categories %}
-            <button type="button" class="category-pill {% if active_category == category %}active{% endif %}" data-menu-category="{{ category.id }}" data-menu-label="{{ category.name|escape }}" aria-pressed="{% if active_category == category %}true{% else %}false{% endif %}">{{ category.name }}</button>
+        <div class="menu-grid-desktop">
+            {% for item in favorite_items %}
+            <div class="menu-card" onclick="openItemModal({{ item.id }})">
+                <div class="menu-card-image">
+                    {% if item.image %}
+                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
+                    {% else %}
+                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
+                    {% endif %}
+                    <div class="menu-card-badges">
+                        <span class="popular-badge"><i class="ph-fill ph-heart"></i> Saved</span>
+                    </div>
+                </div>
+                <div class="menu-card-body">
+                    <div class="menu-card-title">{{ item.name }}</div>
+                    {% if item.description %}
+                    <div class="menu-card-desc">{{ item.description }}</div>
+                    {% endif %}
+                    <div class="menu-card-footer">
+                        <span class="menu-card-price">£{{ item.price }}</span>
+                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
         </div>
-        
-        <!-- Dietary Filters -->
-        <div class="menu-dietary-filters">
-            <button type="button"
-               class="dietary-pill {% if dietary_filter == 'vegetarian' %}active{% endif %}" 
-               data-menu-dietary="vegetarian"
-               aria-pressed="{% if dietary_filter == 'vegetarian' %}true{% else %}false{% endif %}"
-               style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'vegetarian' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'vegetarian' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'vegetarian' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+    </div>
+</section>
+{% endif %}
+
+{% if popular_items %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Popular <span>Right Now</span></h2>
+                <p>Our most loved dishes, ordered by customers this week.</p>
+            </div>
+            <a href="{% url 'menu:menu' %}" class="section-link">
+                View Full Menu <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="menu-grid-desktop">
+            {% for item in popular_items %}
+            <div class="menu-card" onclick="openItemModal({{ item.id }})">
+                <div class="menu-card-image">
+                    {% if item.image %}
+                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
+                    {% else %}
+                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
+                    {% endif %}
+                    {% if item.is_popular %}
+                    <div class="menu-card-badges">
+                        <span class="popular-badge">Popular</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="menu-card-body">
+                    <div class="menu-card-title">{{ item.name }}</div>
+                    {% if item.description %}
+                    <div class="menu-card-desc">{{ item.description }}</div>
+                    {% endif %}
+                    <div class="menu-card-footer">
+                        <span class="menu-card-price">£{{ item.price }}</span>
+                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if hero_offers|length > 1 %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Today's <span>Offers</span></h2>
+                <p>Don't miss out on these limited-time deals.</p>
+            </div>
+            <a href="{% url 'offers:list' %}" class="section-link">
+                All Offers <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="offers-grid">
+            {% for offer in hero_offers|slice:"1:" %}
+            <a href="{% url 'offers:detail' offer.id %}" class="offer-card-desktop">
+                <div class="offer-bg"></div>
+                <div class="offer-card-content">
+                    <h3>{{ offer.name }}</h3>
+                    <p>{{ offer.description }}</p>
+                    <span class="offer-btn-desktop">
+                        View Offer <i class="ph-bold ph-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ═══ FULL MENU ═══ -->
+<section class="section" id="menu-section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2 id="menuSectionTitle">
+                    {% if active_category %}
+                    {{ active_category.name }}
+                    {% elif dietary_filter %}
+                    {{ dietary_filter|title }} options
+                    {% else %}
+                    Full Menu
+                    {% endif %}
+                </h2>
+                <p>Browse and filter — no page reloads.</p>
+            </div>
+        </div>
+
+        <!-- Category pills (client-side filter) -->
+        <div class="pill-row">
+            <button type="button" class="pill {% if not active_category %}active{% endif %}"
+                    data-menu-category="" data-menu-label="Full Menu"
+                    aria-pressed="{% if not active_category %}true{% else %}false{% endif %}">All Items</button>
+            {% for category in categories %}
+            <button type="button" class="pill {% if active_category == category %}active{% endif %}"
+                    data-menu-category="{{ category.id }}" data-menu-label="{{ category.name|escape }}"
+                    aria-pressed="{% if active_category == category %}true{% else %}false{% endif %}">{{ category.name }}</button>
+            {% endfor %}
+        </div>
+
+        <!-- Dietary pills -->
+        <div class="dietary-filter-row">
+            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'vegetarian' %}active{% endif %}"
+                    data-menu-dietary="vegetarian" aria-pressed="{% if dietary_filter == 'vegetarian' %}true{% else %}false{% endif %}">
                 🥬 Vegetarian
             </button>
-            <button type="button"
-               class="dietary-pill {% if dietary_filter == 'vegan' %}active{% endif %}"
-               data-menu-dietary="vegan"
-               aria-pressed="{% if dietary_filter == 'vegan' %}true{% else %}false{% endif %}"
-               style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'vegan' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'vegan' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'vegan' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'vegan' %}active{% endif %}"
+                    data-menu-dietary="vegan" aria-pressed="{% if dietary_filter == 'vegan' %}true{% else %}false{% endif %}">
                 🌱 Vegan
             </button>
-            <button type="button"
-               class="dietary-pill {% if dietary_filter == 'gluten-free' %}active{% endif %}"
-               data-menu-dietary="gluten-free"
-               aria-pressed="{% if dietary_filter == 'gluten-free' %}true{% else %}false{% endif %}"
-               style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'gluten-free' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'gluten-free' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'gluten-free' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'gluten-free' %}active{% endif %}"
+                    data-menu-dietary="gluten-free" aria-pressed="{% if dietary_filter == 'gluten-free' %}true{% else %}false{% endif %}">
                 🌾 Gluten-Free
             </button>
-            <button type="button"
-               class="dietary-pill {% if dietary_filter == 'halal' %}active{% endif %}"
-               data-menu-dietary="halal"
-               aria-pressed="{% if dietary_filter == 'halal' %}true{% else %}false{% endif %}"
-               style="flex-shrink: 0; padding: 8px 16px; background: {% if dietary_filter == 'halal' %}var(--success-bg){% else %}var(--surface){% endif %}; border: 2px solid {% if dietary_filter == 'halal' %}var(--success){% else %}var(--border){% endif %}; border-radius: 20px; font-size: 13px; font-weight: 600; color: {% if dietary_filter == 'halal' %}var(--success){% else %}var(--text){% endif %}; text-decoration: none;">
+            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'halal' %}active{% endif %}"
+                    data-menu-dietary="halal" aria-pressed="{% if dietary_filter == 'halal' %}true{% else %}false{% endif %}">
                 ☪️ Halal
             </button>
-            {% if dietary_filter %}
-            <button type="button"
-               data-menu-dietary=""
-               data-menu-clear="dietary"
-               aria-pressed="false"
-               style="flex-shrink: 0; padding: 8px 16px; background: var(--error-bg); border: 2px solid var(--error); border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--error); text-decoration: none;">
+            <button type="button" class="dietary-filter-pill clear" data-menu-dietary="" data-menu-clear="dietary"
+                    aria-pressed="false" {% if not dietary_filter %}hidden{% endif %}>
                 ✕ Clear Filter
             </button>
-            {% endif %}
+        </div>
+
+        <!-- Search -->
+        {% if all_items|length > 4 %}
+        <div class="menu-search-bar" style="margin-top:1.5rem;">
+            <input type="text" id="menuSearchInput" class="menu-search-input"
+                   placeholder="Search menu items…"
+                   aria-label="Search menu">
+            <i class="ph ph-magnifying-glass menu-search-icon"></i>
+            <button type="button" class="menu-search-clear" id="menuSearchClear" aria-label="Clear search">
+                <i class="ph ph-x"></i>
+            </button>
+            <span class="menu-search-shortcut">⌘K</span>
+        </div>
+        {% endif %}
+
+        <!-- Menu grid: all items rendered, filtered client-side -->
+        <div class="menu-grid-desktop" style="margin-top:1.5rem;" id="menuGrid">
+            {% for item in all_items %}
+            <div class="menu-card" onclick="openItemModal({{ item.id }})"
+                 data-category-id="{{ item.category_id }}"
+                 data-dietary-tags="{{ item.dietary_tags|join:','|lower|escapejs }}"
+                 data-search-name="{{ item.name|lower|escapejs }}"
+                 data-search-desc="{{ item.description|default:''|lower|escapejs }}">
+                <div class="menu-card-image">
+                    {% if item.image %}
+                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
+                    {% else %}
+                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
+                    {% endif %}
+                    {% if item.dietary_tags %}
+                    <div class="menu-card-badges">
+                        {% for tag in item.dietary_tags|slice:":2" %}
+                        <span class="dietary-badge">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="menu-card-body">
+                    <div class="menu-card-title">{{ item.name }}</div>
+                    {% if item.description %}
+                    <div class="menu-card-desc">{{ item.description }}</div>
+                    {% endif %}
+                    <div class="menu-card-footer">
+                        <span class="menu-card-price">£{{ item.price }}</span>
+                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state home-menu-empty">
+                <i class="ph ph-fork-knife"></i>
+                <h3>No items yet</h3>
+                <p>Check back soon — we're always adding new dishes!</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="empty-state home-menu-empty" id="menuNoResults" hidden>
+            <i class="ph ph-magnifying-glass"></i>
+            <h3>No items match</h3>
+            <p>Try a different search term or clear your filters.</p>
         </div>
     </div>
+</section>
 
-    <!-- Full Menu Grid -->
-    <div class="menu-grid" id="menuGrid">
-        {% for item in all_items %}
-        <div class="food-card" onclick="openItemModal({{ item.id }})"
-             data-category-id="{{ item.category_id }}"
-             data-dietary-tags="{{ item.dietary_tags|join:','|lower|escapejs }}">
-            <div class="food-image">
-                {% if item.image %}
-                <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-                {% else %}
-                <span style="font-size: 48px;">{{ item.category.icon|default:"🍽️" }}</span>
-                {% endif %}
-            </div>
-            <div class="food-name">{{ item.name }}</div>
-            <div class="food-price">£{{ item.price }}</div>
-            {% if item.dietary_tags %}
-            <div style="font-size: 11px; color: var(--success); margin-top: 4px;">
-                {{ item.dietary_tags_display }}
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    <p id="menuNoResults" hidden style="text-align: center; color: var(--text-secondary); padding: 40px 16px 24px;">
-        No items match your filters.
-    </p>
-</div>
-
-<div style="height: 100px;"></div>
-
-<!-- Item Modal (hidden by default) -->
-<div id="itemModal" class="item-modal" onclick="closeItemModal(event)">
-    <div class="item-modal-sheet" onclick="event.stopPropagation()">
-        <div id="modalContent">Loading...</div>
-    </div>
-</div>
-
-<style>
-.item-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    align-items: flex-end;
-    background: rgba(0,0,0,0.5);
-    z-index: 2000;
-}
-
-.item-modal-sheet {
-    width: 100%;
-    max-width: 430px;
-    height: min(92dvh, 640px);
-    max-height: calc(100dvh - var(--safe-top, 0px) - 10px);
-    margin: 0 auto;
-    background: white;
-    border-radius: 20px 20px 0 0;
-    overflow: hidden;
-    animation: slideUp 0.3s ease;
-    display: flex;
-    flex-direction: column;
-}
-
-#modalContent,
-#modalContent > .modal-item-detail {
-    min-height: 0;
-    height: 100%;
-}
-
-.modal-item-detail {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    background: white;
-}
-
-.modal-item-close {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: rgba(255,255,255,0.92);
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 5;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-}
-
-.modal-item-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 24px 24px 44px;
-    scrollbar-width: thin;
-}
-
-.modal-item-detail::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: var(--modal-actions-height, 124px);
-    height: 58px;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.96));
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 3;
-}
-
-.modal-item-detail.has-more-content::after {
-    opacity: 1;
-}
-
-.modal-scroll-cue {
-    position: absolute;
-    left: 50%;
-    bottom: calc(var(--modal-actions-height, 124px) + 12px);
-    transform: translateX(-50%);
-    z-index: 4;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(17, 24, 39, 0.9);
-    color: #fff;
-    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.22);
-    pointer-events: none;
-}
-
-.modal-scroll-cue i {
-    font-size: 16px;
-    animation: modalScrollCueBounce 1.2s ease-in-out infinite;
-}
-
-.modal-item-detail.has-more-content .modal-scroll-cue {
-    display: inline-flex;
-}
-
-.modal-item-detail.has-seen-scroll .modal-scroll-cue {
-    display: none;
-}
-
-.modal-item-detail.has-seen-scroll::after,
-.modal-item-detail.is-at-scroll-end::after {
-    opacity: 0;
-}
-
-.modal-item-actions {
-    flex: 0 0 auto;
-    padding: 14px 24px calc(16px + var(--safe-bottom));
-    background: rgba(255,255,255,0.98);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
-}
-
-.modal-item-image {
-    width: 100%;
-    height: clamp(120px, 24dvh, 190px);
-    background: var(--bg);
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 18px;
-    overflow: hidden;
-}
-
-.modal-item-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.modal-item-emoji {
-    font-size: clamp(56px, 16vw, 76px);
-}
-
-.modal-recommendations {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.modal-recommendations::-webkit-scrollbar {
-    display: none;
-}
-
-.modal-recommendation-card {
-    flex: 0 0 108px;
-    background: var(--bg);
-    border-radius: 12px;
-    padding: 10px;
-    text-align: center;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: border-color 0.2s;
-}
-
-.modal-recommendation-card:hover {
-    border-color: var(--brand);
-}
-
-.modal-recommendation-image {
-    width: 52px;
-    height: 52px;
-    background: white;
-    border-radius: 50%;
-    margin: 0 auto 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-}
-
-.modal-recommendation-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.modal-item-quantity {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.modal-item-stepper {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    background: var(--bg);
-    padding: 8px 16px;
-    border-radius: 24px;
-}
-
-.modal-item-stepper .qty-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed !important;
-}
-
-.modal-large-order-link {
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin: -4px 0 12px;
-    text-align: right;
-}
-
-.modal-large-order-link a {
-    color: var(--brand);
-    font-weight: 700;
-    text-decoration: none;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-
-@keyframes modalScrollCueBounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(4px); }
-}
-
-@media (max-height: 700px) {
-    .item-modal-sheet {
-        height: min(92dvh, 614px);
-    }
-
-    .modal-item-scroll {
-        padding: 18px 24px 40px;
-    }
-
-    .modal-item-actions {
-        padding-top: 12px;
-    }
-
-    .modal-item-image {
-        height: 132px;
-        margin-bottom: 14px;
-    }
-
-    .modal-item-detail h2 {
-        font-size: 22px !important;
-    }
-
-    .modal-recommendation-card {
-        flex-basis: 96px;
-        padding: 9px;
-    }
-
-    .modal-recommendation-image {
-        width: 46px;
-        height: 46px;
-    }
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// Measure the mobile header height so the sticky filters sit directly beneath it.
-(function() {
-    const statusBar = document.querySelector('.status-bar');
-    if (!statusBar) return;
-
-    const syncStickyOffset = () => {
-        document.documentElement.style.setProperty('--home-menu-filters-top', `${statusBar.offsetHeight}px`);
-    };
-
-    syncStickyOffset();
-    window.addEventListener('resize', syncStickyOffset);
-})();
-
-const deliveryEnabled = {{ delivery_enabled|yesno:"true,false" }};
-let currentService = normalizeServiceType('{{ service_type|default:"pickup" }}');
-let currentMenuFilters = {
-    category: '',
-    dietary: ''
-};
-
-function normalizeServiceType(service) {
-    return service === 'delivery' && !deliveryEnabled ? 'pickup' : service;
-}
-
-function getMenuTitleForFilters(filters) {
-    if (filters.category) {
-        const categoryLink = document.querySelector(`[data-menu-category="${filters.category}"]`);
-        return categoryLink ? (categoryLink.dataset.menuLabel || categoryLink.textContent.trim()) : 'Full Menu';
-    }
-
-    if (filters.dietary) {
-        const label = filters.dietary
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, letter => letter.toUpperCase());
-        return `${label} options`;
-    }
-
-    return 'Full Menu';
-}
-
-function normalizeMenuFilters(filters) {
-    return {
-        category: filters.category || '',
-        dietary: filters.dietary || '',
-    };
-}
-
-function updateMenuUrl(filters, replace = false) {
-    const url = new URL(window.location.href);
-
-    if (filters.category) {
-        url.searchParams.set('category', filters.category);
-    } else {
-        url.searchParams.delete('category');
-    }
-
-    if (filters.dietary) {
-        url.searchParams.set('dietary', filters.dietary);
-    } else {
-        url.searchParams.delete('dietary');
-    }
-
-    const nextUrl = url.pathname + (url.search ? url.search : '') + url.hash;
-    if (replace) {
-        history.replaceState(filters, '', nextUrl);
-    } else {
-        history.pushState(filters, '', nextUrl);
-    }
-}
-
-function applyMenuFilters(nextFilters, options = {}) {
-    currentMenuFilters = normalizeMenuFilters(nextFilters);
-
-    const menuGrid = document.getElementById('menuGrid');
-    const noResults = document.getElementById('menuNoResults');
-    const title = document.getElementById('menuSectionTitle');
-    const cards = menuGrid ? Array.from(menuGrid.querySelectorAll('.food-card')) : [];
-    let visibleCount = 0;
-
-    cards.forEach(card => {
-        const cardCategoryId = card.dataset.categoryId || '';
-        const cardDietaryTags = (card.dataset.dietaryTags || '')
-            .split(',')
-            .map(tag => tag.trim().toLowerCase())
-            .filter(Boolean);
-
-        const matchesCategory = !currentMenuFilters.category || cardCategoryId === currentMenuFilters.category;
-        const matchesDietary = !currentMenuFilters.dietary || cardDietaryTags.includes(currentMenuFilters.dietary);
-        const visible = matchesCategory && matchesDietary;
-
-        card.classList.toggle('is-hidden', !visible);
-        if (visible) visibleCount++;
-    });
-
-    if (title) {
-        title.textContent = getMenuTitleForFilters(currentMenuFilters);
-    }
-
-    document.querySelectorAll('[data-menu-category]').forEach(link => {
-        const linkCategory = link.dataset.menuCategory || '';
-        const isActive = linkCategory === currentMenuFilters.category || (!currentMenuFilters.category && linkCategory === '');
-        link.classList.toggle('active', isActive);
-        link.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    });
-
-    document.querySelectorAll('[data-menu-dietary]').forEach(link => {
-        const linkDietary = link.dataset.menuDietary || '';
-        const isActive = linkDietary === currentMenuFilters.dietary;
-        link.classList.toggle('active', isActive);
-        link.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    });
-
-    if (noResults) {
-        noResults.hidden = visibleCount > 0;
-    }
-
-    if (options.updateUrl !== false) {
-        updateMenuUrl(currentMenuFilters, Boolean(options.replaceUrl));
-    }
-}
-
-function readMenuFiltersFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return normalizeMenuFilters({
-        category: params.get('category') || '',
-        dietary: params.get('dietary') || '',
-    });
-}
-
-const initialMenuFilters = readMenuFiltersFromUrl();
-applyMenuFilters(initialMenuFilters, { updateUrl: false });
-history.replaceState(initialMenuFilters, '', window.location.href);
-
-window.addEventListener('popstate', function(event) {
-    const nextFilters = event.state ? normalizeMenuFilters(event.state) : readMenuFiltersFromUrl();
-    applyMenuFilters(nextFilters, { updateUrl: false });
-});
-
-function applyServiceSelection(service) {
-    service = normalizeServiceType(service);
-    currentService = service;
-    document.querySelectorAll('.toggle-option').forEach(el => {
-        el.classList.toggle('active', el.dataset.service === service);
-    });
-    localStorage.setItem('service_type', service);
-}
-
-function persistServiceSelection(service) {
-    return fetch('{% url "orders:set_service_type" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `service_type=${encodeURIComponent(service)}`
-    }).catch(() => null);
-}
-
-function switchService(service) {
-    service = normalizeServiceType(service);
-    applyServiceSelection(service);
-    persistServiceSelection(service);
-}
-
-document.addEventListener('click', function(event) {
-    const categoryLink = event.target.closest('[data-menu-category]');
-    const dietaryLink = event.target.closest('[data-menu-dietary]');
-
-    if (!categoryLink && !dietaryLink) {
-        return;
-    }
-
-    event.preventDefault();
-
-    if (categoryLink) {
-        applyMenuFilters({
-            category: categoryLink.dataset.menuCategory || '',
-            dietary: currentMenuFilters.dietary,
-        });
-    }
-
-    if (dietaryLink) {
-        const selectedDietary = dietaryLink.dataset.menuDietary || '';
-        applyMenuFilters({
-            category: currentMenuFilters.category,
-            dietary: selectedDietary,
-        });
-    }
-});
-
-function addToCart(itemId) {
-    // Use HTMX to add to cart
-    fetch('{% url "orders:add_to_cart" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `menu_item_id=${itemId}&quantity=1&service_type=${encodeURIComponent(currentService)}&modifiers=[]`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Show success feedback
-            if (navigator.vibrate) navigator.vibrate(50);
-            
-            // Update cart badge
-            const badge = document.getElementById('cartBadge');
-            if (badge) {
-                badge.textContent = data.cart_count;
-                badge.style.display = 'flex';
-            }
-            
-            // Show basket bar
-            const basketBar = document.getElementById('basketBar');
-            if (basketBar) {
-                basketBar.classList.add('show');
-            }
-            
-            // Reload to update cart
-            window.location.reload();
-        }
-    });
-}
-
-function openItemModal(itemId) {
-    const modal = document.getElementById('itemModal');
-    const content = document.getElementById('modalContent');
-    
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    // Load item details with HTMX header to get HTML
-    fetch(`/menu/item/${itemId}/`, {
-        headers: {
-            'HX-Request': 'true'
-        }
-    })
-        .then(response => response.text())
-        .then(html => {
-            content.innerHTML = html;
-            
-            // Initialize modal state after content loaded
-            modalQuantity = 1;
-            const modalDiv = content.querySelector('div[data-item-id]');
-            if (modalDiv) {
-                modalItemId = modalDiv.dataset.itemId;
-                modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
-                updateModalTotal();
-                setupModalScrollCue();
-            }
-        })
-        .catch(() => {
-            content.innerHTML = '<p style="padding: 20px; text-align: center;">Error loading item. Please try again.</p>';
-        });
-}
-
-function closeItemModal(event) {
-    if (event.target.id === 'itemModal') {
-        document.getElementById('itemModal').style.display = 'none';
-        document.body.style.overflow = '';
-    }
-}
-
-const savedService = localStorage.getItem('service_type');
-if (savedService === 'pickup' || savedService === 'delivery') {
-    const nextService = normalizeServiceType(savedService);
-    applyServiceSelection(nextService);
-    if (nextService !== '{{ service_type|default:"pickup" }}' || nextService !== savedService) {
-        persistServiceSelection(nextService);
-    }
-} else {
-    applyServiceSelection(currentService);
-}
-
-// Scroll to menu section if category is selected
-if (window.location.search.includes('category=')) {
-    const menuSection = document.getElementById('menu-section');
-    if (menuSection) {
-        menuSection.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-
-// ==================== MODAL FUNCTIONS ====================
-let modalQuantity = 1;
-let modalBasePrice = 0;
-let modalItemId = null;
-let modalScrollCueFrame = null;
-const maxCartItemQuantity = Math.max(1, parseInt(window.APP_CONFIG?.maxCartItemQuantity || '{{ max_cart_item_quantity|default:20 }}', 10) || 20);
-
-function clampModalQuantity(quantity) {
-    return Math.min(maxCartItemQuantity, Math.max(1, quantity));
-}
-
-function updateModalQuantityState() {
-    modalQuantity = clampModalQuantity(modalQuantity);
-    const quantityEl = document.getElementById('modal-quantity');
-    if (quantityEl) quantityEl.textContent = modalQuantity;
-
-    document.querySelectorAll('#modalContent .qty-btn').forEach(btn => {
-        const change = parseInt(btn.dataset.change || '0', 10);
-        btn.disabled = (change < 0 && modalQuantity <= 1) || (change > 0 && modalQuantity >= maxCartItemQuantity);
-    });
-
-    const largeOrderCue = document.querySelector('#modalContent [data-large-order-cue]');
-    if (largeOrderCue) {
-        largeOrderCue.hidden = modalQuantity < maxCartItemQuantity;
-    }
-}
-
-function setupModalScrollCue() {
-    if (modalScrollCueFrame) {
-        cancelAnimationFrame(modalScrollCueFrame);
-    }
-
-    modalScrollCueFrame = requestAnimationFrame(() => {
-        const detail = document.querySelector('#modalContent .modal-item-detail');
-        const scrollArea = document.querySelector('#modalContent [data-scrollable-content]');
-        const actions = document.querySelector('#modalContent .modal-item-actions');
-        if (!detail || !scrollArea) return;
-
-        if (actions) {
-            detail.style.setProperty('--modal-actions-height', `${actions.offsetHeight}px`);
-        }
-
-        const updateScrollState = () => {
-            const hasOverflow = scrollArea.scrollHeight > scrollArea.clientHeight + 8;
-            const isAtEnd = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 8;
-            detail.classList.toggle('has-more-content', hasOverflow);
-            detail.classList.toggle('is-at-scroll-end', isAtEnd);
-            if (!hasOverflow) {
-                detail.classList.remove('has-seen-scroll');
-            }
-        };
-
-        updateScrollState();
-
-        scrollArea.addEventListener('scroll', () => {
-            if (scrollArea.scrollTop > 8) {
-                detail.classList.add('has-seen-scroll');
-            }
-            updateScrollState();
-        }, { passive: true });
-
-        window.addEventListener('resize', updateScrollState, { once: true });
-    });
-}
-
-// Handle modal content loaded
-document.addEventListener('htmx:afterSwap', function(evt) {
-    if (evt.detail.target.id === 'modalContent') {
-        // Reset modal state
-        modalQuantity = 1;
-        const modalDiv = document.querySelector('#modalContent > div');
-        if (modalDiv) {
-            modalItemId = modalDiv.dataset.itemId;
-            modalBasePrice = parseFloat(modalDiv.dataset.basePrice) || 0;
-            updateModalQuantityState();
-            updateModalTotal();
-            setupModalScrollCue();
-        }
-    }
-});
-
-// Event delegation for modal buttons (clicks)
-document.getElementById('modalContent').addEventListener('click', function(e) {
-    // Quantity buttons
-    if (e.target.classList.contains('qty-btn')) {
-        const change = parseInt(e.target.dataset.change);
-        modalQuantity = clampModalQuantity(modalQuantity + change);
-        updateModalQuantityState();
-        updateModalTotal();
-    }
-    
-    // Add to basket button
-    if (e.target.id === 'modal-add-btn' || e.target.closest('#modal-add-btn')) {
-        const btn = document.getElementById('modal-add-btn');
-        const itemId = btn.dataset.itemId;
-        addToCartFromModal(itemId);
-    }
-});
-
-// Event delegation for modal checkboxes (change events)
-document.getElementById('modalContent').addEventListener('change', function(e) {
-    // Modifier checkboxes - update price in real-time
-    if (e.target.classList.contains('modifier-checkbox')) {
-        updateModalTotal();
-    }
-});
-
-function updateModalTotal() {
-    if (!modalBasePrice) return;
-    
-    let modifiersTotal = 0;
-    document.querySelectorAll('.modifier-checkbox:checked').forEach(cb => {
-        modifiersTotal += parseFloat(cb.dataset.price) || 0;
-    });
-    
-    const total = (modalBasePrice + modifiersTotal) * modalQuantity;
-    const priceEl = document.getElementById('modal-total-price');
-    if (priceEl) {
-        priceEl.textContent = '£' + total.toFixed(2);
-    }
-}
-
-function addToCartFromModal(itemId) {
-    const btn = document.getElementById('modal-add-btn');
-    const originalText = btn.innerHTML;
-    
-    // Show loading state
-    btn.innerHTML = '<span>Adding...</span><span>⏳</span>';
-    btn.style.opacity = '0.7';
-    btn.disabled = true;
-    
-    // Collect modifiers
-    const modifiers = [];
-    document.querySelectorAll('.modifier-checkbox:checked').forEach(cb => {
-        modifiers.push({
-            id: cb.value,
-            name: cb.dataset.name,
-            price: parseFloat(cb.dataset.price) || 0
-        });
-    });
-    
-    fetch('{% url "orders:add_to_cart" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `menu_item_id=${itemId}&quantity=${modalQuantity}&service_type=${encodeURIComponent(currentService)}&modifiers=${encodeURIComponent(JSON.stringify(modifiers))}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            btn.innerHTML = '<span>✓ Added!</span>';
-            btn.style.background = '#22C55E';
-            if (navigator.vibrate) navigator.vibrate(50);
-            
-            setTimeout(() => {
-                closeItemModal({target: {id: 'itemModal'}});
-                window.location.reload();
-            }, 600);
-        } else {
-            throw new Error('Failed to add item');
-        }
-    })
-    .catch(err => {
-        btn.innerHTML = '<span>❌ Error</span>';
-        btn.style.background = '#EF4444';
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.style.opacity = '1';
-            btn.disabled = false;
-        }, 2000);
-    });
-}
-</script>
+<script src="{% static 'js/home.js' %}" defer></script>
 {% endblock %}

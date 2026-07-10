@@ -1,6 +1,8 @@
 """
 Core views for Tinashe Takeaway.
 """
+import logging
+
 from django.contrib import messages
 from django.db import connection
 from django.http import JsonResponse, HttpResponse
@@ -108,8 +110,7 @@ def home(request):
         "service_type": service_type,
     }
 
-    template = "desktop/core/home.html" if getattr(request, "is_desktop", True) else "core/home.html"
-    return render(request, template, context)
+    return render(request, "core/home.html", context)
 
 
 def about(request):
@@ -242,9 +243,7 @@ def newsletter_signup(request):
         )
 
     # Fallback: log it (Sender.net not configured)
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info("Newsletter signup (no Sender.net): %s", email)
+    logging.getLogger(__name__).info("Newsletter signup (no Sender.net): %s", email)
     return HttpResponse(
         '<p style="color:var(--success);font-size:0.8rem;margin-top:0.5rem;">✓ Thanks! We\'ll keep you updated.</p>',
         content_type="text/html",

@@ -46,8 +46,7 @@ def menu_list(request):
         "service_type": selected_service_type(request),
     }
 
-    template = "desktop/menu/menu_list.html" if getattr(request, "is_desktop", True) else "menu/menu_list.html"
-    return render(request, template, context)
+    return render(request, "menu/menu_list.html", context)
 
 
 def menu_item_detail(request, pk):
@@ -67,12 +66,7 @@ def menu_item_detail(request, pk):
     is_json_request = "application/json" in accept_header and "text/html" not in accept_header
     
     if request.headers.get("HX-Request") or not is_json_request:
-        detail_template = (
-            "desktop/menu/partials/item_detail.html"
-            if getattr(request, "is_desktop", True)
-            else "menu/partials/item_detail.html"
-        )
-        return render(request, detail_template, {
+        return render(request, "menu/partials/item_detail.html", {
             "item": item,
             "recommendations": recommendations,
             "is_favorite": is_favorite,

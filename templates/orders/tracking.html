@@ -1,327 +1,214 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
+{% load static %}
 
-{% block title %}Order {{ order.order_number }} - {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}Order Status{% endblock %}
+{% block title %}Track Order {{ order.order_number }} - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/orders.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <!-- Order Number Banner -->
-    <div style="background: var(--brand); color: white; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 20px;">
-        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-bottom: 4px;">Order Number</div>
-        <div style="font-size: 32px; font-weight: 800; letter-spacing: 2px; font-family: monospace;">{{ order.order_number }}</div>
-    </div>
-    
-    <!-- Status Badge -->
-    <div style="text-align: center; margin-bottom: 24px;">
-        {% if order.status == 'pending' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #FFF3E0; color: #E65100; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-clock" style="margin-right: 6px;"></i>Pending Payment
-        </span>
-        {% elif order.status == 'confirmed' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #E3F2FD; color: #1565C0; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-check-circle" style="margin-right: 6px;"></i>Confirmed
-        </span>
-        {% elif order.status == 'preparing' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #FFF3E0; color: #E65100; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-cooking-pot" style="margin-right: 6px;"></i>Preparing
-        </span>
-        {% elif order.status == 'ready' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #E8F5E9; color: #2E7D32; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-check-circle" style="margin-right: 6px;"></i>{{ order.ready_status_label }}
-        </span>
-        {% elif order.status == 'out_for_delivery' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #DBEAFE; color: #1D4ED8; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-van" style="margin-right: 6px;"></i>Out for Delivery
-        </span>
-        {% elif order.status == 'completed' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #E8F5E9; color: #2E7D32; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-check" style="margin-right: 6px;"></i>Completed
-        </span>
-        {% elif order.status == 'cancelled' %}
-        <span style="display: inline-block; padding: 8px 20px; background: #FFEBEE; color: #C62828; border-radius: 20px; font-weight: 700; font-size: 14px;">
-            <i class="ph ph-x-circle" style="margin-right: 6px;"></i>Cancelled
-        </span>
-        {% endif %}
-        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
-            Last updated {{ order.updated_at|time:"H:i" }}. This page refreshes automatically.
-        </div>
-    </div>
 
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 20px; box-shadow: var(--shadow-sm);">
-        <div style="display: flex; gap: 12px; align-items: flex-start;">
-            <div style="width: 42px; height: 42px; border-radius: 14px; background: var(--brand-light); color: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                {% if order.status == 'out_for_delivery' %}
-                <i class="ph ph-van" style="font-size: 22px;"></i>
-                {% elif order.status == 'ready' %}
-                <i class="ph ph-bag-check" style="font-size: 22px;"></i>
-                {% elif order.status == 'preparing' %}
-                <i class="ph ph-cooking-pot" style="font-size: 22px;"></i>
-                {% elif order.status == 'completed' %}
-                <i class="ph ph-check-circle" style="font-size: 22px;"></i>
-                {% elif order.status == 'cancelled' %}
-                <i class="ph ph-x-circle" style="font-size: 22px;"></i>
-                {% else %}
-                <i class="ph ph-clock" style="font-size: 22px;"></i>
-                {% endif %}
+<section class="section">
+    <div class="container tracking-page">
+        <div class="text-center" style="margin-bottom:2rem;">
+            <h1 style="margin-bottom:0.5rem;">Track Your Order</h1>
+            <p style="font-size:1.05rem;">Order <strong>{{ order.order_number }}</strong></p>
+        </div>
+
+        <!-- Status Card -->
+        <div class="tracking-card">
+            <div class="tracking-head">
+                <div>
+                    <div class="tracking-order-number">Order {{ order.order_number }}</div>
+                    <div class="tracking-meta">{{ order.created_at|date:"d M Y, H:i" }}</div>
+                    <div class="tracking-meta" style="margin-top:0.25rem;">Last updated {{ order.updated_at|time:"H:i" }}. This page refreshes automatically.</div>
+                </div>
+                <span class="status-pill {% if order.status == 'completed' %}status-pill--success{% elif order.status == 'cancelled' %}status-pill--error{% else %}status-pill--warning{% endif %}">
+                    {{ order.service_status_display }}
+                </span>
             </div>
-            <div>
-                <div style="font-weight: 800; margin-bottom: 4px;">What is happening now</div>
-                <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
-                    {% if order.status == 'pending' %}
-                    {% if order.payment.provider == 'offline_pending' %}
-                    We are holding this order while waiting for shop payment. Please call or visit the shop to pay{% if order.payment.expires_at %} before {{ order.payment.expires_at|time:"H:i" }}{% endif %}. The kitchen will not start until payment is received.
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 14px;">
-                        {% if site_settings.phone %}
-                        <a href="tel:{{ site_settings.phone }}" class="btn btn-brand" style="padding: 12px;"><i class="ph ph-phone" style="vertical-align: middle;"></i> Call store</a>
+
+            <div class="tracking-now">
+                <div class="tracking-now-icon">
+                    {% if order.status == 'out_for_delivery' %}
+                    <i class="ph ph-van"></i>
+                    {% elif order.status == 'ready' %}
+                    <i class="ph ph-bag-check"></i>
+                    {% elif order.status == 'preparing' %}
+                    <i class="ph ph-cooking-pot"></i>
+                    {% elif order.status == 'completed' %}
+                    <i class="ph ph-check-circle"></i>
+                    {% elif order.status == 'cancelled' %}
+                    <i class="ph ph-x-circle"></i>
+                    {% else %}
+                    <i class="ph ph-clock"></i>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="tracking-now-title">What is happening now</div>
+                    <div class="tracking-now-copy">
+                        {% if order.status == 'pending' %}
+                        {% if order.payment.provider == 'offline_pending' %}
+                        We are holding this order while waiting for shop payment. Please call or visit the shop to pay{% if order.payment.expires_at %} before {{ order.payment.expires_at|time:"H:i" }}{% endif %}. The kitchen will not start until payment is received.
+                        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-top:1rem;">
+                            {% if site_settings.phone %}
+                            <a href="tel:{{ site_settings.phone }}" class="btn btn--primary btn--sm"><i class="ph-bold ph-phone"></i> Call store</a>
+                            {% endif %}
+                            {% if site_settings.address %}
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn--secondary btn--sm" target="_blank" rel="noopener"><i class="ph-bold ph-map-pin"></i> Get directions</a>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        We are waiting for payment before the kitchen starts this order.
                         {% endif %}
-                        {% if site_settings.address %}
-                        <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn-secondary" style="padding: 12px; margin-top: 0;" target="_blank" rel="noopener"><i class="ph ph-map-pin" style="vertical-align: middle;"></i> Get directions</a>
+                        {% elif order.status == 'confirmed' %}
+                        The kitchen has your order and will start preparing it shortly.
+                        {% elif order.status == 'preparing' %}
+                        Your food is being prepared fresh.
+                        {% elif order.status == 'ready' %}
+                        {% if order.is_delivery %}Your order is ready for dispatch.{% else %}Your order is ready to collect. Quote {{ order.order_number }} when you arrive.{% endif %}
+                        {% elif order.status == 'out_for_delivery' %}
+                        Your order is on the way to your delivery address.
+                        {% elif order.status == 'completed' %}
+                        This order is complete. Thanks for ordering with us.
+                        {% elif order.status == 'cancelled' %}
+                        This order has been cancelled. Contact the shop if you need help.
                         {% endif %}
                     </div>
-                    {% else %}
-                    We are waiting for payment before the kitchen starts this order.
-                    {% endif %}
-                    {% elif order.status == 'confirmed' %}
-                    The kitchen has your order and will start preparing it shortly.
-                    {% elif order.status == 'preparing' %}
-                    Your food is being prepared fresh.
-                    {% elif order.status == 'ready' %}
-                    {% if order.is_delivery %}Your order is ready for dispatch.{% else %}Your order is ready to collect. Quote {{ order.order_number }} when you arrive.{% endif %}
-                    {% elif order.status == 'out_for_delivery' %}
-                    Your order is on the way to your delivery address.
-                    {% elif order.status == 'completed' %}
-                    This order is complete. Thanks for ordering with us.
-                    {% elif order.status == 'cancelled' %}
-                    {% if order.cancel_reason %}{{ order.cancel_reason }}{% else %}This order has been cancelled. Contact the shop if you need help.{% endif %}
-                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="tracking-steps">
+                <div class="tracking-step {% if order.status != 'pending' and order.status != 'cancelled' %}is-done{% endif %}">
+                    <i class="ph-fill ph-check-circle"></i>
+                    <div class="tracking-step-label">Confirmed</div>
+                </div>
+                <div class="tracking-step {% if order.status == 'preparing' or order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}is-done{% endif %}">
+                    <i class="ph-fill ph-fire"></i>
+                    <div class="tracking-step-label">Preparing</div>
+                </div>
+                <div class="tracking-step {% if order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}is-done{% endif %}">
+                    <i class="ph-fill ph-bag-check"></i>
+                    <div class="tracking-step-label">
+                        {% if order.is_delivery %}On the Way{% else %}Ready{% endif %}
+                    </div>
+                </div>
+                <div class="tracking-step {% if order.status == 'completed' %}is-done{% endif %}">
+                    <i class="ph-fill ph-check"></i>
+                    <div class="tracking-step-label">
+                        {% if order.is_delivery %}Delivered{% else %}Collected{% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Progress Bar -->
-    <div style="margin-bottom: 24px;">
+
         {% if order.is_delivery %}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status != 'pending' and order.status != 'cancelled' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status != 'pending' and order.status != 'cancelled' %}<i class="ph ph-check"></i>{% endif %}
+        <div class="tracking-card">
+            <h3>Delivery Confidence</h3>
+            <div class="tracking-stat-grid">
+                <div class="tracking-stat">
+                    <div class="tracking-stat-label">ETA</div>
+                    <div class="tracking-stat-value">{% if order.delivery_eta_minutes %}{{ order.delivery_eta_minutes }} mins{% else %}Confirming{% endif %}</div>
                 </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">confirmed</div>
-            </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'preparing' or order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'preparing' or order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
+                <div class="tracking-stat">
+                    <div class="tracking-stat-label">Fee</div>
+                    <div class="tracking-stat-value">£{{ order.delivery_fee|floatformat:2 }}</div>
                 </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">preparing</div>
-            </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
+                <div class="tracking-stat">
+                    <div class="tracking-stat-label">Zone</div>
+                    <div class="tracking-stat-value">{{ order.delivery_zone_name|default:"Local delivery" }}</div>
                 </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">ready</div>
-            </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'out_for_delivery' or order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'out_for_delivery' or order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
+                <div class="tracking-stat">
+                    <div class="tracking-stat-label">Run</div>
+                    <div class="tracking-stat-value">{% if order.delivery_run_order %}{{ order.delivery_run_order.run.get_status_display }}{% elif order.delivery_driver %}Assigned{% else %}Not assigned{% endif %}</div>
                 </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">on the way</div>
             </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
-                </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">delivered</div>
-            </div>
-        </div>
-        <div style="height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;">
-            <div style="height: 100%; background: var(--success); width: 
-                {% if order.status == 'pending' or order.status == 'cancelled' %}0%{% elif order.status == 'confirmed' %}20%{% elif order.status == 'preparing' %}40%{% elif order.status == 'ready' %}60%{% elif order.status == 'out_for_delivery' %}80%{% else %}100%{% endif %}; transition: width 0.3s;"></div>
-        </div>
-        {% else %}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status != 'pending' and order.status != 'cancelled' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status != 'pending' and order.status != 'cancelled' %}<i class="ph ph-check"></i>{% endif %}
-                </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">confirmed</div>
-            </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'preparing' or order.status == 'ready' or order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'preparing' or order.status == 'ready' or order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
-                </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">preparing</div>
-            </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'ready' or order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'ready' or order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
-                </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">ready</div>
-            </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; {% if order.status == 'completed' %}background: var(--success); color: white;{% else %}background: var(--border); color: var(--text-secondary);{% endif %}">
-                    {% if order.status == 'completed' %}<i class="ph ph-check"></i>{% endif %}
-                </div>
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary);">completed</div>
-            </div>
-        </div>
-        <div style="height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;">
-            <div style="height: 100%; background: var(--success); width: 
-                {% if order.status == 'pending' or order.status == 'cancelled' %}0%{% elif order.status == 'confirmed' %}25%{% elif order.status == 'preparing' %}50%{% elif order.status == 'ready' %}75%{% else %}100%{% endif %}; transition: width 0.3s;"></div>
-        </div>
-        {% endif %}
-    </div>
-    
-    {% if order.requested_service_time %}
-    <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">
-            <i class="ph ph-clock" style="color: var(--brand); margin-right: 8px;"></i>{{ order.service_time_label }}
-        </h3>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <div style="font-size: 24px; font-weight: 700;">{{ order.requested_service_time|time:"H:i" }}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">{{ order.requested_service_time|date:"l, j F" }}</div>
-            </div>
-            {% if order.estimated_ready_time %}
-            <div style="text-align: right;">
-                <div style="font-size: 12px; color: var(--text-secondary);">{% if order.is_delivery %}Estimated dispatch{% else %}Estimated ready{% endif %}</div>
-                <div style="font-size: 16px; font-weight: 600; color: var(--success);">{{ order.estimated_ready_time|time:"H:i" }}</div>
+            {% if order.delivery_address_display or order.delivery_driver %}
+            <div style="margin-top:1rem;color:var(--text-secondary);line-height:1.6;">
+                {% if order.delivery_address_display %}<div>Delivery address: {{ order.delivery_address_display }}</div>{% endif %}
+                {% if order.delivery_driver %}<div>Driver/run: {{ order.delivery_driver.name }}{% if order.delivery_run_order.eta_at %} · ETA {{ order.delivery_run_order.eta_at|time:"H:i" }}{% endif %}</div>{% endif %}
             </div>
             {% endif %}
         </div>
-    </div>
-    {% endif %}
-
-    {% if order.is_delivery and order.delivery_address_display %}
-    <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">
-            <i class="ph ph-map-pin" style="color: var(--brand); margin-right: 8px;"></i>Delivery Address
-        </h3>
-        <div style="font-size: 14px; line-height: 1.5;">{{ order.delivery_address_display }}</div>
-    </div>
-    {% endif %}
-
-    {% if order.is_delivery %}
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px;">
-            <i class="ph ph-navigation-arrow" style="color: var(--brand); margin-right: 8px;"></i>Delivery Confidence
-        </h3>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-            <div style="background: var(--bg); border-radius: 12px; padding: 12px;">
-                <div style="font-size: 12px; color: var(--text-secondary);">ETA</div>
-                <div style="font-weight: 800;">{% if order.delivery_eta_minutes %}{{ order.delivery_eta_minutes }} mins{% else %}Confirming{% endif %}</div>
-            </div>
-            <div style="background: var(--bg); border-radius: 12px; padding: 12px;">
-                <div style="font-size: 12px; color: var(--text-secondary);">Delivery fee</div>
-                <div style="font-weight: 800;">£{{ order.delivery_fee|floatformat:2 }}</div>
-            </div>
-            <div style="background: var(--bg); border-radius: 12px; padding: 12px;">
-                <div style="font-size: 12px; color: var(--text-secondary);">Zone</div>
-                <div style="font-weight: 800;">{{ order.delivery_zone_name|default:"Local delivery" }}</div>
-            </div>
-            <div style="background: var(--bg); border-radius: 12px; padding: 12px;">
-                <div style="font-size: 12px; color: var(--text-secondary);">Run status</div>
-                <div style="font-weight: 800;">{% if order.delivery_run_order %}{{ order.delivery_run_order.run.get_status_display }}{% elif order.delivery_driver %}Assigned{% else %}Not assigned{% endif %}</div>
-            </div>
-        </div>
-        {% if order.delivery_driver %}
-        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 12px;">Driver/run: {{ order.delivery_driver.name }}{% if order.delivery_run_order.eta_at %} · ETA {{ order.delivery_run_order.eta_at|time:"H:i" }}{% endif %}</div>
         {% endif %}
-    </div>
-    {% endif %}
 
-    {% if can_prompt_guest_claim %}
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px;">
-        <div style="font-weight: 800; margin-bottom: 6px;">Save this order</div>
-        <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Add this guest order to your account so it appears in your order history.</div>
-        {% if can_claim_order %}
-        <form method="post" action="{{ claim_url }}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-brand" style="width: 100%;"><i class="ph ph-plus-circle"></i> Add to my account</button>
-        </form>
-        {% elif not request.user.is_authenticated %}
-        <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-brand" style="width: 100%;"><i class="ph ph-user"></i> Sign in to save</a>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px;">
-        <div style="font-weight: 800; margin-bottom: 6px;">Need help with this order?</div>
-        <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Report missing items, late delivery, wrong items or payment issues without calling the shop.</div>
-        {% if request.user.is_authenticated and order.user_id == request.user.id %}
-        <a href="{{ issue_url }}" class="btn btn-brand" style="width: 100%;"><i class="ph ph-warning-circle"></i> Report an issue</a>
-        {% else %}
-        <a href="{{ issue_url }}" class="btn btn-secondary" style="width: 100%;"><i class="ph ph-warning-circle"></i> Report an issue</a>
-        {% endif %}
-        {% if order.issues.exists %}
-        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 10px;">Support requests on this order: {{ order.issues.count }}</div>
-        {% endif %}
-    </div>
-    
-    <!-- Order Items -->
-    <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Order Details</h3>
-        
-        {% for item in order.items.all %}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; {% if not forloop.last %}border-bottom: 1px solid var(--border);{% endif %}">
+        {% if can_prompt_guest_claim %}
+        <div class="tracking-cta-card">
             <div>
-                <span style="font-weight: 600;">{{ item.quantity }}x {{ item.item_name }}</span>
-                {% if item.modifiers %}
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                    {% for mod in item.modifiers %}+ {{ mod.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </div>
-                {% endif %}
+                <div class="tracking-cta-title">Save this order</div>
+                <div class="tracking-cta-copy">Add this guest order to your account so it appears in your order history.</div>
             </div>
-            <span style="font-weight: 600;">£{{ item.line_total }}</span>
-        </div>
-        {% endfor %}
-        
-        <div style="border-top: 2px solid var(--border); margin-top: 16px; padding-top: 16px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: var(--text-secondary);">Subtotal</span>
-                <span>£{{ order.subtotal|floatformat:2 }}</span>
-            </div>
-            {% if order.discount_amount > 0 %}
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--success);">
-                <span>Discount</span>
-                <span>-£{{ order.discount_amount|floatformat:2 }}</span>
-            </div>
+            {% if can_claim_order %}
+            <form method="post" action="{{ claim_url }}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn--primary"><i class="ph-bold ph-plus-circle"></i> Add to my account</button>
+            </form>
+            {% elif not request.user.is_authenticated %}
+            <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn--primary"><i class="ph-bold ph-user"></i> Sign in to save</a>
             {% endif %}
-            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800;">
+        </div>
+        {% endif %}
+
+        <div class="tracking-cta-card">
+            <div>
+                <div class="tracking-cta-title">Need help with this order?</div>
+                <div class="tracking-cta-copy">Report missing items, late delivery, wrong items or payment issues from your account.</div>
+                {% if order.issues.exists %}<div class="tracking-meta" style="margin-top:0.35rem;">Support requests on this order: {{ order.issues.count }}</div>{% endif %}
+            </div>
+            {% if request.user.is_authenticated and order.user_id == request.user.id %}
+            <a href="{{ issue_url }}" class="btn btn--primary"><i class="ph-bold ph-warning-circle"></i> Report an issue</a>
+            {% else %}
+            <a href="{{ issue_url }}" class="btn btn--secondary"><i class="ph-bold ph-warning-circle"></i> Report an issue</a>
+            {% endif %}
+        </div>
+
+        <!-- Order Details -->
+        <div class="tracking-card">
+            <h3>Order Details</h3>
+
+            <div class="tracking-stat-grid" style="grid-template-columns:1fr 1fr;margin-bottom:1.5rem;">
+                <div class="tracking-stat">
+                    <div class="tracking-stat-label">Service</div>
+                    <div class="tracking-stat-value">{{ order.get_service_type_display }}</div>
+                </div>
+                <div class="tracking-stat">
+                    <div class="tracking-stat-label">{{ order.service_time_label }}</div>
+                    <div class="tracking-stat-value">{% if order.requested_service_time %}{{ order.requested_service_time|date:"H:i" }}{% else %}TBD{% endif %}</div>
+                </div>
+            </div>
+
+            <h4 style="font-size:0.95rem;margin-bottom:0.75rem;">Items</h4>
+            {% for item in order.items.all %}
+            <div class="tracking-item-row">
+                <span>{{ item.quantity }}x {{ item.item_name }}</span>
+                <span>£{{ item.line_total }}</span>
+            </div>
+            {% endfor %}
+
+            <div class="summary-total">
                 <span>Total</span>
-                <span>£{{ order.total_amount|floatformat:2 }}</span>
+                <span class="text-brand">£{{ order.total_amount }}</span>
             </div>
         </div>
-    </div>
-    
-    <!-- Customer Info -->
-    <div style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Customer Details</h3>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: var(--text-secondary);">Name</span>
-            <span style="font-weight: 500;">{{ order.customer_name }}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: var(--text-secondary);">Service</span>
-            <span style="font-weight: 500;">{{ order.get_service_type_display }}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-secondary);">Phone</span>
-            <span style="font-weight: 500;">{{ order.customer_phone }}</span>
-        </div>
-    </div>
-    
-    <!-- Refresh Button -->
-    <button onclick="window.location.reload()" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;">
-        <i class="ph ph-arrows-clockwise"></i> Refresh Status
-    </button>
-    
-    <a href="{% url 'core:home' %}" class="btn btn-brand" style="width: 100%;">
-        <i class="ph ph-house"></i> Back to Menu
-    </a>
-</div>
 
-<!-- Auto-refresh every 60 seconds -->
+        <div class="text-center" style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+            <a href="{% url 'core:home' %}" class="btn btn--primary">
+                <i class="ph-bold ph-house"></i>
+                Back to Home
+            </a>
+            <button type="button" onclick="window.location.reload()" class="btn btn--secondary">
+                <i class="ph-bold ph-arrows-clockwise"></i>
+                Refresh Status
+            </button>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
 <script>
 setTimeout(function() {
     window.location.reload();

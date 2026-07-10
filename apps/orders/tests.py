@@ -1184,25 +1184,19 @@ class OrderFlowTests(TestCase):
             {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
             HTTP_ACCEPT="application/json",
         )
-        self.client.cookies["view_mode"] = "mobile"
+        # The checkout template is unified: phones and desktop share one
+        # responsive template, so both view modes get the same fallback UI.
+        for view_mode in ("mobile", "desktop"):
+            with self.subTest(view_mode=view_mode):
+                self.client.cookies["view_mode"] = view_mode
+                response = self.client.get(reverse("orders:checkout"))
 
-        response = self.client.get(reverse("orders:checkout"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="paymentAvailabilityMessage"')
-        self.assertContains(response, 'name="payment_fallback_acknowledged"')
-        self.assertContains(response, "I understand I must pay the shop within 15 minutes")
-        self.assertContains(response, 'href="tel:+441131234567"')
-        self.assertContains(response, "Call store")
-        self.assertNotContains(response, "Get directions")
-        self.assertNotContains(response, "paymentAlert.textContent")
-
-        self.client.cookies["view_mode"] = "desktop"
-        desktop_response = self.client.get(reverse("orders:checkout"))
-        self.assertEqual(desktop_response.status_code, 200)
-        self.assertContains(desktop_response, 'href="tel:+441131234567"')
-        self.assertContains(desktop_response, "Call store")
-        self.assertNotContains(desktop_response, "Get directions")
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'name="payment_fallback_acknowledged"')
+                self.assertContains(response, "I understand I must pay the shop within 15 minutes")
+                self.assertContains(response, 'href="tel:+441131234567"')
+                self.assertContains(response, "Call store")
+                self.assertNotContains(response, "Get directions")
 
     def test_staff_boards_and_tracking_render(self):
         order = create_order(

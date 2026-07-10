@@ -1,0 +1,359 @@
+/* ==========================================================================
+   Home page — hero, service bar, reorder cards, menu section
+   ========================================================================== */
+
+@layer pages {
+
+/* ── Hero ──────────────────────────────────────────────────────────── */
+.hero-section {
+    width: min(100%, var(--content-width));
+    margin-inline: auto;
+    padding: 34px var(--space-6) 24px;
+}
+
+.hero-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 500px;
+    border-radius: 34px;
+    background:
+        radial-gradient(circle at 78% 20%, rgba(255, 107, 53, 0.32), transparent 27%),
+        radial-gradient(circle at 86% 92%, rgba(255, 255, 255, 0.12), transparent 24%),
+        linear-gradient(135deg, #121212 0%, #1C1B19 48%, #2B211D 100%);
+    box-shadow: var(--shadow-xl);
+    color: #fff;
+    display: grid;
+    grid-template-columns: 1.03fr 0.97fr;
+    align-items: center;
+    gap: 20px;
+    padding: 56px;
+}
+
+.hero-card.has-restaurant-image::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(135deg, rgba(18, 18, 18, 0.86), rgba(36, 25, 20, 0.72)),
+        var(--hero-bg-image) center/cover no-repeat;
+    opacity: 0.72;
+}
+
+.hero-copy,
+.hero-plate {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-text {
+    max-width: 610px;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #FFD8CA;
+    background: rgba(255, 107, 53, 0.18);
+    border: 1px solid rgba(255, 107, 53, 0.28);
+    padding: 0.55rem 0.9rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+}
+
+.hero-text h1 {
+    font-size: var(--text-display);
+    line-height: 0.96;
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 1.35rem;
+}
+
+.hero-text h1 span {
+    color: var(--brand);
+}
+
+.hero-text p {
+    max-width: 500px;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: var(--text-md);
+    line-height: 1.75;
+    margin-bottom: 1.85rem;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    margin-bottom: 1.9rem;
+}
+
+.hero-stats {
+    display: flex;
+    gap: 2.5rem;
+    max-width: 520px;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hero-stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.hero-stat-label {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.48);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.25rem;
+}
+
+.hero-plate {
+    min-height: 430px;
+    display: grid;
+    place-items: center;
+}
+
+.plate-glow {
+    position: absolute;
+    width: 440px;
+    height: 440px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 107, 53, 0.25), transparent 62%);
+    filter: blur(2px);
+}
+
+.plate {
+    width: min(410px, 90%);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #FFF7EF, #FFFFFF);
+    box-shadow: 0 35px 80px rgba(0, 0, 0, 0.35), inset 0 0 0 20px #F3EEE8;
+    display: grid;
+    place-items: center;
+    position: relative;
+}
+
+.plate-food {
+    width: 74%;
+    height: 74%;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 6rem;
+    background:
+        radial-gradient(circle at 35% 35%, #D79F43 0 16%, transparent 17%),
+        radial-gradient(circle at 60% 58%, #3F8F3D 0 13%, transparent 14%),
+        radial-gradient(circle at 47% 68%, #9A3F2E 0 12%, transparent 13%),
+        linear-gradient(145deg, #F0D8AA, #C7803F);
+    box-shadow: inset 0 0 0 14px rgba(255, 255, 255, 0.22);
+    overflow: hidden;
+}
+
+.plate-food img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.floating-chip {
+    position: absolute;
+    right: 26px;
+    bottom: 34px;
+    width: 190px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--ink);
+    border-radius: 20px;
+    padding: 14px;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
+}
+
+.floating-chip strong,
+.floating-chip span {
+    display: block;
+}
+
+.floating-chip strong {
+    font-size: var(--text-base);
+}
+
+.floating-chip span {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 920px) {
+    .hero-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        padding: 34px;
+    }
+
+    .hero-plate {
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 640px) {
+    .hero-section {
+        padding: 14px var(--space-4) 20px;
+    }
+
+    .hero-card {
+        border-radius: var(--radius-xl);
+        padding: 26px 20px 20px;
+    }
+
+    .hero-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .hero-actions .hero-btn-primary,
+    .hero-actions .hero-btn-secondary {
+        justify-content: center;
+    }
+
+    .hero-stats {
+        gap: 10px;
+        justify-content: space-between;
+    }
+
+    .hero-stat-value {
+        font-size: 1.05rem;
+    }
+
+    .hero-stat-label {
+        font-size: 0.62rem;
+    }
+
+    .plate {
+        width: 255px;
+    }
+
+    .plate-food {
+        font-size: 4rem;
+    }
+
+    .floating-chip {
+        display: none;
+    }
+}
+
+/* ── Service bar ───────────────────────────────────────────────────── */
+.service-bar {
+    margin: -20px auto 20px;
+    position: relative;
+    z-index: 6;
+}
+
+.service-bar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: min(100%, var(--content-width));
+    margin-inline: auto;
+    padding-inline: var(--space-6);
+}
+
+@media (max-width: 640px) {
+    .service-bar {
+        margin-top: -8px;
+    }
+
+    .service-bar-inner {
+        flex-direction: column;
+        align-items: stretch;
+        padding-inline: var(--space-4);
+    }
+
+    .service-bar-inner .service-toggle-desktop {
+        width: 100%;
+    }
+
+    .service-bar-inner .service-info {
+        justify-content: center;
+    }
+}
+
+/* ── Reorder cards ─────────────────────────────────────────────────── */
+.reorder-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+@media (max-width: 920px) {
+    .reorder-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.reorder-card {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+}
+
+.reorder-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.reorder-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--brand-light);
+    color: var(--brand);
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.reorder-card-number {
+    font-weight: 800;
+}
+
+.reorder-card-date {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.reorder-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+.reorder-card-total {
+    color: var(--brand);
+    font-size: var(--text-md);
+    font-weight: 800;
+}
+
+/* ── Menu section ──────────────────────────────────────────────────── */
+#menu-section {
+    scroll-margin-top: calc(var(--header-height) + 12px);
+}
+
+.home-menu-empty {
+    grid-column: 1 / -1;
+}
+
+} /* end @layer pages */

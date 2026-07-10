@@ -1,0 +1,9 @@
+{# Non-field errors. Usage: {% include "partials/form_errors.html" with form=form %} #}
+{% if form.non_field_errors %}
+{% for error in form.non_field_errors %}
+<div class="alert alert--error">
+    <i class="ph-fill ph-warning-circle"></i>
+    {{ error }}
+</div>
+{% endfor %}
+{% endif %}

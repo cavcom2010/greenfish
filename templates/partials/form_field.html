@@ -1,0 +1,26 @@
+{% load form_tags %}
+{# Shared form field renderer. Renders Django's own widget so values,      #}
+{# checkbox state, selects and textareas survive validation errors.        #}
+{# Usage: {% include "partials/form_field.html" with field=form.email %}   #}
+{% if field|widget_type == 'checkbox' %}
+<div class="form-field form-field--checkbox {% if field.errors %}form-field--error{% endif %}">
+    {{ field }}
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {% if field.errors %}
+    <span class="form-field-error"><i class="ph-fill ph-warning-circle"></i>{{ field.errors.0 }}</span>
+    {% endif %}
+</div>
+{% else %}
+<div class="form-field {% if field.errors %}form-field--error{% endif %}">
+    <label for="{{ field.id_for_label }}">
+        {{ field.label }}{% if field.field.required %}<span class="required-marker" aria-hidden="true">*</span>{% endif %}
+    </label>
+    {{ field }}
+    {% if field.errors %}
+    <span class="form-field-error"><i class="ph-fill ph-warning-circle"></i>{{ field.errors.0 }}</span>
+    {% endif %}
+    {% if field.help_text %}
+    <span class="form-field-help">{{ field.help_text|safe }}</span>
+    {% endif %}
+</div>
+{% endif %}
