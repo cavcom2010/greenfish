@@ -154,6 +154,20 @@
                     {% endif %}
                 </div>
                 {% endif %}
+
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Offers & Updates</div>
+                    <p class="mobile-menu-newsletter-copy">Get exclusive offers &amp; updates by email.</p>
+                    <form class="mobile-menu-newsletter"
+                          hx-post="{% url 'core:newsletter' %}"
+                          hx-target="#menuNewsletterFeedback"
+                          hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <input type="email" name="email" placeholder="Your email" required aria-label="Email for newsletter">
+                        <button type="submit">Subscribe</button>
+                    </form>
+                    <div id="menuNewsletterFeedback" class="mobile-menu-newsletter-feedback"></div>
+                </div>
             </nav>
 
             <div class="mobile-menu-footer">
