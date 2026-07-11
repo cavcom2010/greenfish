@@ -518,6 +518,14 @@
     margin-top: auto;
 }
 
+/* App shell on phones: the bottom nav and hamburger menu carry all
+   footer links, so the footer itself is desktop/tablet only. */
+@media (max-width: 767px) {
+    .site-footer {
+        display: none;
+    }
+}
+
 .footer-main {
     width: min(100%, var(--content-width));
     margin-inline: auto;
