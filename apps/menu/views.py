@@ -13,33 +13,21 @@ from .services import get_recommendations
 
 
 def menu_list(request):
-    """Menu page with all categories and items."""
-    categories = MenuCategory.objects.filter(
-        is_active=True
-    ).prefetch_related(
-        "items"
-    ).order_by("sort_order")
+    """Full menu page. All items are rendered; category/dietary filters and
+    search run client-side (menu.js) with the URL kept in sync, so
+    ?category= and ?dietary= only seed the initial filter state here."""
+    categories = MenuCategory.objects.filter(is_active=True).order_by("sort_order")
 
     all_items = MenuItem.objects.filter(
         is_available=True
     ).select_related("category").order_by("category__sort_order", "sort_order")
 
-    # Get category filter from query params
     category_id = request.GET.get("category")
-    dietary_filter = request.GET.get("dietary") or ""
-    if category_id:
-        active_category = get_object_or_404(MenuCategory, id=category_id)
-        items = MenuItem.objects.filter(
-            category=active_category,
-            is_available=True
-        ).select_related("category").order_by("sort_order")
-    else:
-        active_category = None
-        items = all_items
+    dietary_filter = (request.GET.get("dietary") or "").strip().lower()
+    active_category = MenuCategory.objects.filter(id=category_id).first() if category_id else None
 
     context = {
         "categories": categories,
-        "items": items,
         "all_items": all_items,
         "active_category": active_category,
         "dietary_filter": dietary_filter,

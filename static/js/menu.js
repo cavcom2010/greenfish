@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Home page — client-side menu filtering (category + dietary), search,
-   and scroll-to-menu. Service toggle & modal live in app.js.
+   Menu page — client-side filtering (category + dietary + search) with
+   URL sync, no page reloads. Item modal & cart live in app.js.
    ========================================================================== */
 
 (function () {
@@ -192,13 +192,4 @@
     const initialFilters = readMenuFiltersFromUrl();
     applyMenuFilters(initialFilters, { updateUrl: false });
     history.replaceState(initialFilters, '', window.location.href);
-
-    if (window.location.search.includes('category=') || window.location.search.includes('dietary=')) {
-        const menuSection = document.getElementById('menu-section');
-        if (menuSection) {
-            setTimeout(() => {
-                menuSection.scrollIntoView({ behavior: 'smooth' });
-            }, 300);
-        }
-    }
 })();

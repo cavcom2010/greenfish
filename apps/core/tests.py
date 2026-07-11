@@ -173,7 +173,7 @@ class PublicRouteTests(TestCase):
         self.assertEqual(json_response.status_code, 200)
         self.assertEqual(json_response.json()["name"], self.menu_item.name)
 
-    def test_mobile_menu_uses_home_filter_and_modal_contract(self):
+    def test_menu_page_carries_filter_contract_and_home_is_shop_window(self):
         category = MenuCategory.objects.create(name="Sides", sort_order=2, is_active=True, icon="🍟")
         side_item = create_menu_item(
             name="Spicy Chips",
@@ -182,8 +182,9 @@ class PublicRouteTests(TestCase):
             is_popular=False,
         )
 
-        # Menu page is unified: phones get the same responsive template with
-        # server-side category filtering and the shared item modal.
+        # Menu page renders every item with the client-side filter contract:
+        # category/dietary pills, search, and data attributes on each card.
+        # ?category= only seeds the initial pill state.
         response = self.client.get(
             reverse("menu:menu"),
             {"category": category.id},
@@ -193,19 +194,26 @@ class PublicRouteTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="menuGrid"')
         self.assertContains(response, side_item.name)
-        self.assertNotContains(response, self.menu_item.name)
+        self.assertContains(response, self.menu_item.name)
+        self.assertContains(response, 'data-menu-category=""')
+        self.assertContains(response, "data-menu-dietary")
+        self.assertContains(response, f'data-category-id="{self.menu_item.category_id}"')
+        self.assertContains(response, f'data-category-id="{side_item.category_id}"')
         self.assertContains(response, "openItemModal")
         self.assertContains(response, "quickAddToCart")
+        self.assertEqual(response.context["active_category"], category)
 
-        # Home carries the client-side category/dietary filter contract.
+        # Home is the shop window: no embedded full-menu grid, category
+        # tiles link into the menu page instead.
         home_response = self.client.get(
             reverse("core:home"),
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
         )
         self.assertEqual(home_response.status_code, 200)
-        self.assertContains(home_response, 'data-menu-category=""')
-        self.assertContains(home_response, f'data-category-id="{self.menu_item.category_id}"')
-        self.assertContains(home_response, f'data-category-id="{side_item.category_id}"')
+        self.assertNotContains(home_response, 'id="menuGrid"')
+        self.assertNotContains(home_response, "data-menu-category")
+        self.assertContains(home_response, 'class="category-tile"')
+        self.assertContains(home_response, f'{reverse("menu:menu")}?category={category.id}')
 
     def test_category_fragment_renders(self):
         response = self.client.get(
@@ -215,29 +223,22 @@ class PublicRouteTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.menu_item.name)
 
-    def test_home_dietary_filter_works_on_sqlite(self):
+    def test_menu_cards_expose_dietary_tags_for_client_side_filtering(self):
         category = self.menu_item.category
-        vegetarian_item = create_menu_item(
+        create_menu_item(
             name="Veg Sadza",
             category=category,
             dietary_tags=["vegetarian", "vegan"],
             is_popular=False,
         )
-        non_matching_item = create_menu_item(
-            name="Beef Sadza",
-            category=category,
-            dietary_tags=["halal"],
-            is_popular=False,
-        )
 
-        response = self.client.get(
-            reverse("core:home"),
-            {"dietary": "vegetarian", "category": category.id},
-        )
+        response = self.client.get(reverse("menu:menu"), {"dietary": "vegetarian"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(list(response.context["items"]), [vegetarian_item])
-        self.assertNotIn(non_matching_item, response.context["items"])
+        # Dietary filtering happens client-side against these attributes;
+        # the query param just marks the pill active on load.
+        self.assertContains(response, 'data-dietary-tags="vegetarian,vegan"')
+        self.assertEqual(response.context["dietary_filter"], "vegetarian")
 
     def test_home_order_again_only_includes_reorderable_orders(self):
         user = create_user(email="home-repeat@example.com")

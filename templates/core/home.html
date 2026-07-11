@@ -268,127 +268,38 @@
 </section>
 {% endif %}
 
-<!-- ═══ FULL MENU ═══ -->
+<!-- ═══ BROWSE THE MENU (shop window → /menu/) ═══ -->
 <section class="section" id="menu-section">
     <div class="container">
         <div class="section-header">
             <div>
-                <h2 id="menuSectionTitle">
-                    {% if active_category %}
-                    {{ active_category.name }}
-                    {% elif dietary_filter %}
-                    {{ dietary_filter|title }} options
-                    {% else %}
-                    Full Menu
-                    {% endif %}
-                </h2>
-                <p>Browse and filter — no page reloads.</p>
+                <h2>Browse the <span>Menu</span></h2>
+                <p>Pick a category or explore everything on the full menu.</p>
             </div>
+            <a href="{% url 'menu:menu' %}" class="section-link">
+                Full Menu <i class="ph-bold ph-arrow-right"></i>
+            </a>
         </div>
 
-        <!-- Category pills (client-side filter) -->
-        <div class="pill-row">
-            <button type="button" class="pill {% if not active_category %}active{% endif %}"
-                    data-menu-category="" data-menu-label="Full Menu"
-                    aria-pressed="{% if not active_category %}true{% else %}false{% endif %}">All Items</button>
+        {% if categories %}
+        <div class="category-tile-grid">
             {% for category in categories %}
-            <button type="button" class="pill {% if active_category == category %}active{% endif %}"
-                    data-menu-category="{{ category.id }}" data-menu-label="{{ category.name|escape }}"
-                    aria-pressed="{% if active_category == category %}true{% else %}false{% endif %}">{{ category.name }}</button>
+            <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-tile">
+                <span class="category-tile-icon">{{ category.icon|default:"🍽️" }}</span>
+                <span class="category-tile-name">{{ category.name }}</span>
+                <i class="ph-bold ph-arrow-right category-tile-arrow"></i>
+            </a>
             {% endfor %}
-        </div>
-
-        <!-- Dietary pills -->
-        <div class="dietary-filter-row">
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'vegetarian' %}active{% endif %}"
-                    data-menu-dietary="vegetarian" aria-pressed="{% if dietary_filter == 'vegetarian' %}true{% else %}false{% endif %}">
-                🥬 Vegetarian
-            </button>
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'vegan' %}active{% endif %}"
-                    data-menu-dietary="vegan" aria-pressed="{% if dietary_filter == 'vegan' %}true{% else %}false{% endif %}">
-                🌱 Vegan
-            </button>
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'gluten-free' %}active{% endif %}"
-                    data-menu-dietary="gluten-free" aria-pressed="{% if dietary_filter == 'gluten-free' %}true{% else %}false{% endif %}">
-                🌾 Gluten-Free
-            </button>
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'halal' %}active{% endif %}"
-                    data-menu-dietary="halal" aria-pressed="{% if dietary_filter == 'halal' %}true{% else %}false{% endif %}">
-                ☪️ Halal
-            </button>
-            <button type="button" class="dietary-filter-pill clear" data-menu-dietary="" data-menu-clear="dietary"
-                    aria-pressed="false" {% if not dietary_filter %}hidden{% endif %}>
-                ✕ Clear Filter
-            </button>
-        </div>
-
-        <!-- Search -->
-        {% if all_items|length > 4 %}
-        <div class="menu-search-bar" style="margin-top:1.5rem;">
-            <input type="text" id="menuSearchInput" class="menu-search-input"
-                   placeholder="Search menu items…"
-                   aria-label="Search menu">
-            <i class="ph ph-magnifying-glass menu-search-icon"></i>
-            <button type="button" class="menu-search-clear" id="menuSearchClear" aria-label="Clear search">
-                <i class="ph ph-x"></i>
-            </button>
-            <span class="menu-search-shortcut">⌘K</span>
         </div>
         {% endif %}
 
-        <!-- Menu grid: all items rendered, filtered client-side -->
-        <div class="menu-grid-desktop" style="margin-top:1.5rem;" id="menuGrid">
-            {% for item in all_items %}
-            <div class="menu-card" onclick="openItemModal({{ item.id }})"
-                 data-category-id="{{ item.category_id }}"
-                 data-dietary-tags="{{ item.dietary_tags|join:','|lower|escapejs }}"
-                 data-search-name="{{ item.name|lower|escapejs }}"
-                 data-search-desc="{{ item.description|default:''|lower|escapejs }}">
-                <div class="menu-card-image">
-                    {% if item.image %}
-                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-                    {% else %}
-                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
-                    {% endif %}
-                    {% if item.dietary_tags %}
-                    <div class="menu-card-badges">
-                        {% for tag in item.dietary_tags|slice:":2" %}
-                        <span class="dietary-badge">{{ tag }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="menu-card-body">
-                    <div class="menu-card-title">{{ item.name }}</div>
-                    {% if item.description %}
-                    <div class="menu-card-desc">{{ item.description }}</div>
-                    {% endif %}
-                    <div class="menu-card-footer">
-                        <span class="menu-card-price">£{{ item.price }}</span>
-                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
-                            <i class="ph-bold ph-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="empty-state home-menu-empty">
-                <i class="ph ph-fork-knife"></i>
-                <h3>No items yet</h3>
-                <p>Check back soon — we're always adding new dishes!</p>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="empty-state home-menu-empty" id="menuNoResults" hidden>
-            <i class="ph ph-magnifying-glass"></i>
-            <h3>No items match</h3>
-            <p>Try a different search term or clear your filters.</p>
+        <div class="text-center" style="margin-top:2rem;">
+            <a href="{% url 'menu:menu' %}" class="btn btn--primary btn--lg">
+                <i class="ph-bold ph-fork-knife"></i>
+                View the Full Menu
+            </a>
         </div>
     </div>
 </section>
 
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/home.js' %}" defer></script>
 {% endblock %}

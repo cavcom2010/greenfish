@@ -18,53 +18,10 @@ from apps.orders.reorder import reorderable_orders
 from apps.orders.services import get_cart_summary, selected_service_type
 
 
-def _filter_items_by_dietary_tag(queryset, dietary_filter):
-    """Filter dietary tags across database backends.
-
-    PostgreSQL supports JSON containment directly. SQLite does not, so fall
-    back to a small Python-side pass over the candidate IDs.
-    """
-    normalized_filter = (dietary_filter or "").strip().lower()
-    if not normalized_filter:
-        return queryset, ""
-
-    if getattr(connection.features, "supports_json_field_contains", False):
-        return queryset.filter(dietary_tags__contains=[normalized_filter]), normalized_filter
-
-    matching_ids = [
-        item_id
-        for item_id, dietary_tags in queryset.values_list("id", "dietary_tags")
-        if any(str(tag).strip().lower() == normalized_filter for tag in (dietary_tags or []))
-    ]
-    if not matching_ids:
-        return queryset.none(), normalized_filter
-
-    return queryset.filter(id__in=matching_ids), normalized_filter
-
-
 def home(request):
-    """Home page view with full menu and dietary filters."""
+    """Shop-window home page; the full browsable menu lives at menu:menu."""
     categories = MenuCategory.objects.filter(is_active=True).order_by("sort_order")
     service_type = selected_service_type(request)
-
-    # Get filter parameters
-    category_id = request.GET.get("category")
-    dietary_filter = request.GET.get("dietary")
-
-    # Build base queryset
-    all_items = MenuItem.objects.filter(is_available=True).select_related("category").order_by("category__sort_order", "sort_order")
-    items = all_items
-
-    # Apply category filter
-    if category_id:
-        active_category = MenuCategory.objects.filter(id=category_id).first()
-        items = items.filter(category_id=category_id)
-    else:
-        active_category = None
-
-    # Apply dietary filter
-    if dietary_filter:
-        items, dietary_filter = _filter_items_by_dietary_tag(items, dietary_filter)
 
     # Get popular items for "Popular Now" section
     popular_items = MenuItem.objects.filter(
@@ -99,13 +56,9 @@ def home(request):
 
     context = {
         "categories": categories,
-        "items": items,
-        "all_items": all_items,
         "popular_items": popular_items,
         "favorite_items": favorite_items,
         "recent_orders": recent_orders,
-        "active_category": active_category,
-        "dietary_filter": dietary_filter,
         "hero_offers": hero_offers,
         "service_type": service_type,
     }
