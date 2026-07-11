@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.accounts.models import CustomerProfile
 from apps.core.forms import LargeOrderRequestForm
 from apps.menu.models import MenuCategory, MenuItem
+from apps.menu.services import get_popular_menu_items
 from apps.offers.models import Offer
 from apps.orders.reorder import reorderable_orders
 from apps.orders.services import get_cart_summary, selected_service_type
@@ -23,10 +24,8 @@ def home(request):
     categories = MenuCategory.objects.filter(is_active=True).order_by("sort_order")
     service_type = selected_service_type(request)
 
-    # Get popular items for "Popular Now" section
-    popular_items = MenuItem.objects.filter(
-        is_available=True, is_popular=True
-    ).select_related("category")[:6]
+    # Best sellers from recent paid orders (admin is_popular flag as fallback)
+    popular_items = get_popular_menu_items(limit=6)
 
     # Get active offers for hero banner
     now = timezone.now()

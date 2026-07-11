@@ -1,11 +1,65 @@
 """
 Menu services - Recommendations and business logic.
 """
-from django.db.models import Count, Q
+from datetime import timedelta
+
+from django.core.cache import cache
+from django.db.models import Count, Q, Sum
+from django.utils import timezone
 
 from apps.orders.models import Order, OrderItem
 
 from .models import MenuItem
+
+POPULAR_ITEMS_CACHE_SECONDS = 60 * 60
+
+
+def get_popular_menu_items(limit=6, days=14):
+    """Return the current best sellers, most-ordered first.
+
+    Ranks available menu items by quantity sold across paid, non-cancelled
+    orders in the last ``days`` days. When there isn't enough recent order
+    history to fill ``limit`` slots (new shop, quiet fortnight), tops up
+    with items the admin has flagged ``is_popular``.
+
+    The sales ranking (ids only) is cached for an hour; availability is
+    re-checked on every call so 86'd items drop out immediately.
+    """
+    cache_key = f"menu:popular-item-ids:{limit}:{days}"
+    ranked_ids = cache.get(cache_key)
+    if ranked_ids is None:
+        since = timezone.now() - timedelta(days=days)
+        ranked_ids = list(
+            OrderItem.objects.filter(
+                order__created_at__gte=since,
+                order__payment_status=Order.PaymentStatus.PAID,
+                menu_item__isnull=False,
+            )
+            .exclude(order__status=Order.OrderStatus.CANCELLED)
+            .values("menu_item")
+            .annotate(total_quantity=Sum("quantity"))
+            .order_by("-total_quantity", "menu_item")
+            .values_list("menu_item", flat=True)[:limit]
+        )
+        cache.set(cache_key, ranked_ids, POPULAR_ITEMS_CACHE_SECONDS)
+
+    items_by_id = (
+        MenuItem.objects.filter(id__in=ranked_ids, is_available=True)
+        .select_related("category")
+        .in_bulk()
+    )
+    items = [items_by_id[item_id] for item_id in ranked_ids if item_id in items_by_id]
+
+    if len(items) < limit:
+        flagged = (
+            MenuItem.objects.filter(is_available=True, is_popular=True)
+            .exclude(id__in=[item.id for item in items])
+            .select_related("category")
+            .order_by("category__sort_order", "sort_order")[: limit - len(items)]
+        )
+        items.extend(flagged)
+
+    return items
 
 
 def get_recommendations(item_id, limit=4):

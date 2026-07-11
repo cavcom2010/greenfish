@@ -72,7 +72,7 @@
             </div>
             {% if popular_items %}
             <div class="floating-chip">
-                <strong>Popular this week</strong>
+                <strong>Popular right now</strong>
                 <span>{{ popular_items.0.name }} · £{{ popular_items.0.price }}</span>
             </div>
             {% endif %}
@@ -196,7 +196,7 @@
         <div class="section-header">
             <div>
                 <h2>Popular <span>Right Now</span></h2>
-                <p>Our most loved dishes, ordered by customers this week.</p>
+                <p>What customers are ordering most right now.</p>
             </div>
             <a href="{% url 'menu:menu' %}" class="section-link">
                 View Full Menu <i class="ph-bold ph-arrow-right"></i>
@@ -212,11 +212,9 @@
                     {% else %}
                     <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
                     {% endif %}
-                    {% if item.is_popular %}
                     <div class="menu-card-badges">
                         <span class="popular-badge">Popular</span>
                     </div>
-                    {% endif %}
                 </div>
                 <div class="menu-card-body">
                     <div class="menu-card-title">{{ item.name }}</div>

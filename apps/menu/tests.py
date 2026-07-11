@@ -10,7 +10,86 @@ from django.test import TestCase
 from django.test import override_settings
 from PIL import Image
 
-from apps.core.test_support import create_menu_item
+from django.core.cache import cache
+
+from apps.core.test_support import create_menu_item, create_order
+from apps.menu.models import MenuItem
+from apps.menu.services import get_popular_menu_items
+from apps.orders.models import Order, OrderItem
+
+
+class PopularMenuItemsTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        # The seed migration ships flagged items; hide them so each test
+        # controls exactly which items can rank.
+        MenuItem.objects.update(is_available=False)
+
+    def _paid_order_with(self, item, quantity, **order_overrides):
+        order_overrides.setdefault("payment_status", Order.PaymentStatus.PAID)
+        order = create_order(**order_overrides)
+        # create_order seeds its own line; replace it with a controlled one
+        order.items.all().delete()
+        OrderItem.objects.create(
+            order=order,
+            menu_item=item,
+            item_name=item.name,
+            item_price=item.price,
+            quantity=quantity,
+            modifiers=[],
+        )
+        return order
+
+    def test_ranks_by_recent_paid_sales_and_tops_up_with_flag(self):
+        best_seller = create_menu_item(name="Best Seller", is_popular=False)
+        runner_up = create_menu_item(name="Runner Up", is_popular=False)
+        chefs_pick = create_menu_item(name="Chefs Pick", is_popular=True)
+
+        self._paid_order_with(best_seller, quantity=5)
+        self._paid_order_with(runner_up, quantity=2)
+
+        items = get_popular_menu_items(limit=3)
+
+        self.assertEqual(
+            [item.name for item in items[:2]], ["Best Seller", "Runner Up"]
+        )
+        # Not enough sales history for 3 slots: flag-popular item fills in.
+        self.assertIn(chefs_pick, items)
+
+    def test_ignores_unpaid_and_cancelled_orders(self):
+        noise = create_menu_item(name="Noise Item", is_popular=False)
+        seller = create_menu_item(name="Actual Seller", is_popular=False)
+
+        self._paid_order_with(noise, quantity=50, payment_status=Order.PaymentStatus.PENDING)
+        self._paid_order_with(noise, quantity=50, status=Order.OrderStatus.CANCELLED)
+        self._paid_order_with(seller, quantity=1)
+
+        items = get_popular_menu_items(limit=1)
+
+        self.assertEqual([item.name for item in items], ["Actual Seller"])
+
+    def test_unavailable_items_drop_out_even_when_ranking_is_cached(self):
+        seller = create_menu_item(name="Sold Out Star", is_popular=False)
+        backup = create_menu_item(name="Backup Flagged", is_popular=True)
+        self._paid_order_with(seller, quantity=4)
+
+        first = get_popular_menu_items(limit=1)
+        self.assertEqual([item.name for item in first], ["Sold Out Star"])
+
+        seller.is_available = False
+        seller.save(update_fields=["is_available"])
+
+        # Ranking ids are cached, but availability is re-checked per call.
+        second = get_popular_menu_items(limit=1)
+        self.assertEqual([item.name for item in second], ["Backup Flagged"])
+
+    def test_falls_back_to_flagged_items_without_order_history(self):
+        create_menu_item(name="Unflagged", is_popular=False)
+        flagged = create_menu_item(name="Flagged", is_popular=True)
+
+        items = get_popular_menu_items(limit=6)
+
+        self.assertEqual([item.id for item in items], [flagged.id])
 
 
 class MenuItemPrepTimeTests(TestCase):
