@@ -23,15 +23,6 @@ from .models import CustomerProfile, SavedMeal
 from apps.menu.models import MenuItem
 
 
-def _desktop_template(template_name, request):
-    """Return desktop or mobile template path."""
-    if getattr(request, 'is_desktop', True):
-        parts = template_name.split('/')
-        if len(parts) >= 2:
-            return f"desktop/{parts[0]}/{parts[1]}"
-    return template_name
-
-
 def _safe_next_redirect(request, fallback_url_name):
     next_url = request.POST.get("next") or request.GET.get("next")
     if next_url and url_has_allowed_host_and_scheme(
@@ -41,89 +32,6 @@ def _safe_next_redirect(request, fallback_url_name):
     ):
         return next_url
     return reverse(fallback_url_name)
-
-
-# ── Desktop-aware allauth wrappers ──────────────────────────────────────
-def desktop_aware_login(request):
-    """Login page — desktop-aware."""
-    if not getattr(request, 'is_desktop', True):
-        from allauth.account.views import LoginView
-        return LoginView.as_view()(request)
-    from allauth.account.forms import LoginForm
-    if request.method == "POST":
-        form = LoginForm(request.POST, request=request)
-        if form.is_valid():
-            form.login(request)
-            return redirect("core:home")
-    else:
-        form = LoginForm()
-    return render(request, "desktop/account/login.html", {"form": form})
-
-
-def desktop_aware_signup(request):
-    """Signup page — desktop-aware."""
-    if not getattr(request, 'is_desktop', True):
-        from allauth.account.views import SignupView
-        return SignupView.as_view()(request)
-    from allauth.account.forms import SignupForm
-    if request.method == "POST":
-        form = SignupForm(request.POST)
-        if form.is_valid():
-            user = form.save(request)
-            return redirect("core:home")
-    else:
-        form = SignupForm()
-    return render(request, "desktop/account/signup.html", {"form": form})
-
-
-def desktop_aware_logout(request):
-    """Logout confirmation — desktop-aware."""
-    if not getattr(request, 'is_desktop', True):
-        from allauth.account.views import LogoutView
-        return LogoutView.as_view()(request)
-    if request.method == "POST":
-        from django.contrib.auth import logout
-        logout(request)
-        return redirect("core:home")
-    return render(request, "desktop/account/logout.html", {})
-
-
-def desktop_aware_password_reset(request):
-    """Password reset — desktop-aware."""
-    if not getattr(request, 'is_desktop', True):
-        from allauth.account.views import PasswordResetView
-        return PasswordResetView.as_view()(request)
-    from allauth.account.forms import ResetPasswordForm
-    if request.method == "POST":
-        form = ResetPasswordForm(request.POST)
-        if form.is_valid():
-            form.save(request)
-            return redirect("account_reset_password_done")
-    else:
-        form = ResetPasswordForm()
-    return render(request, "desktop/account/password_reset.html", {"form": form})
-
-
-def desktop_aware_password_reset_done(request):
-    """Password reset sent confirmation — desktop-aware."""
-    return render(request, _desktop_template("account/password_reset_done.html", request), {})
-
-
-def desktop_aware_password_reset_from_key(request, uidb36, key):
-    """Password reset link form — desktop-aware."""
-    from allauth.account.views import PasswordResetFromKeyView
-
-    template_name = _desktop_template("account/password_reset_from_key.html", request)
-    view = PasswordResetFromKeyView.as_view(template_name=template_name)
-    return view(request, uidb36=uidb36, key=key)
-
-
-def desktop_aware_password_reset_from_key_done(request):
-    """Password reset complete confirmation — desktop-aware."""
-    return render(request, _desktop_template("account/password_reset_from_key_done.html", request), {})
-
-
-# ── Existing views ──────────────────────────────────────────────────────
 
 
 @login_required

@@ -115,14 +115,17 @@ def home(request):
 
 def about(request):
     """About page view."""
-    template = "desktop/core/about.html" if getattr(request, "is_desktop", True) else "core/about.html"
-    return render(request, template)
+    return render(request, "core/about.html")
 
 
 def contact(request):
     """Contact page view."""
-    template = "desktop/core/contact.html" if getattr(request, "is_desktop", True) else "core/contact.html"
-    return render(request, template)
+    return render(request, "core/contact.html")
+
+
+def privacy(request):
+    """Privacy policy / GDPR information page."""
+    return render(request, "core/privacy.html")
 
 
 def _large_order_initial(request):

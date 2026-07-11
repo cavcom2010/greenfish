@@ -1,1246 +1,385 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="{{ site_settings.theme_color|default:'#FF6B35' }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Order delicious food from {{ site_settings.shop_name }}. Fresh, authentic cuisine available for pickup{% if delivery_enabled %} or delivery{% endif %}.">
-    
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="description" content="{% block meta_description %}Order delicious food from {{ site_settings.shop_name }}. Fresh food available for pickup{% if delivery_enabled %} or delivery{% endif %}.{% endblock %}">
+
     <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
-    
-    {% load static %}
-    
+
     <!-- PWA -->
     <link rel="manifest" href="{% url 'pwa:manifest' %}">
     <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+    {% if site_settings.favicon %}
+    <link rel="icon" type="image/png" href="{{ site_settings.favicon.url }}">
+    {% else %}
     <link rel="icon" type="image/png" href="{% static 'icons/icon-192.png' %}">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
-    
-    <style>
-        :root {
-            --brand: #FF6B35;
-            --brand-dark: #E55A2B;
-            --brand-light: #FFF0EB;
-            --bg: #FAFAFA;
-            --surface: #FFFFFF;
-            --text: #1A1A1A;
-            --text-secondary: #666666;
-            --text-muted: #999999;
-            --border: #E5E5E5;
-            --success: #22C55E;
-            --success-bg: #DCFCE7;
-            --warning: #F59E0B;
-            --error: #EF4444;
-            --error-bg: #FEE2E2;
-            --shadow: 0 2px 8px rgba(0,0,0,0.08);
-            --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        html {
-            scrollbar-width: none;
-        }
-        
-        ::-webkit-scrollbar {
-            display: none;
-        }
-        
-        body {
-            background: var(--bg);
-            color: var(--text);
-            overflow-x: hidden;
-            min-height: 100vh;
-            padding-bottom: calc(80px + var(--safe-bottom));
-        }
-        
-        /* Mobile Container */
-        .mobile-container {
-            max-width: 430px;
-            margin: 0 auto;
-            background: var(--bg);
-            min-height: 100vh;
-            position: relative;
-        }
-        
-        /* Status Bar Area */
-        .status-bar {
-            background: var(--surface);
-            padding: 12px 16px 8px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .status-bar h1 {
-            font-size: 28px;
-            font-weight: 800;
-        }
-        
-        /* Location Picker */
-        .location-picker {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 12px;
-        }
-        
-        .location-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--brand);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-        
-        .location-info h2 {
-            font-size: 16px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-        }
-        
-        .location-info p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-        
-        .change-location {
-            margin-left: auto;
-            color: #007AFF;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-        }
-        
-        /* Service Toggle */
-        .service-toggle {
-            display: flex;
-            background: var(--bg);
-            border-radius: 24px;
-            padding: 4px;
-            margin: 16px;
-            border: 1px solid var(--border);
-        }
-        
-        .toggle-option {
-            flex: 1;
-            text-align: center;
-            padding: 10px 16px;
-            font-weight: 700;
-            font-size: 15px;
-            border-radius: 20px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            color: var(--text);
-        }
-        
-        .toggle-option.active {
-            background: var(--brand);
-            color: white;
-            box-shadow: 0 2px 8px rgba(255,107,53,0.3);
-        }
-        
-        /* Hero Section */
-        .hero {
-            margin: 0 16px 24px;
-            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
-            border-radius: 20px;
-            padding: 24px;
-            color: white;
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .hero-content {
-            position: relative;
-            z-index: 1;
-        }
-        
-        .hero h3 {
-            font-size: 22px;
-            font-weight: 800;
-            margin-bottom: 8px;
-            line-height: 1.2;
-        }
-        
-        .hero p {
-            font-size: 14px;
-            opacity: 0.95;
-            margin-bottom: 16px;
-        }
-        
-        .hero-btn {
-            background: white;
-            color: var(--brand);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 24px;
-            font-weight: 700;
-            font-size: 15px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: var(--shadow);
-            text-decoration: none;
-            cursor: pointer;
-        }
-        
-        /* Category Pills */
-        .categories {
-            display: flex;
-            gap: 10px;
-            padding: 0 16px 16px;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        
-        .categories::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .category-pill {
-            flex-shrink: 0;
-            padding: 10px 20px;
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: 24px;
-            font-weight: 700;
-            font-size: 15px;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-            text-decoration: none;
-            color: var(--text);
-        }
-        
-        .category-pill.active {
-            border-color: var(--success);
-            background: var(--success-bg);
-            color: var(--success);
-        }
-        
-        /* Section Title */
-        .section-title {
-            padding: 0 16px;
-            font-size: 20px;
-            font-weight: 800;
-            margin-bottom: 12px;
-            letter-spacing: -0.5px;
-        }
-        
-        /* Menu Grid */
-        .menu-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 0 16px 24px;
-        }
-        
-        .food-card {
-            background: var(--surface);
-            border-radius: 16px;
-            padding: 16px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            position: relative;
-            transition: transform 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            color: var(--text);
-        }
-        
-        .food-card:active {
-            transform: scale(0.96);
-        }
-        
-        .food-image {
-            width: 100%;
-            height: 100px;
-            background: var(--bg);
-            border-radius: 12px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            overflow: hidden;
-        }
-        
-        .food-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .food-name {
-            font-weight: 700;
-            font-size: 15px;
-            margin-bottom: 4px;
-            line-height: 1.3;
-        }
-        
-        .food-price {
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .add-btn {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            width: 32px;
-            height: 32px;
-            background: var(--brand);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 2px 8px rgba(255,107,53,0.4);
-            cursor: pointer;
-        }
-        
-        /* List View */
-        .menu-list {
-            padding: 0 16px;
-        }
-        
-        .list-item {
-            display: flex;
-            align-items: center;
-            padding: 16px;
-            background: var(--surface);
-            margin-bottom: 12px;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: transform 0.2s;
-            text-decoration: none;
-            color: var(--text);
-        }
-        
-        .list-item:active {
-            transform: scale(0.98);
-        }
-        
-        .list-image {
-            width: 60px;
-            height: 60px;
-            background: var(--bg);
-            border-radius: 12px;
-            margin-right: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        
-        .list-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .list-content {
-            flex: 1;
-        }
-        
-        .list-title {
-            font-weight: 700;
-            font-size: 16px;
-            margin-bottom: 4px;
-        }
-        
-        .list-desc {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        
-        .list-arrow {
-            color: var(--text-secondary);
-            font-size: 20px;
-        }
-        
-        /* Bottom Navigation */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 430px;
-            background: rgba(255,255,255,0.98);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 0 calc(8px + var(--safe-bottom));
-            z-index: 1000;
-        }
-        
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 20px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 11px;
-            font-weight: 600;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-        }
-        
-        .nav-item.active {
-            color: var(--brand);
-        }
-        
-        .nav-item i {
-            font-size: 24px;
-        }
-        
-        /* Cart Badge */
-        .cart-badge {
-            position: absolute;
-            top: 2px;
-            right: 12px;
-            background: var(--brand);
-            color: white;
-            font-size: 10px;
-            font-weight: 800;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 5px;
-            border: 2px solid white;
-        }
-        
-        /* Sticky Basket Bar - Floating Pill Style */
-        .basket-bar {
-            position: fixed;
-            bottom: calc(80px + var(--safe-bottom));
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            width: calc(100% - 32px);
-            max-width: 400px;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            color: var(--text);
-            padding: 12px 16px;
-            border-radius: 28px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 998;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .basket-bar.show {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateX(-50%) translateY(0);
-        }
-        
-        .basket-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .basket-icon {
-            position: relative;
-            width: 40px;
-            height: 40px;
-            background: var(--brand-light);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        
-        .basket-icon i {
-            font-size: 20px;
-            color: var(--brand);
-        }
-        
-        .basket-count {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            background: var(--brand);
-            color: white;
-            font-size: 10px;
-            font-weight: 800;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 5px;
-            border: 2px solid white;
-        }
-        
-        .basket-text {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .basket-text h4 {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text);
-            margin: 0;
-        }
-        
-        .basket-text p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin: 2px 0 0 0;
-        }
-        
-        .basket-btn {
-            background: var(--brand);
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 14px;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        
-        /* Offers */
-        .offer-card {
-            margin: 0 16px 16px;
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            height: 180px;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .offer-content {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 24px;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            color: white;
-        }
-        
-        .offer-content h3 {
-            font-size: 22px;
-            font-weight: 800;
-            margin-bottom: 4px;
-        }
-        
-        .offer-content p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .offer-btn {
-            background: white;
-            color: var(--text);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-weight: 700;
-            margin-top: 12px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        /* Account Page */
-        .account-page {
-            padding: 40px 20px;
-            text-align: center;
-        }
-        
-        .account-avatar {
-            width: 80px;
-            height: 80px;
-            background: var(--border);
-            border-radius: 50%;
-            margin: 0 auto 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: var(--text-secondary);
-        }
-        
-        .account-page h2 {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-        
-        .account-page p {
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            font-size: 15px;
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 16px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-        
-        .btn-primary {
-            background: var(--text);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: var(--surface);
-            color: var(--text);
-            border: 2px solid var(--border);
-            margin-top: 12px;
-        }
-        
-        .btn-brand {
-            background: var(--brand);
-            color: white;
-        }
-        
-        /* Form Styles */
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        .form-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text);
-        }
-        
-        .form-input {
-            width: 100%;
-            padding: 14px 16px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 16px;
-            background: var(--surface);
-            transition: border-color 0.2s;
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: var(--brand);
-        }
-        
-        /* Alerts */
-        .alert {
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
-        
-        .alert-success {
-            background: var(--success-bg);
-            color: #166534;
-        }
-        
-        .alert-error {
-            background: var(--error-bg);
-            color: #991B1B;
-        }
+    {% endif %}
 
-        .message-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 16px 16px 0;
-        }
-        
-        /* Page Content Padding */
-        .page-content {
-            padding: 16px;
-        }
-        
-        /* Utility */
-        .text-center { text-align: center; }
-        .mt-4 { margin-top: 16px; }
-        .mb-4 { margin-bottom: 16px; }
-        .hidden { display: none !important; }
-        
-        /* Loading */
-        .htmx-indicator {
-            opacity: 0;
-            transition: opacity 200ms;
-        }
-        .htmx-request .htmx-indicator {
-            opacity: 1;
-        }
+    <!-- Fonts & icons (self-hosted) -->
+    <link rel="preload" href="{% static 'fonts/inter-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'fonts/inter.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/phosphor/regular/style.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/phosphor/fill/style.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/phosphor/bold/style.css' %}">
 
-        /* Cookie Consent Banner (Mobile) */
-        .cookie-consent-banner {
-            position: fixed;
-            bottom: calc(80px + var(--safe-bottom));
-            left: 0;
-            right: 0;
-            z-index: 5000;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
-            padding: 1rem 1.25rem;
-        }
-        .cookie-consent-banner.visible {
-            display: block !important;
-        }
-        .cookie-consent-content {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        .cookie-consent-text h4 {
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin-bottom: 0.2rem;
-        }
-        .cookie-consent-text p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin: 0;
-            line-height: 1.5;
-        }
-        .cookie-consent-text a {
-            color: var(--brand);
-            text-decoration: underline;
-        }
-        .cookie-consent-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .cookie-btn {
-            padding: 0.55rem 1rem;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            font-size: 0.8rem;
-            cursor: pointer;
-            border: none;
-            flex: 1;
-        }
-        .cookie-btn-accept {
-            background: var(--brand);
-            color: white;
-        }
-        .cookie-btn-essential {
-            background: var(--bg);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-        }
+    <!-- Design system -->
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shell.css' %}">
 
-        /* Customer responsive polish */
-        .customer-ui {
-            --warm-bg: #fffaf6;
-            --warm-panel: rgba(255, 255, 255, 0.92);
-            --warm-border: #ece7e2;
-            --warm-muted: #6b7280;
-            background:
-                radial-gradient(circle at 12% 0%, rgba(255,107,53,0.12), transparent 30%),
-                linear-gradient(180deg, #fffaf6 0%, #f8f4ef 52%, #ffffff 100%);
-        }
+    <!-- HTMX (self-hosted) -->
+    <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
 
-        .customer-ui .mobile-container {
-            width: min(100%, 430px);
-            background: transparent;
-        }
-
-        .customer-ui .status-bar {
-            background: rgba(255, 250, 246, 0.94);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border-bottom-color: var(--warm-border);
-            box-shadow: 0 8px 22px rgba(21, 21, 21, 0.05);
-        }
-
-        .customer-ui .status-bar h1 {
-            font-size: clamp(22px, 7vw, 28px);
-            letter-spacing: 0;
-        }
-
-        .customer-ui .location-icon {
-            background: #171717;
-            box-shadow: 0 10px 24px rgba(21, 21, 21, 0.14);
-        }
-
-        .customer-ui .hero {
-            background:
-                radial-gradient(circle at 86% 18%, rgba(255,107,53,0.34), transparent 30%),
-                linear-gradient(135deg, #121212 0%, #1c1b19 48%, #2b211d 100%);
-            border-radius: 26px;
-            padding: clamp(22px, 6vw, 32px);
-            box-shadow: 0 18px 45px rgba(21, 21, 21, 0.16);
-        }
-
-        .customer-ui .hero h3 {
-            font-size: clamp(26px, 9vw, 38px);
-            line-height: 1;
-            letter-spacing: 0;
-        }
-
-        .customer-ui .hero-btn,
-        .customer-ui .btn-brand,
-        .customer-ui .btn-primary,
-        .customer-ui .basket-btn {
-            border-radius: 16px;
-            font-weight: 900;
-            box-shadow: 0 14px 28px rgba(255,107,53,0.24);
-        }
-
-        .customer-ui .service-toggle,
-        .customer-ui .list-item,
-        .customer-ui .food-card,
-        .customer-ui .account-page,
-        .customer-ui .page-content > div[style*="background"],
-        .customer-ui .form-input,
-        .customer-ui input,
-        .customer-ui select,
-        .customer-ui textarea {
-            background: var(--warm-panel) !important;
-            border-color: var(--warm-border) !important;
-            box-shadow: 0 10px 24px rgba(21, 21, 21, 0.06);
-        }
-
-        .customer-ui .category-pill,
-        .customer-ui .dietary-pill,
-        .customer-ui .btn-secondary {
-            background: rgba(255,255,255,0.82) !important;
-            border-color: var(--warm-border) !important;
-            border-radius: 999px !important;
-            box-shadow: 0 8px 18px rgba(21,21,21,0.04);
-        }
-
-        .customer-ui .category-pill.active,
-        .customer-ui .dietary-pill.active,
-        .customer-ui .toggle-option.active {
-            background: var(--brand) !important;
-            border-color: var(--brand) !important;
-            color: #ffffff !important;
-        }
-
-        .customer-ui .section-title {
-            font-size: clamp(20px, 6vw, 26px);
-            letter-spacing: 0;
-        }
-
-        .customer-ui .food-card,
-        .customer-ui .list-item {
-            border-radius: 20px;
-        }
-
-        .customer-ui .deals-header {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            border-radius: 0 0 26px 26px;
-        }
-
-        .customer-ui .deals-grid {
-            padding-left: clamp(12px, 4vw, 16px);
-            padding-right: clamp(12px, 4vw, 16px);
-            max-width: 100%;
-        }
-
-        .customer-ui .deal-card {
-            border-radius: 20px;
-            max-width: 100%;
-        }
-
-        .customer-ui .deal-footer {
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .customer-ui .btn-build {
-            width: 100%;
-            text-align: center;
-        }
-
-        .customer-ui .food-image,
-        .customer-ui .list-image {
-            background: linear-gradient(145deg, #fbfaf8, #f1eee9);
-        }
-
-        .customer-ui .bottom-nav {
-            background: rgba(255, 250, 246, 0.96);
-            border-top-color: var(--warm-border);
-            box-shadow: 0 -10px 30px rgba(21,21,21,0.08);
-        }
-
-        .customer-ui .nav-item {
-            min-width: 64px;
-            padding-inline: 10px;
-        }
-
-        .customer-ui .basket-bar {
-            background: rgba(20, 20, 20, 0.92);
-            color: #ffffff;
-            border-color: rgba(255,255,255,0.14);
-            box-shadow: 0 20px 55px rgba(0,0,0,0.28);
-        }
-
-        .customer-ui .basket-text h4,
-        .customer-ui .basket-text p {
-            color: #ffffff;
-        }
-
-        .customer-ui .basket-icon {
-            background: var(--brand);
-        }
-
-        .customer-ui .basket-icon i {
-            color: #ffffff;
-        }
-
-        .customer-ui .basket-btn {
-            background: #ffffff;
-            color: #111827;
-        }
-
-        .customer-ui .page-content {
-            padding: clamp(14px, 4vw, 20px);
-        }
-
-        .customer-ui .page-content h1,
-        .customer-ui .account-page h2 {
-            font-size: clamp(26px, 8vw, 36px);
-            line-height: 1;
-            letter-spacing: 0;
-        }
-
-        .customer-ui .btn,
-        .customer-ui button,
-        .customer-ui input,
-        .customer-ui select,
-        .customer-ui textarea {
-            max-width: 100%;
-        }
-
-        @media (min-width: 431px) {
-            .customer-ui .mobile-container {
-                border-left: 1px solid rgba(236,231,226,0.8);
-                border-right: 1px solid rgba(236,231,226,0.8);
-                box-shadow: 0 24px 80px rgba(21,21,21,0.08);
-            }
-        }
-
-        @media (max-width: 380px) {
-            .customer-ui .menu-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .customer-ui .bottom-nav span {
-                font-size: 10px;
-            }
-        }
-    </style>
-    
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% if '/ops/' not in request.path and '/analytics/' not in request.path and '/admin/' not in request.path %}customer-ui customer-ui-mobile{% endif %}">
-    <div class="mobile-container">
-        {% block header %}
-        <div class="status-bar">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h1>{% block page_title %}Order{% endblock %}</h1>
-                <a href="{% url 'orders:cart' %}" style="font-size: 24px; position: relative; color: var(--text); text-decoration: none;">
-                    <i class="ph ph-basket"></i>
-                    {% if cart_count > 0 %}
-                    <span class="cart-badge" id="cartBadge">{{ cart_count }}</span>
-                    {% endif %}
-                </a>
-            </div>
-            
-            {% block location_picker %}
-            <div class="location-picker">
-                <div class="location-icon">
-                    <i class="ph-fill ph-map-pin"></i>
-                </div>
-                <div class="location-info">
-                    <h2>{{ site_settings.shop_name|upper }}</h2>
-                    <p>{{ site_settings.address }}</p>
-                </div>
-                <span class="change-location">Change</span>
-            </div>
-            {% endblock %}
-        </div>
-        {% endblock %}
+<body class="page-fade-in {% block body_class %}{% endblock %}">
 
-        {% if messages %}
-        <div class="message-stack">
-            {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
-                {{ message }}
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    {% block header %}
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <a href="{% url 'core:home' %}" class="logo">
+                    {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}">
+                    {% else %}
+                    <span class="logo-mark" aria-hidden="true"><i class="ph-fill ph-bowl-food"></i></span>
+                    {% endif %}
+                    <span class="logo-text">
+                        {{ site_settings.shop_name }}
+                        {% if site_settings.tagline %}
+                        <small>{{ site_settings.tagline }}</small>
+                        {% endif %}
+                    </span>
+                </a>
+
+                <nav class="main-nav" aria-label="Main navigation">
+                    <a href="{% url 'core:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Order</a>
+                    <a href="{% url 'menu:menu' %}" class="{% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">Menu</a>
+                    <a href="{% url 'offers:list' %}" class="{% if 'offers' in request.path %}active{% endif %}">Offers</a>
+                    <a href="{% url 'core:large_orders' %}" class="{% if request.resolver_match.url_name == 'large_orders' %}active{% endif %}">Large Orders</a>
+                    <a href="{% url 'loyalty:dashboard' %}" class="{% if 'rewards' in request.path %}active{% endif %}">Rewards</a>
+                    {% if site_settings.about_page_enabled %}
+                    <a href="{% url 'core:about' %}">About</a>
+                    {% endif %}
+                </nav>
             </div>
-            {% endfor %}
+
+            <div class="header-right">
+                <button type="button" class="header-icon-btn" id="desktopCartButton" onclick="openCartDrawer()" aria-label="View cart{% if cart_count > 0 %}, {{ cart_count }} item{{ cart_count|pluralize }}{% endif %}">
+                    <i class="ph ph-shopping-cart"></i>
+                    <span class="cart-badge-desktop" {% if cart_count <= 0 %}hidden{% endif %}>{{ cart_count|default:0 }}</span>
+                </button>
+
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}" class="btn-account">
+                    <i class="ph ph-user-circle" style="font-size:1.25rem;"></i>
+                    {{ request.user.first_name|default:"Account" }}
+                </a>
+                {% else %}
+                <a href="{% url 'account_login' %}" class="btn-account">Sign In</a>
+                <a href="{% url 'account_signup' %}" class="btn-order">
+                    Order Now <i class="ph-bold ph-arrow-right"></i>
+                </a>
+                {% endif %}
+
+                <button type="button" class="header-icon-btn mobile-menu-btn" id="mobileMenuButton"
+                        onclick="openMobileMenu()" aria-label="Open menu" aria-haspopup="true" aria-expanded="false">
+                    <i class="ph-bold ph-list"></i>
+                </button>
+            </div>
         </div>
-        {% endif %}
-        
-        <main>
-            {% block content %}{% endblock %}
-        </main>
-        
-        {% block bottom_nav %}
-        <!-- Bottom Navigation -->
-        <nav class="bottom-nav">
-            <a href="{% url 'core:home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                <i class="ph-fill ph-house"></i>
-                <span>Order</span>
-            </a>
-            <a href="{% url 'offers:list' %}" class="nav-item {% if 'offers' in request.path %}active{% endif %}">
-                <i class="ph-bold ph-tag"></i>
-                <span>Offers</span>
-            </a>
-            <a href="{% url 'loyalty:dashboard' %}" class="nav-item {% if 'rewards' in request.path %}active{% endif %}">
-                <i class="ph-bold ph-gift"></i>
-                <span>Rewards</span>
-            </a>
-            <a href="{% url 'accounts:profile' %}" class="nav-item {% if 'profile' in request.path %}active{% endif %}">
-                <i class="ph-bold ph-user"></i>
-                <span>Account</span>
-            </a>
-        </nav>
-        {% endblock %}
-        
-        <!-- Sticky Cart Bar - Hidden on checkout/cart pages -->
-        {% if cart_count > 0 and 'checkout' not in request.path and 'cart' not in request.path %}
-        <a href="{% url 'orders:checkout' %}" class="basket-bar show" id="basketBar" style="text-decoration: none;">
-            <div class="basket-info">
-                <div class="basket-icon">
-                    <i class="ph-fill ph-shopping-cart"></i>
-                    <span class="basket-count">{{ cart_count }}</span>
+    </header>
+    {% endblock %}
+
+    <!-- Mobile hamburger menu (off-canvas) -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenuOnOverlay(event)">
+        <aside class="mobile-menu" role="dialog" aria-label="Site menu">
+            <div class="mobile-menu-header">
+                <span class="mobile-menu-title">{{ site_settings.shop_name }}</span>
+                <button type="button" class="cart-drawer-close" onclick="closeMobileMenu()" aria-label="Close menu">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <nav class="mobile-menu-body">
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Explore</div>
+                    <a href="{% url 'core:large_orders' %}"><i class="ph ph-users-three"></i> Large Orders & Catering</a>
+                    <a href="{% url 'mealdeals:list' %}"><i class="ph ph-bowl-food"></i> Meal Deals</a>
+                    {% if site_settings.about_page_enabled %}
+                    <a href="{% url 'core:about' %}"><i class="ph ph-info"></i> About Us</a>
+                    {% endif %}
+                    <a href="{% url 'core:contact' %}"><i class="ph ph-chat-circle-text"></i> Contact</a>
                 </div>
-                <div class="basket-text">
-                    <h4>{{ cart_count }} item{{ cart_count|pluralize }}</h4>
-                    <p>£{{ cart_total|floatformat:2 }}</p>
+
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Your Account</div>
+                    {% if request.user.is_authenticated %}
+                    <a href="{% url 'accounts:order_history' %}"><i class="ph ph-receipt"></i> Order History</a>
+                    <a href="{% url 'loyalty:refer' %}"><i class="ph ph-share-network"></i> Refer a Friend</a>
+                    <form method="post" action="{% url 'account_logout' %}">
+                        {% csrf_token %}
+                        <button type="submit"><i class="ph ph-sign-out"></i> Sign Out</button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'account_login' %}"><i class="ph ph-sign-in"></i> Sign In</a>
+                    <a href="{% url 'account_signup' %}"><i class="ph ph-user-plus"></i> Create Account</a>
+                    {% endif %}
+                </div>
+
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Legal & Privacy</div>
+                    <a href="{% url 'core:privacy' %}"><i class="ph ph-shield-check"></i> Privacy Policy</a>
+                    <a href="{% url 'core:privacy' %}#your-rights"><i class="ph ph-scales"></i> GDPR & Your Data</a>
+                    <button type="button" onclick="openCookiePreferences()"><i class="ph ph-cookie"></i> Cookie Preferences</button>
+                </div>
+
+                {% if site_settings.phone or site_settings.email %}
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Get in Touch</div>
+                    {% if site_settings.phone %}
+                    <a href="tel:{{ site_settings.phone }}"><i class="ph ph-phone"></i> {{ site_settings.phone }}</a>
+                    {% endif %}
+                    {% if site_settings.email %}
+                    <a href="mailto:{{ site_settings.email }}"><i class="ph ph-envelope-simple"></i> {{ site_settings.email }}</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </nav>
+
+            <div class="mobile-menu-footer">
+                &copy; {% now "Y" %} {{ site_settings.shop_name }}
+            </div>
+        </aside>
+    </div>
+
+    {% if messages %}
+    <div class="messages-strip">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert--error{% elif message.tags == 'warning' %}alert--warning{% else %}alert--success{% endif %}">
+            <i class="ph-fill {% if message.tags == 'error' %}ph-warning-circle{% elif message.tags == 'warning' %}ph-warning{% else %}ph-check-circle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block bottom_nav %}
+    <nav class="bottom-nav" aria-label="App navigation">
+        <a href="{% url 'core:home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <i class="ph-fill ph-house"></i>
+            <span>Order</span>
+        </a>
+        <a href="{% url 'menu:menu' %}" class="nav-item {% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">
+            <i class="ph-bold ph-fork-knife"></i>
+            <span>Menu</span>
+        </a>
+        <a href="{% url 'offers:list' %}" class="nav-item {% if 'offers' in request.path %}active{% endif %}">
+            <i class="ph-bold ph-tag"></i>
+            <span>Offers</span>
+        </a>
+        <a href="{% url 'loyalty:dashboard' %}" class="nav-item {% if 'rewards' in request.path %}active{% endif %}">
+            <i class="ph-bold ph-gift"></i>
+            <span>Rewards</span>
+        </a>
+        <a href="{% url 'accounts:profile' %}" class="nav-item {% if 'profile' in request.path %}active{% endif %}">
+            <i class="ph-bold ph-user"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+    {% endblock %}
+
+    <!-- Item modal / bottom sheet -->
+    <div class="modal-overlay" id="itemModalDesktop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalDesktopTitle">Item Details</h3>
+                <button class="modal-close" onclick="closeItemModal()" aria-label="Close">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalDesktopContent">
+                <div class="loading-block">
+                    <div class="spinner"></div>
+                    <p>Loading...</p>
                 </div>
             </div>
-            <span class="basket-btn">Checkout <i class="ph-bold ph-arrow-right"></i></span>
-        </a>
-        {% endif %}
-        
-        {% block extra_content %}{% endblock %}
+        </div>
     </div>
-    
-    <!-- PWA Registration -->
-    <script>
-        window.addEventListener('appinstalled', () => {
-            console.log('PWA was installed');
-        });
-        
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('{% url "pwa:service_worker" %}')
-                .then(registration => {
-                    console.log('SW registered');
-                    // Check for push support after SW is ready
-                    if ('PushManager' in window) {
-                        setupPushNotifications(registration);
-                    }
-                })
-                .catch(error => console.log('SW registration failed'));
-        }
-        
-        // Push Notification Setup
-        async function setupPushNotifications(registration) {
-            // Check if already subscribed
-            const subscription = await registration.pushManager.getSubscription();
-            
-            if (subscription) {
-                console.log('Already subscribed to push notifications');
-                return;
-            }
-            
-            // Ask user for permission after they've interacted with the site
-            // (Don't ask immediately on load - wait for engagement)
-        }
-        
-        // Function to subscribe to push notifications
-        async function subscribeToNotifications() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                console.log('Push notifications not supported');
-                return false;
-            }
-            
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                
-                // Request permission
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    console.log('Notification permission denied');
-                    return false;
-                }
-                
-                // Subscribe
-                // Note: In production, you'd use your VAPID public key here
-                // For now, we'll skip the actual subscription as it requires server setup
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array('{{ VAPID_PUBLIC_KEY|default:"" }}')
-                });
-                
-                // Send subscription to server
-                await fetch('{% url "pwa:subscribe_push" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: JSON.stringify({ subscription: subscription })
-                });
-                
-                console.log('Subscribed to push notifications');
-                return true;
-                
-            } catch (error) {
-                console.error('Failed to subscribe:', error);
-                return false;
-            }
-        }
-        
-        // Helper function for VAPID key
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding)
-                .replace(/\-/g, '+')
-                .replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-        
-        // Prevent zoom on double tap
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
-    </script>
+
+    <!-- Cart drawer -->
+    <div class="cart-drawer-overlay" id="cartDrawerOverlay" onclick="closeCartDrawerOnOverlay(event)">
+        <aside class="cart-drawer" role="dialog" aria-label="Shopping cart">
+            <div id="cartDrawerContent">
+                <div class="loading-block">
+                    <div class="spinner"></div>
+                    <p>Loading your basket...</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Toasts -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    {% block basket_bar %}
+    {% if 'checkout' not in request.path and 'cart' not in request.path %}
+    <div class="sticky-cart-bar {% if cart_count > 0 %}visible{% endif %}" id="stickyCartBar" {% if cart_count <= 0 %}aria-hidden="true"{% endif %}>
+        <div class="sticky-cart-bar-count">
+            <i class="ph-fill ph-shopping-cart"></i>
+            <span id="stickyCartCount">{{ cart_count|default:0 }} item{{ cart_count|pluralize }}</span>
+        </div>
+        <div class="sticky-cart-bar-total" id="stickyCartTotal">£{{ cart_total|floatformat:2 }}</div>
+        <a href="{% url 'orders:checkout' %}" class="sticky-cart-bar-checkout">
+            Checkout <i class="ph-bold ph-arrow-right"></i>
+        </a>
+    </div>
+    {% endif %}
+    {% endblock %}
+
+    <button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="Scroll to top">
+        <i class="ph-bold ph-arrow-up"></i>
+    </button>
+
+    {% block footer %}
+    <footer class="site-footer">
+        <div class="footer-main">
+            <div class="footer-brand">
+                <a href="{% url 'core:home' %}" class="logo">
+                    {% if site_settings.logo %}
+                    <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.shop_name }}">
+                    {% endif %}
+                    {{ site_settings.shop_name }}
+                </a>
+                <p>{{ site_settings.shop_description|default:"Fresh food made with love. Order for pickup." }}{% if delivery_enabled %} Delivery is available too.{% endif %}</p>
+
+                <div class="footer-newsletter">
+                    <p>Get exclusive offers & updates</p>
+                    <form class="footer-newsletter-form" id="footerNewsletterForm"
+                          hx-post="{% url 'core:newsletter' %}"
+                          hx-target="#newsletterFeedback"
+                          hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <input type="email" name="email" placeholder="Your email" required aria-label="Email for newsletter">
+                        <button type="submit">Subscribe</button>
+                    </form>
+                    <div id="newsletterFeedback"></div>
+                </div>
+
+                <div class="footer-trust">
+                    <div class="footer-trust-badges">
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-shield-check"></i> Secure payments
+                        </span>
+                        <span class="footer-trust-badge">
+                            <i class="ph-fill ph-clock"></i> {% if delivery_enabled %}Fast delivery{% else %}Fresh pickup{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-col">
+                <h4>Order</h4>
+                <a href="{% url 'core:home' %}">Order Food</a>
+                <a href="{% url 'menu:menu' %}">Full Menu</a>
+                <a href="{% url 'offers:list' %}">Offers & Deals</a>
+                <a href="{% url 'core:large_orders' %}">Large Orders</a>
+                <a href="{% url 'orders:cart' %}">Your Basket</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Account</h4>
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}">My Profile</a>
+                <a href="{% url 'accounts:order_history' %}">Order History</a>
+                <a href="{% url 'loyalty:dashboard' %}">Rewards</a>
+                <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit">Sign Out</button>
+                </form>
+                {% else %}
+                <a href="{% url 'account_login' %}">Sign In</a>
+                <a href="{% url 'account_signup' %}">Create Account</a>
+                {% endif %}
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                {% if site_settings.address %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" target="_blank" rel="noopener">{{ site_settings.address }}</a>
+                {% endif %}
+                {% if site_settings.phone %}
+                <a href="tel:{{ site_settings.phone }}">{{ site_settings.phone }}</a>
+                {% endif %}
+                {% if site_settings.email %}
+                <a href="mailto:{{ site_settings.email }}">{{ site_settings.email }}</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-inner">
+                <span>&copy; {% now "Y" %} {{ site_settings.shop_name }}. All rights reserved.</span>
+                <div class="footer-social">
+                    {% if site_settings.facebook_url %}
+                    <a href="{{ site_settings.facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
+                        <i class="ph-fill ph-facebook-logo"></i>
+                    </a>
+                    {% endif %}
+                    {% if site_settings.instagram_url %}
+                    <a href="{{ site_settings.instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">
+                        <i class="ph-fill ph-instagram-logo"></i>
+                    </a>
+                    {% endif %}
+                    {% if site_settings.twitter_url %}
+                    <a href="{{ site_settings.twitter_url }}" target="_blank" rel="noopener" aria-label="Twitter">
+                        <i class="ph-fill ph-twitter-logo"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <!-- Cookie consent (GDPR / UK ICO) -->
+    <div class="cookie-consent-banner" id="cookieConsentBanner">
+        <div class="cookie-consent-content">
+            <div class="cookie-consent-text">
+                <h4>🍪 We use cookies</h4>
+                <p>We use essential cookies to make our site work, and analytics cookies to understand how you use it. See our <a href="{% url 'core:privacy' %}">Privacy Policy</a>.</p>
+            </div>
+            <div class="cookie-consent-actions">
+                <button type="button" class="cookie-btn cookie-btn-accept" onclick="acceptCookies('all')">Accept All</button>
+                <button type="button" class="cookie-btn cookie-btn-essential" onclick="acceptCookies('essential')">Essential Only</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         window.APP_CONFIG = Object.assign({}, window.APP_CONFIG, {
             deliveryEnabled: {{ delivery_enabled|yesno:"true,false" }},
-            maxCartItemQuantity: {{ max_cart_item_quantity|default:20 }}
+            maxCartItemQuantity: {{ max_cart_item_quantity|default:20 }},
+            serviceWorkerUrl: "{% url 'pwa:service_worker' %}",
+            pushSubscribeUrl: "{% url 'pwa:subscribe_push' %}",
+            vapidPublicKey: "{{ VAPID_PUBLIC_KEY|default:'' }}"
         });
     </script>
-    
-    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/app.js' %}" defer></script>
 
-    <script>
-    // Cookie Consent (Mobile)
-    (function() {
-        var CONSENT_KEY = 'cookie_consent';
-        var banner = document.getElementById('cookieConsentBanner');
-        if (!localStorage.getItem(CONSENT_KEY)) {
-            setTimeout(function() {
-                if (banner) banner.classList.add('visible');
-            }, 1000);
-        }
-        window.acceptCookies = function(preference) {
-            localStorage.setItem(CONSENT_KEY, preference);
-            if (banner) banner.classList.remove('visible');
-        };
-        window.getCookieConsent = function() {
-            return localStorage.getItem(CONSENT_KEY) || null;
-        };
-    })();
-    </script>
-    <script>
-    (function() {
-        function revealLoadedImages(root) {
-            (root || document).querySelectorAll('img[loading="lazy"]').forEach(function(image) {
-                if (image.complete && image.naturalWidth > 0) {
-                    image.classList.add('loaded');
-                    return;
-                }
-                image.addEventListener('load', function() {
-                    image.classList.add('loaded');
-                }, { once: true });
-            });
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() { revealLoadedImages(document); });
-        } else {
-            revealLoadedImages(document);
-        }
-        document.addEventListener('htmx:afterSwap', function(event) {
-            revealLoadedImages(event.target);
-        });
-    })();
-    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

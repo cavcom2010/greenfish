@@ -16,5 +16,4 @@ def cart_context(request):
         "cart_total": float(summary["total"]),
         "cart_count": sum(item["quantity"] for item in summary["items"]),
         "max_cart_item_quantity": max_cart_item_quantity(),
-        "is_desktop": getattr(request, "is_desktop", True),
     }

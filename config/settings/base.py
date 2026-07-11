@@ -93,7 +93,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "apps.core.middleware.DesktopDetectionMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

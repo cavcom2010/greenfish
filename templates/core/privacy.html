@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy - {{ site_settings.shop_name }}{% endblock %}
+{% block meta_description %}How {{ site_settings.shop_name }} collects, uses, and protects your personal data.{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top:2rem;">
+    <div class="container" style="max-width:780px;">
+        <h1 style="margin-bottom:0.5rem;">Privacy Policy</h1>
+        <p style="margin-bottom:2.5rem;">How {{ site_settings.shop_name }} collects, uses, and protects your personal data.</p>
+
+        <div class="card card--padded" style="display:grid;gap:2rem;line-height:1.7;">
+            <div>
+                <h3 style="margin-bottom:0.75rem;">Who we are</h3>
+                <p>
+                    {{ site_settings.shop_name }}{% if site_settings.address %}, {{ site_settings.address }}{% endif %},
+                    operates this website and online ordering service. We are the data controller for the
+                    personal information collected here.
+                    {% if site_settings.email %}You can contact us about your data at
+                    <a href="mailto:{{ site_settings.email }}" class="text-brand">{{ site_settings.email }}</a>.{% endif %}
+                </p>
+            </div>
+
+            <div>
+                <h3 style="margin-bottom:0.75rem;">What we collect and why</h3>
+                <p style="margin-bottom:0.75rem;">We only collect what we need to take and fulfil your order:</p>
+                <ul style="list-style:disc;padding-left:1.25rem;display:grid;gap:0.5rem;">
+                    <li><strong>Order details</strong> — the items you order, your name, and phone number, so the kitchen can prepare your food and contact you about it.</li>
+                    <li><strong>Delivery address</strong> — only when you choose delivery, so we can bring the order to you and check you're inside our delivery zone.</li>
+                    <li><strong>Email address</strong> — optional at checkout, used for order confirmations; required if you create an account.</li>
+                    <li><strong>Account and loyalty data</strong> — order history, saved favourites, loyalty points, and referral activity, if you sign up.</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3 style="margin-bottom:0.75rem;">Payments</h3>
+                <p>
+                    Card payments are processed by our payment providers (such as Mollie or Stripe).
+                    Your card details go directly to them over an encrypted connection —
+                    <strong>we never see or store your card number</strong>. We only receive confirmation
+                    that a payment succeeded or failed.
+                </p>
+            </div>
+
+            <div>
+                <h3 style="margin-bottom:0.75rem;">Cookies</h3>
+                <p style="margin-bottom:0.75rem;">
+                    We use <strong>essential cookies</strong> to keep your basket and session working — the site
+                    can't function without them. With your consent we may also use <strong>analytics cookies</strong>
+                    to understand how the site is used and improve it. We do not sell your data or use
+                    third-party advertising cookies.
+                </p>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="openCookiePreferences()">
+                    <i class="ph ph-cookie"></i> Change cookie preferences
+                </button>
+            </div>
+
+            <div>
+                <h3 style="margin-bottom:0.75rem;">Marketing</h3>
+                <p>
+                    We only send offers and news if you've opted in (for example, the newsletter or the
+                    marketing preference in your account). You can opt out at any time from your
+                    <a href="{% url 'accounts:profile' %}" class="text-brand">profile settings</a> or by contacting us.
+                </p>
+            </div>
+
+            <div>
+                <h3 style="margin-bottom:0.75rem;">How long we keep your data</h3>
+                <p>
+                    Order records are kept as long as needed for accounting, tax, and food-safety obligations.
+                    Account data is kept while your account is active; ask us and we'll delete it.
+                </p>
+            </div>
+
+            <div id="your-rights">
+                <h3 style="margin-bottom:0.75rem;">Your rights (UK GDPR)</h3>
+                <p style="margin-bottom:0.75rem;">Under UK data protection law you have the right to:</p>
+                <ul style="list-style:disc;padding-left:1.25rem;display:grid;gap:0.5rem;">
+                    <li>Access a copy of the personal data we hold about you</li>
+                    <li>Correct inaccurate data</li>
+                    <li>Ask us to delete your data ("right to be forgotten")</li>
+                    <li>Object to or restrict how we process it</li>
+                    <li>Receive your data in a portable format</li>
+                </ul>
+                <p style="margin-top:0.75rem;">
+                    To exercise any of these,
+                    {% if site_settings.email %}email <a href="mailto:{{ site_settings.email }}" class="text-brand">{{ site_settings.email }}</a>{% else %}contact the shop{% endif %}.
+                    If you're unhappy with how we handle your data you can complain to the
+                    <a href="https://ico.org.uk/" target="_blank" rel="noopener" class="text-brand">Information Commissioner's Office (ICO)</a>.
+                </p>
+            </div>
+
+            <p style="font-size:var(--text-sm);color:var(--text-muted);border-top:1px solid var(--border-light);padding-top:1.25rem;margin-bottom:0;">
+                Last updated: {% now "j F Y" %}. If we make significant changes to this policy we'll update this page.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

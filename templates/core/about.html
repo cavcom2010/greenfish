@@ -1,38 +1,65 @@
 {% extends "base.html" %}
 
-{% block title %}About {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}About{% endblock %}
+{% block title %}About - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <div class="hero" style="margin: 0 0 20px;">
-        <div class="hero-content">
-            <h3>{{ site_settings.shop_name }}</h3>
-            <p>Fresh Zimbabwean food, cooked to order and ready for pickup when you need it.</p>
+
+<section class="section" style="padding-top:2rem;">
+    <div class="container" style="max-width:800px;">
+        <div class="text-center" style="margin-bottom:3rem;">
+            <h1 style="margin-bottom:0.5rem;">About {{ site_settings.shop_name }}</h1>
+            {% if site_settings.tagline %}
+            <p style="font-size:1.15rem;color:var(--brand);font-weight:600;">{{ site_settings.tagline }}</p>
+            {% endif %}
+        </div>
+
+        <div class="card card--padded" style="margin-bottom:2rem;">
+            <p style="font-size:var(--text-md);line-height:1.8;">
+                {{ site_settings.shop_description|default:"We are passionate about bringing great food to your table. Every dish is prepared with fresh ingredients and recipes we're proud of. From our kitchen to your plate, we promise quality and flavour." }}
+            </p>
+        </div>
+
+        <!-- Info Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-bottom:2rem;">
+            {% if site_settings.address %}
+            <div class="card card--padded text-center">
+                <i class="ph-fill ph-map-pin" style="font-size:2rem;color:var(--brand);margin-bottom:0.75rem;display:block;"></i>
+                <h4 style="font-size:0.95rem;margin-bottom:0.5rem;">Location</h4>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">{{ site_settings.address }}</p>
+            </div>
+            {% endif %}
+            {% if site_settings.phone %}
+            <div class="card card--padded text-center">
+                <i class="ph-fill ph-phone" style="font-size:2rem;color:var(--brand);margin-bottom:0.75rem;display:block;"></i>
+                <h4 style="font-size:0.95rem;margin-bottom:0.5rem;">Phone</h4>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">{{ site_settings.phone }}</p>
+            </div>
+            {% endif %}
+            {% if site_settings.email %}
+            <div class="card card--padded text-center">
+                <i class="ph-fill ph-envelope" style="font-size:2rem;color:var(--brand);margin-bottom:0.75rem;display:block;"></i>
+                <h4 style="font-size:0.95rem;margin-bottom:0.5rem;">Email</h4>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">{{ site_settings.email }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if site_settings.opening_hours %}
+        <div class="card card--padded" style="margin-bottom:2rem;">
+            <h3 style="font-size:var(--text-md);margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+                <i class="ph ph-clock" style="color:var(--brand);"></i> Opening Hours
+            </h3>
+            <p style="font-size:0.95rem;white-space:pre-line;">{{ site_settings.opening_hours }}</p>
+        </div>
+        {% endif %}
+
+        <div class="text-center">
+            <a href="{% url 'core:home' %}" class="btn btn--primary">
+                <i class="ph-bold ph-fork-knife"></i>
+                Order Now
+            </a>
         </div>
     </div>
+</section>
 
-    <div class="list-item" style="cursor: default;">
-        <div class="list-content">
-            <div class="list-title">What We Serve</div>
-            <div class="list-desc">Classic mains, comforting sides, family deals, and quick pickup favourites.</div>
-        </div>
-    </div>
-
-    <div class="list-item" style="cursor: default;">
-        <div class="list-content">
-            <div class="list-title">Pickup First</div>
-            <div class="list-desc">Order ahead, choose your collection time, and track progress from confirmation to ready.</div>
-        </div>
-    </div>
-
-    <div class="list-item" style="cursor: default;">
-        <div class="list-content">
-            <div class="list-title">Find Us</div>
-            <div class="list-desc">{{ site_settings.address }}</div>
-        </div>
-    </div>
-
-    <a href="{% url 'menu:menu' %}" class="btn btn-brand" style="margin-top: 20px;">Browse Menu</a>
-</div>
 {% endblock %}

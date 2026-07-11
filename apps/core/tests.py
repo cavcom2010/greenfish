@@ -273,46 +273,28 @@ class PublicRouteTests(TestCase):
         self.assertEqual(self.client.get(reverse("accounts:profile")).status_code, 200)
         self.assertEqual(self.client.get(reverse("accounts:order_history")).status_code, 200)
 
-    def test_phone_tablet_and_cookie_layout_detection(self):
+    def test_unified_shell_renders_for_every_device_class(self):
+        """One responsive template tree serves phones, tablets, and desktop."""
         home_url = reverse("core:home")
         offline_url = reverse("pwa:offline")
-        phone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"
-        android_phone_ua = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Mobile Safari/537.36"
-        android_tablet_ua = "Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-        ipad_ua = "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1"
+        user_agents = [
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+            "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Mobile Safari/537.36",
+            "Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+            "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1",
+            "Mozilla/5.0 (X11; Linux x86_64) Chrome/124 Safari/537.36",
+        ]
 
-        # Home and offline are unified responsive templates: every device gets
-        # the same shell (bottom nav is shown/hidden with CSS). The middleware
-        # flag itself is still exercised below until it is fully removed.
-        for ua, expected_desktop in [
-            (phone_ua, False),
-            (android_phone_ua, False),
-            (android_tablet_ua, True),
-            (ipad_ua, True),
-        ]:
+        for ua in user_agents:
             with self.subTest(ua=ua):
                 response = self.client.get(home_url, HTTP_USER_AGENT=ua)
-                self.assertEqual(response.wsgi_request.is_desktop, expected_desktop)
                 self.assertContains(response, 'class="site-header"')
                 self.assertContains(response, 'class="bottom-nav"')
+                self.assertContains(response, 'id="mobileMenuOverlay"')
                 self.assertNotContains(response, 'class="mobile-container"')
                 offline_response = self.client.get(offline_url, HTTP_USER_AGENT=ua)
                 self.assertContains(offline_response, 'class="site-header"')
                 self.assertNotContains(offline_response, 'class="mobile-container"')
-
-        response = self.client.get(home_url, HTTP_USER_AGENT=phone_ua, HTTP_SEC_CH_UA_MOBILE="?0")
-        self.assertFalse(response.wsgi_request.is_desktop)
-
-        response = self.client.get(home_url, HTTP_USER_AGENT=android_tablet_ua, HTTP_SEC_CH_UA_MOBILE="?1")
-        self.assertFalse(response.wsgi_request.is_desktop)
-
-        self.client.cookies["view_mode"] = "desktop"
-        response = self.client.get(home_url, HTTP_USER_AGENT=phone_ua)
-        self.assertTrue(response.wsgi_request.is_desktop)
-
-        self.client.cookies["view_mode"] = "mobile"
-        response = self.client.get(home_url, HTTP_USER_AGENT=android_tablet_ua)
-        self.assertFalse(response.wsgi_request.is_desktop)
 
 
 class ProductionSettingsEmailTests(TestCase):

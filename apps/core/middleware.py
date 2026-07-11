@@ -1,7 +1,6 @@
 """Core middleware."""
 import hashlib
 import logging
-import re
 import traceback
 
 from django.conf import settings
@@ -14,12 +13,6 @@ from .request_meta import client_ip_from_request
 
 logger = logging.getLogger(__name__)
 
-# Phone-class devices should get the mobile/PWA shell. Tablets should get the
-# responsive desktop/tablet layout so they use the full viewport.
-_PHONE_UA_PATTERNS = re.compile(
-    r"iPhone|iPod|BlackBerry|IEMobile|Opera Mini|webOS",
-    re.IGNORECASE,
-)
 _IGNORED_ALERT_PREFIXES = (
     "/health/",
     "/static/",
@@ -34,42 +27,6 @@ _CRITICAL_ALERT_PREFIXES = (
     "/payments/",
     "/ops/",
 )
-
-
-def should_use_desktop_layout(request):
-    """Return True for desktop/tablet layouts and False for phone layouts."""
-    view_mode_cookie = request.COOKIES.get("view_mode", "").lower()
-    if view_mode_cookie == "desktop":
-        return True
-    if view_mode_cookie == "mobile":
-        return False
-
-    mobile_hint = request.META.get("HTTP_SEC_CH_UA_MOBILE", "").strip()
-    if mobile_hint == "?1":
-        return False
-
-    ua = request.META.get("HTTP_USER_AGENT", "")
-    if "Android" in ua:
-        return "Mobile" not in ua
-    if "iPad" in ua:
-        return True
-
-    if _PHONE_UA_PATTERNS.search(ua):
-        return False
-    if mobile_hint == "?0":
-        return True
-    return True
-
-
-class DesktopDetectionMiddleware:
-    """Attach ``request.is_desktop`` based on client hints."""
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        request.is_desktop = should_use_desktop_layout(request)
-        return self.get_response(request)
 
 
 def _exception_status(exc):

@@ -1,0 +1,91 @@
+/* ==========================================================================
+   Auth pages (allauth) — login, signup, logout, password reset
+   ========================================================================== */
+
+@layer pages {
+
+.auth-shell {
+    max-width: 460px;
+    margin: 3rem auto 4rem;
+    padding: 0 1rem;
+}
+
+.auth-head {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--brand-light);
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-icon i {
+    font-size: 1.75rem;
+    color: var(--brand);
+}
+
+.auth-icon--success {
+    background: var(--success-bg);
+}
+
+.auth-icon--success i {
+    color: var(--success);
+}
+
+.auth-icon--error {
+    background: var(--error-bg);
+}
+
+.auth-icon--error i {
+    color: var(--error);
+}
+
+.auth-head h1 {
+    font-size: var(--text-xl);
+    margin-bottom: 0.35rem;
+}
+
+.auth-head p {
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.auth-card {
+    background: var(--surface-warm);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-sm);
+}
+
+.auth-alt {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.auth-alt a {
+    color: var(--brand);
+    font-weight: 700;
+    font-size: var(--text-sm);
+}
+
+.auth-divider {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-light);
+}
+
+.auth-divider p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+} /* end @layer pages */

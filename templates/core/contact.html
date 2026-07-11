@@ -1,56 +1,102 @@
 {% extends "base.html" %}
 
-{% block title %}Contact {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}Contact{% endblock %}
+{% block title %}Contact - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px;">
-        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Get in Touch</h3>
 
-        <div style="display: grid; gap: 14px;">
+<section class="section" style="padding-top:2rem;">
+    <div class="container" style="max-width:800px;">
+        <div class="text-center" style="margin-bottom:3rem;">
+            <h1 style="margin-bottom:0.5rem;">Contact Us</h1>
+            <p style="font-size:1.05rem;">Have a question or feedback? We'd love to hear from you.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;" class="contact-grid">
+            <style>@media (max-width: 767px) { .contact-grid { grid-template-columns: 1fr !important; } }</style>
+            <!-- Contact Info -->
             <div>
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Address</div>
-                {% if site_settings.address %}
-                <div style="font-weight: 600; margin-bottom: 8px;">{{ site_settings.address }}</div>
-                <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn-secondary" style="padding: 12px; margin-top: 0;" target="_blank" rel="noopener"><i class="ph ph-map-pin" style="vertical-align: middle;"></i> Get directions</a>
-                {% else %}
-                <div style="font-weight: 600;">Please check in store</div>
+                <div class="card card--padded" style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:var(--text-md);margin-bottom:1.5rem;">Get in Touch</h3>
+
+                    {% if site_settings.address %}
+                    <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                        <i class="ph-fill ph-map-pin" style="font-size:1.25rem;color:var(--brand);flex-shrink:0;margin-top:2px;"></i>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.25rem;">Address</div>
+                            <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.35rem;">{{ site_settings.address }}</div>
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="text-brand" style="font-size:0.85rem;" target="_blank" rel="noopener">Get directions</a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if site_settings.phone %}
+                    <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                        <i class="ph-fill ph-phone" style="font-size:1.25rem;color:var(--brand);flex-shrink:0;margin-top:2px;"></i>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.25rem;">Phone</div>
+                            <a href="tel:{{ site_settings.phone }}" class="text-brand" style="font-size:0.85rem;">{{ site_settings.phone }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if site_settings.email %}
+                    <div style="display:flex;align-items:flex-start;gap:1rem;">
+                        <i class="ph-fill ph-envelope" style="font-size:1.25rem;color:var(--brand);flex-shrink:0;margin-top:2px;"></i>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.25rem;">Email</div>
+                            <a href="mailto:{{ site_settings.email }}" class="text-brand" style="font-size:0.85rem;">{{ site_settings.email }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if site_settings.opening_hours %}
+                <div class="card card--padded" style="margin-bottom:1.5rem;">
+                    <h3 style="font-size:var(--text-md);margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+                        <i class="ph ph-clock" style="color:var(--brand);"></i> Opening Hours
+                    </h3>
+                    <p style="font-size:0.85rem;white-space:pre-line;margin:0;">{{ site_settings.opening_hours }}</p>
+                </div>
                 {% endif %}
+
+                <div class="card card--padded">
+                    <h3 style="font-size:var(--text-md);margin-bottom:0.75rem;">Planning a large order?</h3>
+                    <p style="font-size:0.9rem;margin-bottom:1rem;">
+                        For offices, parties, and event orders, send the details so the shop can confirm availability and timing.
+                    </p>
+                    <a href="{% url 'core:large_orders' %}" class="btn btn--primary btn--block">
+                        <i class="ph-bold ph-clipboard-text"></i>
+                        Request a Large Order
+                    </a>
+                </div>
             </div>
-            <div>
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Phone</div>
-                {% if site_settings.phone %}
-                <a href="tel:{{ site_settings.phone }}" style="font-weight: 600; color: var(--brand); text-decoration: none;">{{ site_settings.phone }}</a>
-                {% else %}
-                <div style="font-weight: 600;">Please check in store</div>
-                {% endif %}
-            </div>
-            <div>
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Email</div>
-                <div style="font-weight: 600;">{{ site_settings.email|default:"orders@tinashe.com" }}</div>
+
+            <!-- Contact Form -->
+            <div class="card card--padded">
+                <h3 style="font-size:var(--text-md);margin-bottom:1.5rem;">Send a Message</h3>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-field">
+                        <label for="contactName">Your Name<span class="required-marker" aria-hidden="true">*</span></label>
+                        <input type="text" id="contactName" name="name" required autocomplete="name">
+                    </div>
+                    <div class="form-field">
+                        <label for="contactEmail">Email Address<span class="required-marker" aria-hidden="true">*</span></label>
+                        <input type="email" id="contactEmail" name="email" required autocomplete="email">
+                    </div>
+                    <div class="form-field">
+                        <label for="contactMessage">Message<span class="required-marker" aria-hidden="true">*</span></label>
+                        <textarea id="contactMessage" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--block">
+                        <i class="ph-bold ph-paper-plane-right"></i>
+                        Send Message
+                    </button>
+                </form>
             </div>
         </div>
     </div>
+</section>
 
-    <div style="background: var(--brand-light); border-radius: 16px; padding: 18px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--brand-dark);">Need to change an order?</h3>
-        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 14px;">
-            Keep your order number handy so we can help quickly.
-        </p>
-        <a href="{% url 'accounts:order_history' %}" class="btn btn-secondary" style="margin-top: 0;">
-            View My Orders
-        </a>
-    </div>
-
-    <div style="background: var(--surface); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); margin-top: 16px;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">Planning a large order?</h3>
-        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 14px;">
-            For offices, parties, and event orders, send the details so the shop can confirm availability and timing.
-        </p>
-        <a href="{% url 'core:large_orders' %}" class="btn btn-brand" style="margin-top: 0;">
-            Request a Large Order
-        </a>
-    </div>
-</div>
 {% endblock %}
