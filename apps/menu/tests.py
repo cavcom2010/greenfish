@@ -40,21 +40,52 @@ class PopularMenuItemsTests(TestCase):
         )
         return order
 
-    def test_ranks_by_recent_paid_sales_and_tops_up_with_flag(self):
+    def test_ranks_by_distinct_orders_and_tops_up_with_flag(self):
         best_seller = create_menu_item(name="Best Seller", is_popular=False)
-        runner_up = create_menu_item(name="Runner Up", is_popular=False)
+        catering_dish = create_menu_item(name="Catering Dish", is_popular=False)
         chefs_pick = create_menu_item(name="Chefs Pick", is_popular=True)
 
-        self._paid_order_with(best_seller, quantity=5)
-        self._paid_order_with(runner_up, quantity=2)
+        # Two separate customers ordering one portion each outranks a
+        # single 50-portion catering order.
+        self._paid_order_with(best_seller, quantity=1)
+        self._paid_order_with(best_seller, quantity=1)
+        self._paid_order_with(catering_dish, quantity=50)
 
         items = get_popular_menu_items(limit=3)
 
         self.assertEqual(
-            [item.name for item in items[:2]], ["Best Seller", "Runner Up"]
+            [item.name for item in items[:2]], ["Best Seller", "Catering Dish"]
         )
         # Not enough sales history for 3 slots: flag-popular item fills in.
         self.assertIn(chefs_pick, items)
+
+    def test_meal_deal_components_count_toward_popularity(self):
+        component = create_menu_item(name="Deal Component", is_popular=False)
+        direct_seller = create_menu_item(name="Direct Seller", is_popular=False)
+
+        # Deal purchases are stored with menu_item NULL and the chosen
+        # component menu-item ids inside modifiers.
+        for _ in range(2):
+            order = create_order(payment_status=Order.PaymentStatus.PAID)
+            order.items.all().delete()
+            OrderItem.objects.create(
+                order=order,
+                menu_item=None,
+                item_name="Family Feast Deal",
+                item_price=component.price,
+                quantity=1,
+                modifiers=[
+                    {"id": component.id, "name": f"Main: {component.name}", "price": "0.00"},
+                    {"id": "not-a-number", "name": "Broken entry", "price": "0.00"},
+                ],
+            )
+        self._paid_order_with(direct_seller, quantity=1)
+
+        items = get_popular_menu_items(limit=2)
+
+        self.assertEqual(
+            [item.name for item in items], ["Deal Component", "Direct Seller"]
+        )
 
     def test_ignores_unpaid_and_cancelled_orders(self):
         noise = create_menu_item(name="Noise Item", is_popular=False)

@@ -2,10 +2,11 @@
 Menu services - Recommendations and business logic.
 """
 import logging
+from collections import defaultdict
 from datetime import timedelta
 
 from django.core.cache import cache
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.orders.models import Order, OrderItem
@@ -20,15 +21,19 @@ POPULAR_ITEMS_CACHE_SECONDS = 60 * 60
 def get_popular_menu_items(limit=6, days=14):
     """Return the current best sellers, most-ordered first.
 
-    Ranks available menu items by quantity sold across paid, non-cancelled
-    orders in the last ``days`` days. When there isn't enough recent order
-    history to fill ``limit`` slots (new shop, quiet fortnight), tops up
-    with items the admin has flagged ``is_popular``.
+    Ranks available menu items by the number of distinct paid,
+    non-cancelled orders containing them in the last ``days`` days, so one
+    50-portion catering order counts the same as one regular order.
+    Meal-deal purchases count toward their selected component items: deal
+    lines are stored with ``menu_item`` NULL and each modifier's ``id`` is
+    the component menu item chosen in the builder. When there isn't enough
+    recent order history to fill ``limit`` slots, tops up with items the
+    admin has flagged ``is_popular``.
 
     The sales ranking (ids only) is cached for an hour; availability is
     re-checked on every call so 86'd items drop out immediately.
     """
-    cache_key = f"menu:popular-item-ids:{limit}:{days}"
+    cache_key = f"menu:popular-item-ids:v2:{limit}:{days}"
     # The production cache is Redis and Django's backend raises on
     # connection errors — the homepage must not depend on Redis being up.
     try:
@@ -39,18 +44,40 @@ def get_popular_menu_items(limit=6, days=14):
 
     if ranked_ids is None:
         since = timezone.now() - timedelta(days=days)
-        ranked_ids = list(
-            OrderItem.objects.filter(
-                order__created_at__gte=since,
-                order__payment_status=Order.PaymentStatus.PAID,
-                menu_item__isnull=False,
+        recent_lines = OrderItem.objects.filter(
+            order__created_at__gte=since,
+            order__payment_status=Order.PaymentStatus.PAID,
+        ).exclude(order__status=Order.OrderStatus.CANCELLED)
+
+        orders_by_item = defaultdict(set)
+
+        # Direct menu-item lines.
+        for item_id, order_id in recent_lines.filter(menu_item__isnull=False).values_list(
+            "menu_item", "order_id"
+        ):
+            orders_by_item[item_id].add(order_id)
+
+        # Meal-deal lines: attribute the order to each chosen component.
+        # (Regular items' modifiers reference MenuItemModifier ids, but
+        # those lines always have menu_item set, so they're never parsed.)
+        for modifiers, order_id in recent_lines.filter(menu_item__isnull=True).values_list(
+            "modifiers", "order_id"
+        ):
+            for modifier in modifiers or []:
+                if not isinstance(modifier, dict):
+                    continue
+                try:
+                    component_id = int(modifier.get("id"))
+                except (TypeError, ValueError):
+                    continue
+                orders_by_item[component_id].add(order_id)
+
+        ranked_ids = [
+            item_id
+            for item_id, order_ids in sorted(
+                orders_by_item.items(), key=lambda pair: (-len(pair[1]), pair[0])
             )
-            .exclude(order__status=Order.OrderStatus.CANCELLED)
-            .values("menu_item")
-            .annotate(total_quantity=Sum("quantity"))
-            .order_by("-total_quantity", "menu_item")
-            .values_list("menu_item", flat=True)[:limit]
-        )
+        ][:limit]
         try:
             cache.set(cache_key, ranked_ids, POPULAR_ITEMS_CACHE_SECONDS)
         except Exception:
