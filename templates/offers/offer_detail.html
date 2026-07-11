@@ -1,55 +1,83 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 {% load media_tags %}
 
 {% block title %}{{ offer.name }} - {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}Offer{% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <div class="offer-card" style="height: 220px; margin: 0 0 20px;">
-        {% if offer.hero_image %}
-        <img src="{{ offer.hero_image|image_variant:'hero' }}" alt="{{ offer.name }}" loading="eager" decoding="async" fetchpriority="high" width="1280" height="720" style="width: 100%; height: 100%; object-fit: cover;">
-        {% endif %}
-        <div class="offer-content">
-            <h3>{{ offer.hero_title|default:offer.name }}</h3>
-            <p>{{ offer.hero_subtitle|default:offer.description }}</p>
-        </div>
-    </div>
 
-    <div style="background: var(--surface); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px;">
-        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Offer Details</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 16px;">{{ offer.description }}</p>
-        <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-            <span class="category-pill active" style="cursor: default;">
-                {% if offer.offer_type == "percentage" %}
-                Save {{ offer.value|floatformat:0 }}%
-                {% elif offer.offer_type == "fixed" %}
-                Save £{{ offer.value|floatformat:2 }}
-                {% else %}
-                {{ offer.get_offer_type_display }}
+<section class="section" style="padding-top:2rem;">
+    <div class="container" style="max-width:800px;">
+        <!-- Breadcrumb -->
+        <div style="margin-bottom:2rem;">
+            <a href="{% url 'offers:list' %}" style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;gap:0.5rem;">
+                <i class="ph ph-arrow-left"></i>
+                Back to Offers
+            </a>
+        </div>
+
+        <!-- Offer Hero -->
+        <div style="border-radius:var(--radius-xl);overflow:hidden;position:relative;min-height:320px;display:flex;align-items:flex-end;margin-bottom:2rem;box-shadow:var(--shadow-lg);">
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);">
+                {% if offer.hero_image %}
+                <img src="{{ offer.hero_image|image_variant:'hero' }}" alt="{{ offer.name }}" style="width:100%;height:100%;object-fit:cover;opacity:0.3;">
                 {% endif %}
-            </span>
-            {% if offer.minimum_order_amount > 0 %}
-            <span class="category-pill" style="cursor: default;">Min order £{{ offer.minimum_order_amount|floatformat:2 }}</span>
-            {% endif %}
+            </div>
+            <div style="position:relative;z-index:2;padding:clamp(1.5rem,5vw,3rem);color:white;width:100%;">
+                <h1 style="font-size:var(--text-2xl);color:#fff;margin-bottom:0.75rem;">{{ offer.hero_title|default:offer.name }}</h1>
+                <p style="font-size:var(--text-md);color:rgba(255,255,255,0.9);max-width:600px;">{{ offer.hero_subtitle|default:offer.description }}</p>
+            </div>
         </div>
-    </div>
 
-    <div style="display: grid; gap: 12px;">
-        {% if offer_can_activate %}
-        <form method="post" action="{% url 'offers:activate' offer.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'menu:menu' %}">
-            <button type="submit" class="btn btn-brand" style="width: 100%;">
-                {% if offer_selected %}Offer Active{% else %}Activate Offer & Order{% endif %}
-            </button>
-        </form>
-        {% else %}
-        <div style="background: var(--surface); border-radius: 16px; padding: 16px; text-align: center; color: var(--text-secondary); box-shadow: var(--shadow);">
-            Available in store only
+        <!-- Offer Details -->
+        <div class="card card--padded" style="margin-bottom:2rem;">
+            <h2 style="font-size:var(--text-lg);margin-bottom:1rem;">Offer Details</h2>
+            <p style="color:var(--text-secondary);font-size:var(--text-md);line-height:1.7;margin-bottom:1.5rem;">{{ offer.description }}</p>
+
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                <div style="padding:0.75rem 1.5rem;background:var(--brand-light);border-radius:var(--radius);font-weight:800;color:var(--brand);">
+                    {% if offer.offer_type == "percentage" %}
+                    Save {{ offer.value|floatformat:0 }}%
+                    {% elif offer.offer_type == "fixed" %}
+                    Save £{{ offer.value|floatformat:2 }}
+                    {% else %}
+                    {{ offer.get_offer_type_display }}
+                    {% endif %}
+                </div>
+                {% if offer.minimum_order_amount > 0 %}
+                <div style="padding:0.75rem 1.5rem;background:var(--gray-100);border-radius:var(--radius);font-weight:600;color:var(--text-secondary);">
+                    Minimum order: £{{ offer.minimum_order_amount|floatformat:2 }}
+                </div>
+                {% endif %}
+                {% if offer.valid_from and offer.valid_to %}
+                <div style="padding:0.75rem 1.5rem;background:var(--gray-100);border-radius:var(--radius);font-weight:600;color:var(--text-secondary);">
+                    Valid: {{ offer.valid_from|date:"d M" }} – {{ offer.valid_to|date:"d M Y" }}
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
-        <a href="{% url 'offers:list' %}" class="btn btn-secondary">Back to Offers</a>
+
+        <!-- CTA -->
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            {% if offer_can_activate %}
+            <form method="post" action="{% url 'offers:activate' offer.id %}" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'menu:menu' %}">
+                <button type="submit" class="btn btn--primary">
+                    <i class="ph-bold ph-fork-knife"></i>
+                    {% if offer_selected %}Offer Active{% else %}Activate Offer & Order{% endif %}
+                </button>
+            </form>
+            {% else %}
+            <div style="padding:0.9rem 1.25rem;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border-light);color:var(--text-secondary);font-weight:600;">
+                Available in store only
+            </div>
+            {% endif %}
+            <a href="{% url 'offers:list' %}" class="btn btn--secondary">
+                <i class="ph-bold ph-tag"></i>
+                View All Offers
+            </a>
+        </div>
     </div>
-</div>
+</section>
+
 {% endblock %}

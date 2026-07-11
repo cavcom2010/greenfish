@@ -40,8 +40,7 @@ def offer_list(request):
     context = {
         "offers": offers,
     }
-    template = "desktop/offers/offer_list.html" if getattr(request, "is_desktop", True) else "offers/offer_list.html"
-    return render(request, template, context)
+    return render(request, "offers/offer_list.html", context)
 
 
 def offer_detail(request, pk):
@@ -50,10 +49,9 @@ def offer_detail(request, pk):
     if not offer.is_available_for_user(request.user):
         raise Http404("Offer is no longer available.")
 
-    template = "desktop/offers/offer_detail.html" if getattr(request, "is_desktop", True) else "offers/offer_detail.html"
     return render(
         request,
-        template,
+        "offers/offer_detail.html",
         {
             "offer": offer,
             "offer_selected": selected_offer_id(request) == offer.id,

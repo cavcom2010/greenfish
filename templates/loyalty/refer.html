@@ -1,281 +1,111 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
+{% load static %}
 
 {% block title %}Refer a Friend - {{ site_settings.shop_name }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/account.css' %}">
+{% endblock %}
+
 {% block content %}
-<style>
-.refer-header {
-    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-    color: white;
-    padding: 1.5rem 1rem;
-    margin: -1rem -1rem 1rem -1rem;
-    text-align: center;
-}
-@media (max-width: 430px) {
-    .refer-header {
-        margin: 0 0 1rem 0;
-        border-radius: 1.5rem;
-    }
-}
-.refer-header a {
-    position: absolute;
-    left: 1rem;
-    top: 1.5rem;
-    color: white;
-    text-decoration: none;
-    font-size: 1.25rem;
-}
-.refer-header h1 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-.refer-header p {
-    opacity: 0.9;
-    font-size: 0.9rem;
-}
-.refer-illustration {
-    text-align: center;
-    padding: 2rem 1rem;
-}
-.refer-illustration i {
-    font-size: 4rem;
-    color: #6366F1;
-}
-.how-it-works {
-    background: white;
-    border-radius: 1rem;
-    padding: 1.25rem;
-    margin: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.how-it-works h3 {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-.step {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-.step:last-child {
-    margin-bottom: 0;
-}
-.step-number {
-    width: 28px;
-    height: 28px;
-    background: #6366F1;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-}
-.step-content h4 {
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem;
-}
-.step-content p {
-    font-size: 0.8rem;
-    color: #6B7280;
-    margin: 0;
-}
-.your-code-section {
-    background: linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%);
-    color: white;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    margin: 1rem;
-    text-align: center;
-}
-.your-code-section h3 {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-}
-.your-code-section p {
-    font-size: 0.85rem;
-    opacity: 0.9;
-    margin-bottom: 1rem;
-}
-.code-box {
-    background: rgba(255,255,255,0.2);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-.code-box .code {
-    font-family: monospace;
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: 3px;
-}
-.btn-copy {
-    background: white;
-    color: #FF6B35;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 2rem;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-}
-.share-options {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-    margin: 1rem;
-}
-.share-btn {
-    background: white;
-    border-radius: 1rem;
-    padding: 1rem 0.5rem;
-    text-align: center;
-    text-decoration: none;
-    color: inherit;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.share-btn i {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    display: block;
-}
-.share-btn span {
-    font-size: 0.75rem;
-    color: #6B7280;
-}
-.share-btn.whatsapp i { color: #25D366; }
-.share-btn.sms i { color: #34B7F1; }
-.share-btn.email i { color: #EA4335; }
-.share-btn.copy i { color: #6B7280; }
-.stats-section {
-    background: white;
-    border-radius: 1rem;
-    padding: 1.25rem;
-    margin: 1rem;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.stats-section h3 {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-.stat-item h4 {
-    font-size: 1.5rem;
-    color: #FF6B35;
-    margin-bottom: 0.25rem;
-}
-.stat-item span {
-    font-size: 0.8rem;
-    color: #6B7280;
-}
-</style>
 
-<div class="refer-header" style="position: relative;">
-    <a href="{% url 'loyalty:dashboard' %}"><i class="ph ph-arrow-left"></i></a>
-    <h1><i class="ph ph-gift"></i> Refer a Friend</h1>
-    <p>Share the taste of Zimbabwe! <em>Tinotenda!</em> - They get {{ settings.welcome_bonus }} points, you get {{ settings.referral_points }}.</p>
-</div>
+<section class="account-page-desktop">
+    <div class="container">
+        <div class="account-layout">
+            {% include "partials/account_sidebar.html" with active="refer" %}
 
-<div class="refer-illustration">
-    <i class="ph ph-users"></i>
-</div>
+            <div class="account-content">
+                <h2>Refer a Friend</h2>
+                <p style="color:var(--text-secondary);margin-bottom:2rem;">Share the taste! They get {{ settings.welcome_bonus }} points, you get {{ settings.referral_points }}.</p>
 
-<div class="how-it-works">
-    <h3>How It Works</h3>
-    <div class="step">
-        <div class="step-number">1</div>
-        <div class="step-content">
-            <h4>Share Your Code</h4>
-            <p>Send your unique referral code to friends and family</p>
+                <!-- Referral Code -->
+                <div style="background:linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%);border-radius:var(--radius-xl);padding:2.5rem;color:white;text-align:center;margin-bottom:2rem;box-shadow:var(--shadow-lg);">
+                    <h3 style="font-size:var(--text-md);margin-bottom:0.5rem;color:rgba(255,255,255,0.9);">Your Referral Code</h3>
+                    <div style="background:rgba(255,255,255,0.15);border-radius:var(--radius);padding:1.25rem 2rem;margin:1.25rem 0;font-family:monospace;font-size:2rem;font-weight:800;letter-spacing:4px;overflow-wrap:anywhere;">
+                        {{ referral_code }}
+                    </div>
+                    <button onclick="copyCode()" style="background:white;color:#6366F1;border:none;padding:0.85rem 2rem;border-radius:var(--radius);font-weight:800;font-size:0.95rem;cursor:pointer;">
+                        <i class="ph-bold ph-copy" style="margin-right:4px;"></i> Copy Code
+                    </button>
+                </div>
+
+                <!-- How It Works -->
+                <div class="panel-card">
+                    <h3>How It Works</h3>
+                    <div class="step-grid">
+                        <div class="step-tile">
+                            <div class="step-tile-number">1</div>
+                            <h4>Share Your Code</h4>
+                            <p>Send your unique code to friends</p>
+                        </div>
+                        <div class="step-tile">
+                            <div class="step-tile-number">2</div>
+                            <h4>They Sign Up</h4>
+                            <p>Your friend creates an account</p>
+                        </div>
+                        <div class="step-tile">
+                            <div class="step-tile-number">3</div>
+                            <h4>You Both Earn!</h4>
+                            <p>They get {{ settings.welcome_bonus }} pts, you get {{ settings.referral_points }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Share Options -->
+                <div class="panel-card">
+                    <h3>Share Via</h3>
+                    <div class="share-row">
+                        <a href="https://wa.me/?text=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}"
+                           target="_blank" rel="noopener" class="share-btn">
+                            <i class="ph-fill ph-whatsapp-logo" style="color:#25D366;"></i>
+                            WhatsApp
+                        </a>
+                        <a href="mailto:?subject=Free%20{{ settings.welcome_bonus }}%20Points%20at%20{{ site_settings.shop_name|urlencode }}&body=Hi!%20Use%20my%20code:%20{{ referral_code }}"
+                           class="share-btn">
+                            <i class="ph-fill ph-envelope-simple" style="color:#EA4335;"></i>
+                            Email
+                        </a>
+                        <button onclick="copyLink()" class="share-btn">
+                            <i class="ph-fill ph-link" style="color:#6B7280;"></i>
+                            Copy Link
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Referral Stats -->
+                <div class="panel-card" style="margin-bottom:0;">
+                    <h3>Your Referral Stats</h3>
+                    <div class="stat-tile-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0;">
+                        <div class="stat-tile">
+                            <div class="stat-tile-value stat-tile-value--violet">{{ referral_count }}</div>
+                            <div class="stat-tile-label">Friends Referred</div>
+                        </div>
+                        <div class="stat-tile">
+                            <div class="stat-tile-value stat-tile-value--success">{{ referral_total_points|default:"0" }}</div>
+                            <div class="stat-tile-label">Points Earned</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="step">
-        <div class="step-number">2</div>
-        <div class="step-content">
-            <h4>They Sign Up</h4>
-            <p>Your friend creates an account and enters your code</p>
-        </div>
-    </div>
-    <div class="step">
-        <div class="step-number">3</div>
-        <div class="step-content">
-            <h4>You Both Earn!</h4>
-            <p>They get {{ settings.welcome_bonus }} bonus points, you get {{ settings.referral_points }} when they order</p>
-        </div>
-    </div>
-</div>
+</section>
 
-<div class="your-code-section">
-    <h3>Your Referral Code</h3>
-    <p>Share this code with friends</p>
-    <div class="code-box">
-        <div class="code" id="referralCode">{{ referral_code }}</div>
-    </div>
-    <button class="btn-copy" onclick="copyCode()">
-        <i class="ph ph-copy"></i> Copy Code
-    </button>
-</div>
+{% endblock %}
 
-<div class="share-options">
-    <a href="https://wa.me/?text=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}" 
-       class="share-btn whatsapp" target="_blank">
-        <i class="fab fa-whatsapp"></i>
-        <span>WhatsApp</span>
-    </a>
-    <a href="sms:?body=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}" 
-       class="share-btn sms">
-        <i class="ph ph-chat-text"></i>
-        <span>SMS</span>
-    </a>
-    <a href="mailto:?subject=Free%20{{ settings.welcome_bonus }}%20Points%20at%20{{ site_settings.shop_name|urlencode }}&body=Hi!%20I%20thought%20you'd%20love%20this.%20Get%20{{ settings.welcome_bonus }}%20free%20points%20when%20you%20sign%20up%20at%20{{ site_settings.shop_name|urlencode }}%20using%20my%20code:%20{{ referral_code }}" 
-       class="share-btn email">
-        <i class="ph ph-envelope-simple"></i>
-        <span>Email</span>
-    </a>
-    <button class="share-btn copy" onclick="copyLink()">
-        <i class="ph ph-link"></i>
-        <span>Copy Link</span>
-    </button>
-</div>
-
-<div class="stats-section">
-    <h3>Your Referral Stats</h3>
-    <div class="stats-grid">
-        <div class="stat-item">
-            <h4>{{ referral_count }}</h4>
-            <span>Friends Referred</span>
-        </div>
-        <div class="stat-item">
-            <h4>{{ referral_total_points|default:"0" }}</h4>
-            <span>Points Earned</span>
-        </div>
-    </div>
-</div>
-
+{% block extra_js %}
 <script>
 function copyCode() {
-    const code = document.getElementById('referralCode').textContent;
-    navigator.clipboard.writeText(code).then(() => {
-        alert('Referral code copied!');
+    navigator.clipboard.writeText('{{ referral_code }}').then(() => {
+        if (window.showToast) showToast('Referral code copied!', 'success', 2000);
     });
 }
 
 function copyLink() {
-    const code = document.getElementById('referralCode').textContent;
-    const text = `Get ${ {{ settings.welcome_bonus }} } free points at {{ site_settings.shop_name|escapejs }}! Use my code: ${code}`;
+    const text = `Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}`;
     navigator.clipboard.writeText(text).then(() => {
-        alert('Message copied!');
+        if (window.showToast) showToast('Message copied!', 'success', 2000);
     });
 }
 </script>
-
 {% endblock %}

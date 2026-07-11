@@ -1,164 +1,58 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 {% load media_tags %}
 
 {% block title %}Meal Deals - {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
-<style>
-.deals-header {
-    background: linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%);
-    color: white;
-    padding: 2rem 1rem;
-    text-align: center;
-    border-radius: 0 0 2rem 2rem;
-    margin: -1rem -1rem 1.5rem -1rem;
-}
-.deals-header h1 {
-    font-size: 1.75rem;
-    margin-bottom: 0.5rem;
-}
-.deals-header p {
-    opacity: 0.9;
-}
-.deals-grid {
-    display: grid;
-    gap: 1rem;
-    padding: 0.5rem 1rem 2rem;
-}
-.deal-card {
-    background: white;
-    border-radius: 1rem;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-.deal-image {
-    width: 100%;
-    height: 160px;
-    background: linear-gradient(135deg, #FFF0EB 0%, #FFE4DC 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-}
-.deal-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.deal-content {
-    padding: 1rem;
-}
-.deal-badge {
-    display: inline-block;
-    background: #FF6B35;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-.deal-content h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.25rem;
-}
-.deal-content p {
-    font-size: 0.85rem;
-    color: #6B7280;
-    margin-bottom: 0.75rem;
-    line-height: 1.4;
-}
-.deal-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-}
-.deal-price {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-}
-.price-current {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #FF6B35;
-}
-.price-original {
-    font-size: 0.9rem;
-    color: #9CA3AF;
-    text-decoration: line-through;
-}
-.savings-badge {
-    background: #10B981;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-.btn-build {
-    background: #FF6B35;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 2rem;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-block;
-}
-.empty-deals {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #6B7280;
-}
-.empty-deals i {
-    font-size: 3rem;
-    color: #D1D5DB;
-    margin-bottom: 1rem;
-}
-</style>
 
-<div class="deals-header">
-    <h1><i class="ph-fill ph-star"></i> Meal Deals</h1>
-    <p>Save money with our combo meals!</p>
-</div>
-
-<div class="deals-grid">
-    {% for deal in deals %}
-    <div class="deal-card">
-        <div class="deal-image">
-            {% if deal.image %}
-                <img src="{{ deal.image|image_variant:'hero' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="1280" height="720">
-            {% else %}
-                <i class="ph ph-fork-knife" style="color: #FF6B35;"></i>
-            {% endif %}
+<section class="section" style="padding-top:2rem;">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Meal <span>Deals</span></h2>
+                <p>Great value combos — pick your favourites and save.</p>
+            </div>
         </div>
-        <div class="deal-content">
-            <span class="deal-badge">{{ deal.get_deal_type_display }}</span>
-            <h3>{{ deal.name }}</h3>
-            <p>{{ deal.description }}</p>
-            <div class="deal-footer">
-                <div class="deal-price">
-                    <span class="price-current">£{{ deal.deal_price }}</span>
-                    <span class="price-original">£{{ deal.original_price }}</span>
+
+        {% if deals %}
+        <div class="menu-grid-desktop">
+            {% for deal in deals %}
+            <a href="{% url 'mealdeals:detail' deal.id %}" style="text-decoration:none;color:inherit;">
+                <div class="menu-card">
+                    <div class="menu-card-image">
+                        {% if deal.image %}
+                        <img src="{{ deal.image|image_variant:'card' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="640" height="640">
+                        {% else %}
+                        <div class="placeholder-icon">🍽️</div>
+                        {% endif %}
+                        <div class="menu-card-badges">
+                            <span class="popular-badge">Deal</span>
+                        </div>
+                    </div>
+                    <div class="menu-card-body">
+                        <div class="menu-card-title">{{ deal.name }}</div>
+                        {% if deal.description %}
+                        <div class="menu-card-desc">{{ deal.description }}</div>
+                        {% endif %}
+                        <div class="menu-card-footer">
+                            <span class="menu-card-price text-brand">£{{ deal.deal_price }}</span>
+                        </div>
+                    </div>
                 </div>
-                <span class="savings-badge">Save £{{ deal.savings }}</span>
-            </div>
-            <div style="margin-top: 1rem;">
-                <a href="{% url 'mealdeals:detail' deal.id %}" class="btn-build">
-                    <i class="ph ph-plus"></i> Build Deal
-                </a>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card card--padded">
+            <div class="empty-state">
+                <i class="ph ph-bowl-food"></i>
+                <h3>No meal deals available</h3>
+                <p>Check back soon for great value combos!</p>
+                <a href="{% url 'menu:menu' %}" class="btn btn--primary">Browse Menu</a>
             </div>
         </div>
+        {% endif %}
     </div>
-    {% empty %}
-    <div class="empty-deals">
-        <i class="ph ph-ticket"></i>
-        <p>No meal deals available right now.</p>
-        <p style="font-size: 0.85rem;">Check back soon for great offers!</p>
-    </div>
-    {% endfor %}
-</div>
+</section>
 
 {% endblock %}

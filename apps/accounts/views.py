@@ -156,8 +156,7 @@ def profile(request):
         "favorite_items": favorite_items,
         "saved_meals": saved_meals,
     }
-    template = "desktop/accounts/profile.html" if getattr(request, "is_desktop", True) else "accounts/profile.html"
-    return render(request, template, context)
+    return render(request, "accounts/profile.html", context)
 
 
 @login_required
@@ -187,8 +186,7 @@ def app_home(request):
         "favorite_items": favorite_items,
         **rewards,
     }
-    template = "desktop/accounts/app_home.html" if getattr(request, "is_desktop", True) else "accounts/app_home.html"
-    return render(request, template, context)
+    return render(request, "accounts/app_home.html", context)
 
 
 @login_required
@@ -248,8 +246,7 @@ def order_history(request):
         "date_options": date_options,
         "filter_query_string": filter_query_string,
     }
-    template = "desktop/accounts/order_history.html" if getattr(request, "is_desktop", True) else "accounts/order_history.html"
-    return render(request, template, context)
+    return render(request, "accounts/order_history.html", context)
 
 
 @login_required

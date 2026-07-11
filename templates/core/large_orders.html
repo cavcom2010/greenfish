@@ -1,120 +1,121 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Large Orders - {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}Large Orders{% endblock %}
 
 {% block extra_css %}
 <style>
-.large-order-card {
-    background: var(--surface);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: var(--shadow);
-    margin-bottom: 16px;
-}
-
-.large-order-form {
+.large-orders-shell {
+    max-width: 980px;
+    margin: 0 auto;
     display: grid;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 2rem;
+    align-items: start;
 }
 
-.large-order-field label {
-    display: block;
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 6px;
-}
-
-.large-order-field input,
-.large-order-field select,
-.large-order-field textarea {
-    width: 100%;
+.large-orders-panel {
+    background: var(--surface-warm);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 14px;
-    font: inherit;
-    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
 }
 
-.large-order-field textarea {
-    resize: vertical;
-}
-
-.large-order-help,
-.large-order-error {
-    font-size: 12px;
-    margin-top: 5px;
-}
-
-.large-order-help {
-    color: var(--text-secondary);
-}
-
-.large-order-error {
-    color: var(--error);
-}
-
-.large-order-snapshot {
+.large-orders-form {
     display: grid;
-    gap: 8px;
-    margin-top: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
 }
 
-.large-order-snapshot-row {
+.large-orders-form .form-field {
+    margin-bottom: 0;
+}
+
+.large-orders-field-full {
+    grid-column: 1 / -1;
+}
+
+.large-orders-snapshot {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.large-orders-snapshot-row {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    font-size: 14px;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 860px) {
+    .large-orders-shell,
+    .large-orders-form {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <div class="large-order-card">
-        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">Planning a party or company order?</h2>
-        <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.45;">
-            Send the details and the shop will confirm availability, timing, delivery, and payment before the order is accepted.
-        </p>
-    </div>
+<section class="section" style="padding-top:2rem;">
+    <div class="container">
+        <div style="max-width:760px;margin-bottom:2rem;">
+            <h1 style="margin-bottom:0.75rem;">Large Orders</h1>
+            <p style="font-size:1rem;">
+                For offices, parties, events, and Christmas orders, send the details and the shop will confirm availability, timing, delivery, and payment before accepting the order.
+            </p>
+        </div>
 
-    {% if basket_snapshot.items %}
-    <div class="large-order-card">
-        <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 6px;">Basket attached</h3>
-        <p style="color: var(--text-secondary); font-size: 13px;">Staff will see this basket with your request.</p>
-        <div class="large-order-snapshot">
-            {% for item in basket_snapshot.items %}
-            <div class="large-order-snapshot-row">
-                <span>{{ item.quantity }} x {{ item.name }}</span>
-                <strong>£{{ item.line_total }}</strong>
-            </div>
-            {% endfor %}
-            <div class="large-order-snapshot-row" style="border-top:1px solid var(--border); padding-top:8px;">
-                <span>Estimated total</span>
-                <strong>£{{ estimated_total|floatformat:2 }}</strong>
-            </div>
+        <div class="large-orders-shell">
+            <form method="post" class="large-orders-panel large-orders-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="large-orders-field-full">
+                    {% include "partials/form_errors.html" with form=form %}
+                </div>
+                {% endif %}
+
+                {% for field in form %}
+                <div class="{% if field.name == 'delivery_address' or field.name == 'requested_items' %}large-orders-field-full{% endif %}">
+                    {% include "partials/form_field.html" with field=field %}
+                </div>
+                {% endfor %}
+
+                <div class="large-orders-field-full">
+                    <button type="submit" class="btn btn--primary btn--block">
+                        <i class="ph-bold ph-paper-plane-right"></i>
+                        Send Large Order Request
+                    </button>
+                </div>
+            </form>
+
+            <aside class="large-orders-panel">
+                <h3 style="font-size:var(--text-md);margin-bottom:0.75rem;">What happens next</h3>
+                <p style="font-size:0.92rem;line-height:1.55;">
+                    Staff will review quantities, timing, stock, delivery capacity, and any deposit or payment needs before confirming.
+                </p>
+
+                {% if basket_snapshot.items %}
+                <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border-light);">
+                    <h4 style="font-size:0.95rem;margin-bottom:0.35rem;">Basket attached</h4>
+                    <p style="font-size:0.85rem;">This basket will be sent with your request.</p>
+                    <div class="large-orders-snapshot">
+                        {% for item in basket_snapshot.items %}
+                        <div class="large-orders-snapshot-row">
+                            <span>{{ item.quantity }} x {{ item.name }}</span>
+                            <strong>£{{ item.line_total }}</strong>
+                        </div>
+                        {% endfor %}
+                        <div class="large-orders-snapshot-row" style="border-top:1px solid var(--border-light);padding-top:0.75rem;">
+                            <span>Estimated total</span>
+                            <strong>£{{ estimated_total|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </aside>
         </div>
     </div>
-    {% endif %}
-
-    <form method="post" class="large-order-card large-order-form">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-        <div class="large-order-error">{{ form.non_field_errors|join:", " }}</div>
-        {% endif %}
-
-        {% for field in form %}
-        <div class="large-order-field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<div class="large-order-help">{{ field.help_text }}</div>{% endif %}
-            {% if field.errors %}<div class="large-order-error">{{ field.errors|join:", " }}</div>{% endif %}
-        </div>
-        {% endfor %}
-
-        <button type="submit" class="btn btn-brand" style="margin-top: 4px;">
-            Send Large Order Request
-        </button>
-    </form>
-</div>
+</section>
 {% endblock %}

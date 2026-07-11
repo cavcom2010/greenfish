@@ -14,8 +14,7 @@ def deal_list(request):
         "deals": deals,
         "title": "Meal Deals",
     }
-    template = "desktop/mealdeals/list.html" if getattr(request, "is_desktop", True) else "mealdeals/list.html"
-    return render(request, template, context)
+    return render(request, "mealdeals/list.html", context)
 
 
 def deal_detail(request, deal_id):
@@ -31,5 +30,4 @@ def deal_detail(request, deal_id):
         "title": deal.name,
         "service_type": selected_service_type(request),
     }
-    template = "desktop/mealdeals/builder.html" if getattr(request, "is_desktop", True) else "mealdeals/builder.html"
-    return render(request, template, context)
+    return render(request, "mealdeals/builder.html", context)

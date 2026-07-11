@@ -1,196 +1,72 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
+{% load static %}
 
 {% block title %}Points History - {{ site_settings.shop_name }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/account.css' %}">
+{% endblock %}
+
 {% block content %}
-<style>
-.tx-header {
-    background: linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%);
-    color: white;
-    padding: 1.5rem 1rem;
-    margin: -1rem -1rem 1rem -1rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-@media (max-width: 430px) {
-    .tx-header {
-        margin: 0 0 1rem 0;
-        border-radius: 1.5rem;
-    }
-}
-.tx-header a {
-    color: white;
-    text-decoration: none;
-    font-size: 1.25rem;
-}
-.tx-header h1 {
-    font-size: 1.25rem;
-    margin: 0;
-}
-.balance-summary {
-    background: white;
-    border-radius: 1rem;
-    padding: 1.25rem;
-    margin: 1rem;
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.balance-item h3 {
-    font-size: 1.5rem;
-    color: #FF6B35;
-    margin-bottom: 0.25rem;
-}
-.balance-item span {
-    font-size: 0.8rem;
-    color: #6B7280;
-}
-.tx-list {
-    background: white;
-    border-radius: 1rem;
-    margin: 1rem;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.tx-month {
-    background: #F9FAFB;
-    padding: 0.75rem 1rem;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: #6B7280;
-}
-.tx-item {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid #F3F4F6;
-    gap: 0.75rem;
-}
-.tx-item:last-child {
-    border-bottom: none;
-}
-.tx-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-.tx-icon.earned {
-    background: #D1FAE5;
-    color: #059669;
-}
-.tx-icon.redeemed {
-    background: #FEE2E2;
-    color: #DC2626;
-}
-.tx-icon.bonus {
-    background: #DBEAFE;
-    color: #2563EB;
-}
-.tx-icon.referral {
-    background: #E0E7FF;
-    color: #4F46E5;
-}
-.tx-icon.birthday {
-    background: #FCE7F3;
-    color: #DB2777;
-}
-.tx-details {
-    flex: 1;
-}
-.tx-details h4 {
-    font-size: 0.9rem;
-    margin-bottom: 0.125rem;
-}
-.tx-details p {
-    font-size: 0.75rem;
-    color: #9CA3AF;
-    margin: 0;
-}
-.tx-amount {
-    font-weight: 700;
-    font-size: 1rem;
-}
-.tx-amount.positive {
-    color: #10B981;
-}
-.tx-amount.negative {
-    color: #EF4444;
-}
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #9CA3AF;
-}
-.empty-state i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-</style>
 
-<div class="tx-header">
-    <a href="{% url 'loyalty:dashboard' %}"><i class="ph ph-arrow-left"></i></a>
-    <h1>Points History</h1>
-</div>
+<section class="account-page-desktop">
+    <div class="container">
+        <div class="account-layout">
+            {% include "partials/account_sidebar.html" with active="transactions" %}
 
-<div class="balance-summary">
-    <div class="balance-item">
-        <h3>{{ current_points }}</h3>
-        <span>Current Points</span>
-    </div>
-    <div class="balance-item">
-        <h3>{{ lifetime_points }}</h3>
-        <span>Lifetime Earned</span>
-    </div>
-    <div class="balance-item">
-        <h3>£{{ points_value }}</h3>
-        <span>Current Value</span>
-    </div>
-</div>
+            <div class="account-content">
+                <h2>Points History</h2>
 
-<div class="tx-list">
-    {% for tx in recent_transactions %}
-    {% ifchanged tx.created_at|date:"F Y" %}
-    <div class="tx-month">{{ tx.created_at|date:"F Y" }}</div>
-    {% endifchanged %}
-    <div class="tx-item">
-        <div class="tx-icon {{ tx.transaction_type }}">
-            {% if tx.transaction_type == 'earned' %}
-                <i class="ph ph-shopping-bag"></i>
-            {% elif tx.transaction_type == 'redeemed' %}
-                <i class="ph ph-ticket"></i>
-            {% elif tx.transaction_type == 'bonus' %}
-                <i class="ph ph-gift"></i>
-            {% elif tx.transaction_type == 'referral' %}
-                <i class="ph ph-user-plus"></i>
-            {% elif tx.transaction_type == 'birthday' %}
-                <i class="ph ph-cake"></i>
-            {% else %}
-                <i class="ph ph-star"></i>
-            {% endif %}
-        </div>
-        <div class="tx-details">
-            <h4>{{ tx.get_transaction_type_display }}</h4>
-            <p>{{ tx.description|default:tx.created_at|date:"d M Y, H:i" }}</p>
-        </div>
-        <div class="tx-amount {% if tx.points > 0 %}positive{% else %}negative{% endif %}">
-            {% if tx.points > 0 %}+{% endif %}{{ tx.points }}
+                <div class="stat-tile-grid">
+                    <div class="stat-tile">
+                        <div class="stat-tile-value">{{ current_points }}</div>
+                        <div class="stat-tile-label">Current Points</div>
+                    </div>
+                    <div class="stat-tile">
+                        <div class="stat-tile-value stat-tile-value--success">{{ lifetime_points }}</div>
+                        <div class="stat-tile-label">Lifetime Earned</div>
+                    </div>
+                    <div class="stat-tile">
+                        <div class="stat-tile-value">£{{ points_value }}</div>
+                        <div class="stat-tile-label">Current Value</div>
+                    </div>
+                </div>
+
+                <div class="tx-list">
+                    {% for tx in recent_transactions %}
+                    {% ifchanged tx.created_at|date:"F Y" %}
+                    <div class="tx-month">{{ tx.created_at|date:"F Y" }}</div>
+                    {% endifchanged %}
+                    <div class="tx-row">
+                        <div class="tx-row-main">
+                            <div class="tx-icon {% if tx.transaction_type == 'earned' %}tx-icon--earned{% elif tx.transaction_type == 'redeemed' %}tx-icon--redeemed{% elif tx.transaction_type == 'bonus' %}tx-icon--bonus{% elif tx.transaction_type == 'referral' %}tx-icon--referral{% elif tx.transaction_type == 'birthday' %}tx-icon--birthday{% endif %}">
+                                {% if tx.transaction_type == 'earned' %}<i class="ph-fill ph-shopping-bag"></i>
+                                {% elif tx.transaction_type == 'redeemed' %}<i class="ph-fill ph-ticket"></i>
+                                {% elif tx.transaction_type == 'bonus' %}<i class="ph-fill ph-gift"></i>
+                                {% elif tx.transaction_type == 'referral' %}<i class="ph-fill ph-user-plus"></i>
+                                {% elif tx.transaction_type == 'birthday' %}<i class="ph-fill ph-cake"></i>
+                                {% else %}<i class="ph-fill ph-star"></i>{% endif %}
+                            </div>
+                            <div>
+                                <div class="tx-title">{{ tx.get_transaction_type_display }}</div>
+                                <div class="tx-meta">{{ tx.description|default:tx.created_at|date:"d M Y, H:i" }}</div>
+                            </div>
+                        </div>
+                        <div class="tx-points {% if tx.points > 0 %}tx-points--positive{% else %}tx-points--negative{% endif %}">
+                            {% if tx.points > 0 %}+{% endif %}{{ tx.points }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ph ph-receipt"></i>
+                        <h3>No transactions yet</h3>
+                        <p>Start ordering to earn points!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
-    {% empty %}
-    <div class="empty-state">
-        <i class="ph ph-receipt"></i>
-        <p>No transactions yet</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Start ordering Sadza & Nyama to earn points!</p>
-    </div>
-    {% endfor %}
-</div>
+</section>
 
 {% endblock %}

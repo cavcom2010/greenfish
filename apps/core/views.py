@@ -190,8 +190,7 @@ def large_order_request(request):
         "estimated_total": estimated_total,
         "service_type": selected_service_type(request),
     }
-    template = "desktop/core/large_orders.html" if getattr(request, "is_desktop", True) else "core/large_orders.html"
-    return render(request, template, context)
+    return render(request, "core/large_orders.html", context)
 
 
 @require_GET

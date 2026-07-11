@@ -1,112 +1,130 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
+{% load static %}
 
 {% block title %}Order History - {{ site_settings.shop_name }}{% endblock %}
-{% block page_title %}My Orders{% endblock %}
 
-{% block location_picker %}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/account.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <form method="get" style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 16px; display: grid; gap: 10px;">
-        <select name="date" class="form-input" onchange="this.form.submit()">
-            {% for value, label in date_options %}
-            <option value="{{ value }}"{% if date_filter == value %} selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <select name="status" class="form-input" onchange="this.form.submit()">
-            <option value="all"{% if status_filter == 'all' %} selected{% endif %}>All statuses</option>
-            {% for value, label in status_choices %}
-            <option value="{{ value }}"{% if status_filter == value %} selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <select name="service" class="form-input" onchange="this.form.submit()">
-            <option value="all"{% if service_filter == 'all' %} selected{% endif %}>All services</option>
-            {% for value, label in service_choices %}
-            <option value="{{ value }}"{% if service_filter == value %} selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </form>
 
-    {% if orders %}
-    <div class="menu-list" style="padding: 0;">
-        {% for order in orders %}
-        <div class="list-item" style="flex-direction: column; align-items: flex-start;">
-            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
-                <span style="font-weight: 700;">{{ order.order_number }}</span>
-                <span style="font-size: 13px; color: var(--text-secondary);">{{ order.created_at|date:"d M Y" }}</span>
-            </div>
-            
-            <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">
-                {{ order.item_count }} items
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                <span style="font-weight: 700; font-size: 16px;">£{{ order.total_amount }}</span>
-                <span style="
-                    background: {% if order.status == 'completed' %}var(--success-bg){% elif order.status == 'cancelled' %}var(--error-bg){% else %}var(--brand-light){% endif %};
-                    color: {% if order.status == 'completed' %}var(--success){% elif order.status == 'cancelled' %}var(--error){% else %}var(--brand){% endif %};
-                    padding: 4px 12px;
-                    border-radius: 12px;
-                    font-size: 12px;
-                    font-weight: 600;
-                ">
-                    {{ order.service_status_display }}
-                </span>
-            </div>
-            {% if order.is_reorderable and order.items.all %}
-            <div style="width: 100%; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);">
-                {% for item in order.items.all %}
-                {% if item.menu_item %}
-                <form method="post" action="{% url 'accounts:save_order_item_meal' item.id %}" style="display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <span style="font-size: 13px; color: var(--text-secondary);">{{ item.quantity }} x {{ item.item_name }}</span>
-                    <button type="submit" class="btn btn-secondary" style="width: auto; padding: 7px 10px; margin: 0; font-size: 12px;">Save meal</button>
+<section class="account-page-desktop">
+    <div class="container">
+        <div class="account-layout">
+            {% include "partials/account_sidebar.html" with active="orders" %}
+
+            <div class="account-content">
+                <h2>Order History</h2>
+
+                <form method="get" class="order-filter-row">
+                    <select name="date" onchange="this.form.submit()" aria-label="Filter by date">
+                        {% for value, label in date_options %}
+                        <option value="{{ value }}"{% if date_filter == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="status" onchange="this.form.submit()" aria-label="Filter by status">
+                        <option value="all"{% if status_filter == 'all' %} selected{% endif %}>All statuses</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}"{% if status_filter == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="service" onchange="this.form.submit()" aria-label="Filter by service">
+                        <option value="all"{% if service_filter == 'all' %} selected{% endif %}>All services</option>
+                        {% for value, label in service_choices %}
+                        <option value="{{ value }}"{% if service_filter == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </form>
-                {% endif %}
+
+                {% if orders %}
+                {% for order in orders %}
+                <div class="order-card">
+                    <div class="order-card-head">
+                        <div>
+                            <div class="order-card-number">{{ order.order_number }}</div>
+                            <div class="order-card-date">{{ order.created_at|date:"d M Y, H:i" }}</div>
+                        </div>
+                        <span class="status-pill {% if order.status == 'completed' %}status-pill--success{% elif order.status == 'cancelled' %}status-pill--error{% else %}status-pill--warning{% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="order-card-meta">
+                        <span><i class="ph ph-storefront" style="vertical-align:middle;margin-right:4px;"></i>{{ order.get_service_type_display }}</span>
+                        <span><i class="ph ph-clock" style="vertical-align:middle;margin-right:4px;"></i>{{ order.get_service_status_display }}</span>
+                    </div>
+
+                    <div class="order-card-foot">
+                        <div class="order-card-date">
+                            {{ order.items.count }} item{{ order.items.count|pluralize }}
+                        </div>
+                        <div class="order-card-total">£{{ order.total_amount }}</div>
+                    </div>
+
+                    {% if order.is_reorderable and order.items.all %}
+                    <div class="order-save-grid">
+                        {% for item in order.items.all %}
+                        {% if item.menu_item %}
+                        <form method="post" action="{% url 'accounts:save_order_item_meal' item.id %}" class="order-save-row">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <span>{{ item.quantity }} x {{ item.item_name }}</span>
+                            <button type="submit" class="btn btn--secondary btn--sm">Save meal</button>
+                        </form>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="order-card-actions">
+                        <a href="{% url 'orders:tracking' order.order_number %}?t={{ order.public_access_token }}" class="btn btn--secondary btn--sm">
+                            <i class="ph ph-map-trifold"></i>
+                            Track
+                        </a>
+                        {% if order.is_reorderable %}
+                        <form method="post" action="{% url 'accounts:reorder' order.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn--primary btn--sm">
+                                <i class="ph ph-clock-counter-clockwise"></i>
+                                Order Again
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
                 {% endfor %}
-            </div>
-            {% endif %}
-            <div style="display: flex; gap: 8px; width: 100%; margin-top: 12px;">
-                <a href="{% url 'orders:tracking' order.order_number %}?t={{ order.public_access_token }}" class="btn btn-secondary" style="flex: 1; padding: 11px 14px;">
-                    <i class="ph ph-map-trifold" style="margin-right: 6px;"></i>
-                    Track
-                </a>
-                {% if order.is_reorderable %}
-                <form method="post" action="{% url 'accounts:reorder' order.id %}" style="flex: 1;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-brand" style="width: 100%; padding: 11px 14px;">
-                        <i class="ph ph-clock-counter-clockwise" style="margin-right: 6px;"></i>
-                        Order Again
-                    </button>
-                </form>
+
+                {% if page_obj.has_other_pages %}
+                <div class="pagination-row">
+                    {% if page_obj.has_previous %}
+                    <a href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">Previous</a>
+                    {% else %}
+                    <span class="btn btn--secondary btn--sm" aria-disabled="true" style="opacity:0.45;">Previous</span>
+                    {% endif %}
+                    <span style="font-size:0.9rem;color:var(--text-secondary);">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                    <a href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">Next</a>
+                    {% else %}
+                    <span class="btn btn--secondary btn--sm" aria-disabled="true" style="opacity:0.45;">Next</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="empty-state">
+                    <i class="ph ph-receipt"></i>
+                    <h3>No orders yet</h3>
+                    <p>Place your first order to see it here.</p>
+                    <a href="{% url 'core:home' %}" class="btn btn--primary">
+                        <i class="ph-bold ph-fork-knife"></i>
+                        Order Now
+                    </a>
+                </div>
                 {% endif %}
             </div>
         </div>
-        {% endfor %}
     </div>
-    {% if page_obj.has_other_pages %}
-    <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 16px;">
-        {% if page_obj.has_previous %}
-        <a class="btn btn-secondary" style="flex:1;padding: 11px 14px;" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
-        {% else %}
-        <span class="btn btn-secondary" style="flex:1;padding: 11px 14px; opacity: 0.45;">Previous</span>
-        {% endif %}
-        <span style="font-size: 13px; color: var(--text-secondary);">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-        <a class="btn btn-secondary" style="flex:1;padding: 11px 14px;" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
-        {% else %}
-        <span class="btn btn-secondary" style="flex:1;padding: 11px 14px; opacity: 0.45;">Next</span>
-        {% endif %}
-    </div>
-    {% endif %}
-    {% else %}
-    <div style="text-align: center; padding: 60px 20px;">
-        <i class="ph ph-receipt" style="font-size: 64px; color: var(--border); margin-bottom: 16px;"></i>
-        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">No orders yet</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 24px;">Your order history will appear here</p>
-        <a href="{% url 'menu:menu' %}" class="btn btn-brand">Start Ordering</a>
-    </div>
-    {% endif %}
-</div>
+</section>
+
 {% endblock %}

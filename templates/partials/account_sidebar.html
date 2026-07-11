@@ -1,0 +1,37 @@
+{# Shared account sidebar. Usage:                                         #}
+{#   {% include "partials/account_sidebar.html" with active="rewards" %}  #}
+{# active: profile | orders | rewards | transactions | refer              #}
+<div class="account-sidebar">
+    <div class="account-avatar-desktop">
+        <i class="ph-fill ph-user"></i>
+    </div>
+    <div class="account-name">{{ request.user.get_full_name|default:request.user.email }}</div>
+    <div class="account-email">{{ request.user.email }}</div>
+
+    <nav class="account-nav">
+        <a href="{% url 'accounts:profile' %}" {% if active == "profile" %}class="active"{% endif %}>
+            <i class="ph ph-user-gear"></i> Profile
+        </a>
+        <a href="{% url 'accounts:order_history' %}" {% if active == "orders" %}class="active"{% endif %}>
+            <i class="ph ph-receipt"></i> Order History
+        </a>
+        <a href="{% url 'loyalty:dashboard' %}" {% if active == "rewards" %}class="active"{% endif %}>
+            <i class="ph ph-gift"></i> Rewards
+        </a>
+        <a href="{% url 'loyalty:transactions' %}" {% if active == "transactions" %}class="active"{% endif %}>
+            <i class="ph ph-list-dashes"></i> Points History
+        </a>
+        <a href="{% url 'loyalty:refer' %}" {% if active == "refer" %}class="active"{% endif %}>
+            <i class="ph ph-share-network"></i> Refer a Friend
+        </a>
+        <a href="{% url 'menu:menu' %}">
+            <i class="ph ph-fork-knife"></i> Browse Menu
+        </a>
+        <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="signout">
+                <i class="ph ph-sign-out"></i> Sign Out
+            </button>
+        </form>
+    </nav>
+</div>
