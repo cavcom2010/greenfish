@@ -1,6 +1,7 @@
 """
 Menu services - Recommendations and business logic.
 """
+import logging
 from datetime import timedelta
 
 from django.core.cache import cache
@@ -10,6 +11,8 @@ from django.utils import timezone
 from apps.orders.models import Order, OrderItem
 
 from .models import MenuItem
+
+logger = logging.getLogger(__name__)
 
 POPULAR_ITEMS_CACHE_SECONDS = 60 * 60
 
@@ -26,7 +29,14 @@ def get_popular_menu_items(limit=6, days=14):
     re-checked on every call so 86'd items drop out immediately.
     """
     cache_key = f"menu:popular-item-ids:{limit}:{days}"
-    ranked_ids = cache.get(cache_key)
+    # The production cache is Redis and Django's backend raises on
+    # connection errors — the homepage must not depend on Redis being up.
+    try:
+        ranked_ids = cache.get(cache_key)
+    except Exception:
+        logger.warning("Popular-items cache read failed; recomputing", exc_info=True)
+        ranked_ids = None
+
     if ranked_ids is None:
         since = timezone.now() - timedelta(days=days)
         ranked_ids = list(
@@ -41,7 +51,10 @@ def get_popular_menu_items(limit=6, days=14):
             .order_by("-total_quantity", "menu_item")
             .values_list("menu_item", flat=True)[:limit]
         )
-        cache.set(cache_key, ranked_ids, POPULAR_ITEMS_CACHE_SECONDS)
+        try:
+            cache.set(cache_key, ranked_ids, POPULAR_ITEMS_CACHE_SECONDS)
+        except Exception:
+            logger.warning("Popular-items cache write failed", exc_info=True)
 
     items_by_id = (
         MenuItem.objects.filter(id__in=ranked_ids, is_available=True)

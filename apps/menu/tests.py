@@ -83,6 +83,17 @@ class PopularMenuItemsTests(TestCase):
         second = get_popular_menu_items(limit=1)
         self.assertEqual([item.name for item in second], ["Backup Flagged"])
 
+    def test_survives_cache_backend_outage(self):
+        seller = create_menu_item(name="Cacheless Seller", is_popular=False)
+        self._paid_order_with(seller, quantity=3)
+
+        # Production uses Redis; if it's down the homepage must still work.
+        with patch("apps.menu.services.cache.get", side_effect=ConnectionError("redis down")), \
+             patch("apps.menu.services.cache.set", side_effect=ConnectionError("redis down")):
+            items = get_popular_menu_items(limit=1)
+
+        self.assertEqual([item.name for item in items], ["Cacheless Seller"])
+
     def test_falls_back_to_flagged_items_without_order_history(self):
         create_menu_item(name="Unflagged", is_popular=False)
         flagged = create_menu_item(name="Flagged", is_popular=True)
