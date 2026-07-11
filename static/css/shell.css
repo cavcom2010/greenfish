@@ -760,13 +760,24 @@
     border-top: 1px solid var(--border);
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    /* The banner sits above the bottom tab bar on phones, so a pure
+       translateY(105%) would leave its top edge peeking over the nav.
+       Hide it outright when it isn't active. */
     transform: translateY(105%);
-    transition: transform 0.4s var(--ease-out-quart);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.4s var(--ease-out-quart), opacity 0.3s ease, visibility 0.3s ease;
     padding: 1.25rem 2rem;
+    max-height: calc(100vh - var(--header-height));
+    overflow-y: auto;
 }
 
 .cookie-consent-banner.visible {
     transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 @media (max-width: 767px) {
@@ -774,6 +785,7 @@
         bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
         padding: 1rem 1.25rem;
         border-radius: 20px 20px 0 0;
+        max-height: calc(100vh - var(--header-height) - var(--bottom-nav-height) - var(--safe-bottom));
     }
 }
 
