@@ -90,10 +90,77 @@
                     Order Now <i class="ph-bold ph-arrow-right"></i>
                 </a>
                 {% endif %}
+
+                <button type="button" class="header-icon-btn mobile-menu-btn" id="mobileMenuButton"
+                        onclick="openMobileMenu()" aria-label="Open menu" aria-haspopup="true" aria-expanded="false">
+                    <i class="ph-bold ph-list"></i>
+                </button>
             </div>
         </div>
     </header>
     {% endblock %}
+
+    <!-- Mobile hamburger menu (off-canvas) -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenuOnOverlay(event)">
+        <aside class="mobile-menu" role="dialog" aria-label="Site menu">
+            <div class="mobile-menu-header">
+                <span class="mobile-menu-title">{{ site_settings.shop_name }}</span>
+                <button type="button" class="cart-drawer-close" onclick="closeMobileMenu()" aria-label="Close menu">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <nav class="mobile-menu-body">
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Explore</div>
+                    <a href="{% url 'core:large_orders' %}"><i class="ph ph-users-three"></i> Large Orders & Catering</a>
+                    <a href="{% url 'mealdeals:list' %}"><i class="ph ph-bowl-food"></i> Meal Deals</a>
+                    {% if site_settings.about_page_enabled %}
+                    <a href="{% url 'core:about' %}"><i class="ph ph-info"></i> About Us</a>
+                    {% endif %}
+                    <a href="{% url 'core:contact' %}"><i class="ph ph-chat-circle-text"></i> Contact</a>
+                </div>
+
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Your Account</div>
+                    {% if request.user.is_authenticated %}
+                    <a href="{% url 'accounts:order_history' %}"><i class="ph ph-receipt"></i> Order History</a>
+                    <a href="{% url 'loyalty:refer' %}"><i class="ph ph-share-network"></i> Refer a Friend</a>
+                    <form method="post" action="{% url 'account_logout' %}">
+                        {% csrf_token %}
+                        <button type="submit"><i class="ph ph-sign-out"></i> Sign Out</button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'account_login' %}"><i class="ph ph-sign-in"></i> Sign In</a>
+                    <a href="{% url 'account_signup' %}"><i class="ph ph-user-plus"></i> Create Account</a>
+                    {% endif %}
+                </div>
+
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Legal & Privacy</div>
+                    <a href="#privacy"><i class="ph ph-shield-check"></i> Privacy Policy</a>
+                    <a href="#privacy"><i class="ph ph-scales"></i> GDPR & Your Data</a>
+                    <button type="button" onclick="openCookiePreferences()"><i class="ph ph-cookie"></i> Cookie Preferences</button>
+                </div>
+
+                {% if site_settings.phone or site_settings.email %}
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Get in Touch</div>
+                    {% if site_settings.phone %}
+                    <a href="tel:{{ site_settings.phone }}"><i class="ph ph-phone"></i> {{ site_settings.phone }}</a>
+                    {% endif %}
+                    {% if site_settings.email %}
+                    <a href="mailto:{{ site_settings.email }}"><i class="ph ph-envelope-simple"></i> {{ site_settings.email }}</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </nav>
+
+            <div class="mobile-menu-footer">
+                &copy; {% now "Y" %} {{ site_settings.shop_name }}
+            </div>
+        </aside>
+    </div>
 
     {% if messages %}
     <div class="messages-strip">
@@ -115,6 +182,10 @@
         <a href="{% url 'core:home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
             <i class="ph-fill ph-house"></i>
             <span>Order</span>
+        </a>
+        <a href="{% url 'menu:menu' %}" class="nav-item {% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">
+            <i class="ph-bold ph-fork-knife"></i>
+            <span>Menu</span>
         </a>
         <a href="{% url 'offers:list' %}" class="nav-item {% if 'offers' in request.path %}active{% endif %}">
             <i class="ph-bold ph-tag"></i>

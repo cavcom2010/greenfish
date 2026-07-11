@@ -188,6 +188,42 @@
             });
     });
 
+    // ── Mobile hamburger menu ────────────────────────────────────────────
+    let mobileMenuOpen = false;
+
+    window.openMobileMenu = function() {
+        const overlay = document.getElementById('mobileMenuOverlay');
+        if (!overlay || mobileMenuOpen) return;
+        mobileMenuOpen = true;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('mobileMenuButton')?.setAttribute('aria-expanded', 'true');
+    };
+
+    window.closeMobileMenu = function() {
+        const overlay = document.getElementById('mobileMenuOverlay');
+        if (!overlay || !mobileMenuOpen) return;
+        mobileMenuOpen = false;
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        document.getElementById('mobileMenuButton')?.setAttribute('aria-expanded', 'false');
+    };
+
+    window.closeMobileMenuOnOverlay = function(e) {
+        if (e.target === e.currentTarget) window.closeMobileMenu();
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileMenuOpen) window.closeMobileMenu();
+    });
+
+    // Re-open the cookie banner so the visitor can change their choice.
+    window.openCookiePreferences = function() {
+        window.closeMobileMenu();
+        const banner = document.getElementById('cookieConsentBanner');
+        if (banner) banner.classList.add('visible');
+    };
+
     // ── Sticky Header Shadow on Scroll ───────────────────────────────────
     const header = document.querySelector('.site-header');
     if (header) {
