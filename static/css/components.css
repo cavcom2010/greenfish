@@ -907,7 +907,10 @@
 }
 
 .menu-card.search-hidden {
-    display: none;
+    /* State class must beat the phone card-layout override
+       (.menu-grid-desktop .menu-card { display: grid } at <=640px),
+       which has equal specificity but appears later in this file. */
+    display: none !important;
 }
 
 .menu-grid-loading .menu-card {
