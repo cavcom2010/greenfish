@@ -62,7 +62,6 @@ SMTP_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_BACKEND_OVERRIDE = env("EMAIL_BACKEND", default="").strip()
 SMTP_EMAIL_CONFIGURED = bool(EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD)
 SENDGRID_CONFIGURED = bool(SENDGRID_API_KEY)
-SENDER_NET_CONFIGURED = bool(SENDER_NET_API_KEY)
 
 if EMAIL_BACKEND_OVERRIDE:
     EMAIL_BACKEND = EMAIL_BACKEND_OVERRIDE
@@ -75,18 +74,12 @@ elif SENDGRID_CONFIGURED:
     EMAIL_BACKEND = SMTP_EMAIL_BACKEND
 elif SMTP_EMAIL_CONFIGURED:
     EMAIL_BACKEND = SMTP_EMAIL_BACKEND
-elif SENDER_NET_CONFIGURED:
-    EMAIL_HOST = "smtp.sender.net"
-    EMAIL_PORT = 587
-    EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = SENDER_NET_API_KEY
-    EMAIL_HOST_PASSWORD = SENDER_NET_API_KEY
-    EMAIL_BACKEND = SMTP_EMAIL_BACKEND
 else:
     raise ImproperlyConfigured(
         "No email backend configured for production. "
-        "Set EMAIL_HOST, EMAIL_HOST_USER, and EMAIL_HOST_PASSWORD, "
-        "or SENDGRID_API_KEY, or SENDER_NET_API_KEY in .env."
+        "Set EMAIL_HOST, EMAIL_HOST_USER, and EMAIL_HOST_PASSWORD "
+        "(e.g. Google Workspace SMTP — smtp.gmail.com:587 with an App Password), "
+        "or SENDGRID_API_KEY in .env."
     )
 
 # Cache — use the same Redis instance already relied on for Celery (REDIS_URL,

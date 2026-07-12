@@ -265,10 +265,11 @@ ADMINS = [("GreenFish Admin", ADMIN_EMAIL)] if ADMIN_EMAIL else []
 # SendGrid API — optional future transactional email provider.
 SENDGRID_API_KEY = env("SENDGRID_API_KEY", default="")
 
-# Sender.net API — marketing emails (campaigns, offers, newsletters)
-SENDER_NET_API_KEY = env("SENDER_NET_API_KEY", default="")
-SENDER_NET_FROM_EMAIL = env("SENDER_NET_FROM_EMAIL", default="")
-SENDER_NET_FROM_NAME = env("SENDER_NET_FROM_NAME", default="")
+# Resend API — marketing emails (campaigns, offers, newsletters)
+# https://resend.com — developer-first email API for high-volume marketing sends.
+RESEND_API_KEY = env("RESEND_API_KEY", default="")
+RESEND_FROM_EMAIL = env("RESEND_FROM_EMAIL", default="")
+RESEND_FROM_NAME = env("RESEND_FROM_NAME", default="")
 
 # SMS delivery. Use console locally, twilio_test for no-charge provider tests,
 # and twilio only when intentionally sending real customer texts.

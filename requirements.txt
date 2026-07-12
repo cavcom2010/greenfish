@@ -24,6 +24,7 @@ stripe==15.2.0
 # Utilities
 django-extensions==4.1
 requests==2.34.2
+resend>=4.0.0
 python-dateutil==2.9.0.post0
 # twilio is not installed in the current venv (SMS_BACKEND defaults to
 # "console"); kept as a floor since there's no installed version to pin to.

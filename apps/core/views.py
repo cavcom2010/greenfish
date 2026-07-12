@@ -181,9 +181,9 @@ def newsletter_signup(request):
         )
 
     # If Sender.net is configured, add the contact
-    from apps.core.services.sender_net import get_sender_service
+    from apps.core.services.resend import get_resend_service
 
-    service = get_sender_service()
+    service = get_resend_service()
     if service:
         result = service.add_contact(email, name="", fields={"source": "website_footer"})
         if result.success:
@@ -196,8 +196,8 @@ def newsletter_signup(request):
             content_type="text/html",
         )
 
-    # Fallback: log it (Sender.net not configured)
-    logging.getLogger(__name__).info("Newsletter signup (no Sender.net): %s", email)
+    # Fallback: log it (Resend not configured)
+    logging.getLogger(__name__).info("Newsletter signup (no Resend): %s", email)
     return HttpResponse(
         '<p style="color:var(--success);font-size:0.8rem;margin-top:0.5rem;">✓ Thanks! We\'ll keep you updated.</p>',
         content_type="text/html",

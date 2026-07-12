@@ -312,7 +312,7 @@ class ProductionSettingsEmailTests(TestCase):
         probe_env.pop("EMAIL_HOST", None)
         probe_env.pop("EMAIL_HOST_USER", None)
         probe_env.pop("EMAIL_HOST_PASSWORD", None)
-        probe_env.pop("SENDER_NET_API_KEY", None)
+        probe_env.pop("RESEND_API_KEY", None)
         probe_env.pop("SENDGRID_API_KEY", None)
 
         try:
@@ -343,13 +343,16 @@ class ProductionSettingsEmailTests(TestCase):
             "PAYMENT_PROVIDER=stripe",
             "STRIPE_SECRET_KEY=sk_live_example",
             "STRIPE_WEBHOOK_SECRET=whsec_example",
+            "EMAIL_HOST=smtp.gmail.com",
+            "EMAIL_HOST_USER=orders@example.com",
+            "EMAIL_HOST_PASSWORD=app-password",
         ]
 
-    def test_production_uses_console_email_without_provider_keys(self):
+    def test_production_uses_smtp_with_google_workspace_defaults(self):
         result = self._run_production_settings_probe(self._required_production_env())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("django.core.mail.backends.console.EmailBackend", result.stdout)
+        self.assertIn("django.core.mail.backends.smtp.EmailBackend", result.stdout)
 
     def test_production_uses_smtp_when_smtp_credentials_are_present(self):
         env_lines = self._required_production_env() + [
@@ -362,7 +365,7 @@ class ProductionSettingsEmailTests(TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("django.core.mail.backends.smtp.EmailBackend", result.stdout)
 
-    def test_production_falls_back_to_console_when_smtp_backend_lacks_credentials(self):
+    def test_production_uses_explicit_email_backend_when_set(self):
         env_lines = self._required_production_env() + [
             "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend",
             "EMAIL_HOST=smtp.example.com",
@@ -370,7 +373,7 @@ class ProductionSettingsEmailTests(TestCase):
         result = self._run_production_settings_probe(env_lines)
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("django.core.mail.backends.console.EmailBackend", result.stdout)
+        self.assertIn("django.core.mail.backends.smtp.EmailBackend", result.stdout)
 
     def test_local_settings_can_use_mailpit_smtp_from_env(self):
         with tempfile.NamedTemporaryFile("w", delete=False) as env_file:
