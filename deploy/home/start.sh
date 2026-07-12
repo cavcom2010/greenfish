@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
+APP_NAME="${APP_NAME:-Tinashe Takeaway}"
+
 PYTHON_BIN="$ROOT/venv/bin/python"
 GUNICORN_BIN="$ROOT/venv/bin/gunicorn"
 
@@ -23,7 +25,7 @@ Environment:
   HOME_APP_PORT=8026  Requested Gunicorn port. If occupied, start.sh uses the
                        next free port above it and records that choice for stop.sh.
 
-Home server for Tinashe Takeaway - runs on port :8026
+Home server for ${APP_NAME} - runs on port :8026
 EOF
 }
 
@@ -231,7 +233,7 @@ kill_listeners_on_port() {
 LAN_IP="${HOME_HOST:-$(detect_lan_ip)}"
 HOME_BIND="${HOME_BIND:-0.0.0.0}"
 
-# Port configuration for Tinashe Takeaway
+# Port configuration for ${APP_NAME}
 NGINX_PORT="${HOME_PORT:-8006}"
 REQUESTED_GUNICORN_PORT="${HOME_APP_PORT:-8026}"
 GUNICORN_PORT="$(find_next_free_port "$REQUESTED_GUNICORN_PORT")"

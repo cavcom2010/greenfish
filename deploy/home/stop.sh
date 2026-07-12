@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+APP_NAME="${APP_NAME:-Tinashe Takeaway}"
 
 HOME_DIR="$ROOT/.home_nginx"
 RUN_DIR="$HOME_DIR/run"
@@ -9,7 +10,7 @@ NGINX_PID="$RUN_DIR/nginx.pid"
 GUNICORN_PID="$RUN_DIR/gunicorn.pid"
 GUNICORN_PORT_FILE="$RUN_DIR/gunicorn.port"
 
-echo "Stopping Tinashe Takeaway home server..."
+echo "Stopping ${APP_NAME} home server..."
 
 # Stop Nginx
 if [[ -f "$NGINX_PID" ]]; then
