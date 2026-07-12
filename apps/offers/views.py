@@ -87,4 +87,4 @@ def clear_offer(request):
     """Remove the active offer from the session."""
     clear_selected_offer(request)
     messages.success(request, "Offer removed.")
-    return redirect(_redirect_target(request, reverse("offers:list")))
+    return redirect(_redirect_target(request, reverse("loyalty:dashboard")))

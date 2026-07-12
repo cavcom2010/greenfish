@@ -36,26 +36,16 @@
 
         <!-- Dietary pills -->
         <div class="dietary-filter-row">
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'vegetarian' %}active{% endif %}"
-                    data-menu-dietary="vegetarian" aria-pressed="{% if dietary_filter == 'vegetarian' %}true{% else %}false{% endif %}">
-                🥬 Vegetarian
+            {% for tag in unique_dietary_tags %}
+            <button type="button" class="dietary-filter-pill {% if dietary_filter == tag %}active{% endif %}"
+                    data-menu-dietary="{{ tag }}" aria-pressed="{% if dietary_filter == tag %}true{% else %}false{% endif %}">
+                {% if tag == 'vegetarian' %}🥬{% elif tag == 'vegan' %}🌱{% elif tag == 'gluten-free' %}🌾{% elif tag == 'halal' %}🥩{% elif tag == 'spicy' %}🌶️{% else %}🏷️{% endif %}
+                {{ tag|title }}
             </button>
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'vegan' %}active{% endif %}"
-                    data-menu-dietary="vegan" aria-pressed="{% if dietary_filter == 'vegan' %}true{% else %}false{% endif %}">
-                🌱 Vegan
-            </button>
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'gluten-free' %}active{% endif %}"
-                    data-menu-dietary="gluten-free" aria-pressed="{% if dietary_filter == 'gluten-free' %}true{% else %}false{% endif %}">
-                🌾 Gluten-Free
-            </button>
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == 'halal' %}active{% endif %}"
-                    data-menu-dietary="halal" aria-pressed="{% if dietary_filter == 'halal' %}true{% else %}false{% endif %}">
-                ☪️ Halal
-            </button>
-            <button type="button" class="dietary-filter-pill clear" data-menu-dietary="" data-menu-clear="dietary"
-                    aria-pressed="false" {% if not dietary_filter %}hidden{% endif %}>
-                ✕ Clear Filter
-            </button>
+            {% endfor %}
+            <button type="button" class="dietary-filter-pill dietary-filter-pill--clear"
+                    data-menu-dietary="" data-menu-clear aria-pressed="false"
+                    {% if not dietary_filter %}hidden{% endif %}>Clear Filter ✕</button>
         </div>
 
         <!-- Search -->
@@ -73,13 +63,13 @@
         {% endif %}
 
         <!-- Menu grid: all items rendered, filtered client-side -->
-        <div class="menu-grid-desktop" style="margin-top:1.5rem;" id="menuGrid">
+        <div class="menu-grid-desktop menu-grid-loading" style="margin-top:1.5rem;" id="menuGrid">
             {% for item in all_items %}
             <div class="menu-card" onclick="openItemModal({{ item.id }})"
                  data-category-id="{{ item.category_id }}"
-                 data-dietary-tags="{{ item.dietary_tags|join:','|lower|escapejs }}"
-                 data-search-name="{{ item.name|lower|escapejs }}"
-                 data-search-desc="{{ item.description|default:''|lower|escapejs }}">
+                 data-dietary-tags="{{ item.dietary_tags|join:','|lower }}"
+                 data-search-name="{{ item.name|lower }}"
+                 data-search-desc="{{ item.description|default:''|lower }}">
                 <div class="menu-card-image">
                     {% if item.image %}
                     <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">

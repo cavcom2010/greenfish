@@ -64,9 +64,8 @@
                 <nav class="main-nav" aria-label="Main navigation">
                     <a href="{% url 'core:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Order</a>
                     <a href="{% url 'menu:menu' %}" class="{% if 'menu' in request.path and request.resolver_match.url_name != 'home' %}active{% endif %}">Menu</a>
-                    <a href="{% url 'offers:list' %}" class="{% if 'offers' in request.path %}active{% endif %}">Offers</a>
+                    <a href="{% url 'loyalty:dashboard' %}" class="{% if 'rewards' in request.path or 'offers' in request.path %}active{% endif %}">Rewards</a>
                     <a href="{% url 'core:large_orders' %}" class="{% if request.resolver_match.url_name == 'large_orders' %}active{% endif %}">Large Orders</a>
-                    <a href="{% url 'loyalty:dashboard' %}" class="{% if 'rewards' in request.path %}active{% endif %}">Rewards</a>
                     {% if site_settings.about_page_enabled %}
                     <a href="{% url 'core:about' %}">About</a>
                     {% endif %}
@@ -201,11 +200,7 @@
             <i class="ph-bold ph-fork-knife"></i>
             <span>Menu</span>
         </a>
-        <a href="{% url 'offers:list' %}" class="nav-item {% if 'offers' in request.path %}active{% endif %}">
-            <i class="ph-bold ph-tag"></i>
-            <span>Offers</span>
-        </a>
-        <a href="{% url 'loyalty:dashboard' %}" class="nav-item {% if 'rewards' in request.path %}active{% endif %}">
+        <a href="{% url 'loyalty:dashboard' %}" class="nav-item {% if 'rewards' in request.path or 'offers' in request.path %}active{% endif %}">
             <i class="ph-bold ph-gift"></i>
             <span>Rewards</span>
         </a>
@@ -309,7 +304,7 @@
                 <h4>Order</h4>
                 <a href="{% url 'core:home' %}">Order Food</a>
                 <a href="{% url 'menu:menu' %}">Full Menu</a>
-                <a href="{% url 'offers:list' %}">Offers & Deals</a>
+                <a href="{% url 'loyalty:dashboard' %}">Rewards &amp; Deals</a>
                 <a href="{% url 'core:large_orders' %}">Large Orders</a>
                 <a href="{% url 'orders:cart' %}">Your Basket</a>
             </div>

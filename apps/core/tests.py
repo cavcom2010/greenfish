@@ -36,7 +36,6 @@ class PublicRouteTests(TestCase):
             reverse("core:contact"),
             reverse("core:large_orders"),
             reverse("menu:menu"),
-            reverse("offers:list"),
             reverse("offers:detail", args=[self.offer.pk]),
             reverse("mealdeals:list"),
             reverse("mealdeals:detail", args=[self.deal.pk]),

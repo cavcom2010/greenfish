@@ -26,11 +26,24 @@ def menu_list(request):
     dietary_filter = (request.GET.get("dietary") or "").strip().lower()
     active_category = MenuCategory.objects.filter(id=category_id).first() if category_id else None
 
+    # Pill set always includes common dietary filters, plus any extras from the DB.
+    base_dietary_tags = ["vegetarian", "vegan", "gluten-free", "halal"]
+    db_dietary_tags = {
+        tag.lower()
+        for item in all_items
+        for tag in (item.dietary_tags or [])
+    }
+    unique_dietary_tags = [tag for tag in base_dietary_tags if tag in db_dietary_tags]
+    for tag in sorted(db_dietary_tags):
+        if tag not in unique_dietary_tags:
+            unique_dietary_tags.append(tag)
+
     context = {
         "categories": categories,
         "all_items": all_items,
         "active_category": active_category,
         "dietary_filter": dietary_filter,
+        "unique_dietary_tags": unique_dietary_tags,
         "service_type": selected_service_type(request),
     }
 

@@ -910,6 +910,98 @@
     display: none;
 }
 
+.menu-grid-loading .menu-card {
+    display: none;
+}
+
+/* ── Filter reset banner ─────────────────────────────────────────── */
+.filter-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    margin-top: 1rem;
+    background: var(--brand-light, #FFF3EC);
+    border: 1px solid var(--brand, #FF6B35);
+    border-radius: var(--radius, 14px);
+    font-size: 0.82rem;
+    color: var(--text);
+    flex-wrap: wrap;
+    line-height: 1.4;
+}
+
+.filter-banner-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-banner-text strong {
+    color: var(--brand);
+    font-weight: 700;
+}
+
+.filter-banner-text #filterTimer {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    min-width: 3ch;
+    display: inline-block;
+}
+
+.filter-banner-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.filter-banner-btn {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--brand);
+    border-radius: var(--radius-sm, 8px);
+    background: var(--surface, #fff);
+    color: var(--brand);
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.filter-banner-btn:hover {
+    background: var(--brand);
+    color: #fff;
+}
+
+.filter-banner-btn--clear {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+}
+
+.filter-banner-btn--clear:hover {
+    background: var(--brand-dark, #E05520);
+    border-color: var(--brand-dark, #E05520);
+}
+
+@media (max-width: 480px) {
+    .filter-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.625rem 0.9rem;
+    }
+
+    .filter-banner-actions {
+        width: 100%;
+    }
+
+    .filter-banner-btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+
 /* ── Modal / bottom sheet ──────────────────────────────────────────── */
 .modal-overlay {
     display: none;

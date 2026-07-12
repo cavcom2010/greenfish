@@ -10,6 +10,13 @@
     let currentMenuFilters = { category: '', dietary: '' };
     let searchQuery = '';
 
+    // ── Auto-reset timer ───────────────────────────────────────────────
+    const FILTER_RESET_MS = 5 * 60 * 1000; // 5 minutes
+    let filterResetTimerId = null;
+    let filterResetCountdownId = null;
+    let filterKeepRequested = false;
+    let filterResetDeadline = 0;
+
     function normalizeMenuFilters(filters) {
         return {
             category: filters.category || '',
@@ -111,6 +118,16 @@
         if (options.updateUrl !== false) {
             updateMenuUrl(currentMenuFilters, Boolean(options.replaceUrl));
         }
+
+        if (visibleCount > 0 && hasActiveFilters()) {
+            showFilterBanner(visibleCount, cards.length, getMenuTitleForFilters(currentMenuFilters));
+            startFilterResetTimer();
+        } else {
+            hideFilterBanner();
+            if (!hasActiveFilters()) {
+                cancelFilterResetTimer();
+            }
+        }
     }
 
     function readMenuFiltersFromUrl() {
@@ -119,6 +136,86 @@
             category: params.get('category') || '',
             dietary: params.get('dietary') || '',
         });
+    }
+
+    function hasActiveFilters() {
+        return !!(currentMenuFilters.category || currentMenuFilters.dietary);
+    }
+
+    function ensureFilterBanner() {
+        let banner = document.getElementById('filterResetBanner');
+        if (!banner) {
+            const container = document.querySelector('.dietary-filter-row') || document.querySelector('.pill-row');
+            if (!container) return null;
+            banner = document.createElement('div');
+            banner.id = 'filterResetBanner';
+            banner.className = 'filter-banner';
+            banner.setAttribute('role', 'status');
+            banner.setAttribute('aria-live', 'polite');
+            banner.hidden = true;
+            banner.innerHTML =
+                '<span class="filter-banner-text">' +
+                    'Showing <span id="filterCountLabel"></span> items' +
+                    ' &middot; filtered by <strong id="filterPillLabel"></strong>' +
+                    ' &middot; auto-reset in <span id="filterTimer"></span>' +
+                '</span>' +
+                '<span class="filter-banner-actions">' +
+                    '<button type="button" id="filterKeepBtn" class="filter-banner-btn">Keep Filter</button>' +
+                    '<button type="button" id="filterClearBtn" class="filter-banner-btn filter-banner-btn--clear">Show All</button>' +
+                '</span>';
+            container.parentNode.insertBefore(banner, container.nextSibling);
+        }
+        return banner;
+    }
+
+    function showFilterBanner(visibleCount, totalCount, filterLabel) {
+        const banner = ensureFilterBanner();
+        if (!banner) return;
+        const countEl = document.getElementById('filterCountLabel');
+        const labelEl = document.getElementById('filterPillLabel');
+        if (countEl) countEl.textContent = visibleCount + ' of ' + totalCount;
+        if (labelEl) labelEl.textContent = filterLabel;
+        banner.hidden = false;
+    }
+
+    function hideFilterBanner() {
+        const banner = document.getElementById('filterResetBanner');
+        if (banner) banner.hidden = true;
+    }
+
+    function updateFilterTimerDisplay() {
+        const el = document.getElementById('filterTimer');
+        if (!el) return;
+        const remaining = Math.max(0, Math.ceil((filterResetDeadline - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        el.textContent = mins + ':' + String(secs).padStart(2, '0');
+    }
+
+    function cancelFilterResetTimer() {
+        if (filterResetTimerId) { clearTimeout(filterResetTimerId); filterResetTimerId = null; }
+        if (filterResetCountdownId) { clearInterval(filterResetCountdownId); filterResetCountdownId = null; }
+        filterResetDeadline = 0;
+    }
+
+    function startFilterResetTimer() {
+        if (filterKeepRequested) return;
+        if (!hasActiveFilters()) return;
+        cancelFilterResetTimer();
+        filterResetDeadline = Date.now() + FILTER_RESET_MS;
+        updateFilterTimerDisplay();
+        filterResetCountdownId = setInterval(updateFilterTimerDisplay, 1000);
+        filterResetTimerId = setTimeout(function () {
+            cancelFilterResetTimer();
+            hideFilterBanner();
+            applyMenuFilters({ category: '', dietary: '' });
+        }, FILTER_RESET_MS);
+    }
+
+    function clearAllFilters() {
+        cancelFilterResetTimer();
+        hideFilterBanner();
+        applyMenuFilters({ category: '', dietary: '' });
     }
 
     document.addEventListener('click', function (event) {
@@ -148,6 +245,22 @@
     window.addEventListener('popstate', function (event) {
         const nextFilters = event.state ? normalizeMenuFilters(event.state) : readMenuFiltersFromUrl();
         applyMenuFilters(nextFilters, { updateUrl: false });
+        if (hasActiveFilters()) startFilterResetTimer();
+    });
+
+    document.addEventListener('click', function (event) {
+        const keepBtn = event.target.closest('#filterKeepBtn');
+        const clearBtn = event.target.closest('#filterClearBtn');
+        if (!keepBtn && !clearBtn) return;
+
+        if (keepBtn) {
+            filterKeepRequested = true;
+            cancelFilterResetTimer();
+            hideFilterBanner();
+        }
+        if (clearBtn) {
+            clearAllFilters();
+        }
     });
 
     // ── Search ─────────────────────────────────────────────────────────
@@ -163,6 +276,7 @@
                 searchQuery = this.value.trim().toLowerCase();
                 if (clearBtn) clearBtn.classList.toggle('visible', searchQuery.length > 0);
                 applyMenuFilters(currentMenuFilters, { updateUrl: false });
+                if (hasActiveFilters()) startFilterResetTimer();
             }, 150);
         });
 
@@ -192,4 +306,21 @@
     const initialFilters = readMenuFiltersFromUrl();
     applyMenuFilters(initialFilters, { updateUrl: false });
     history.replaceState(initialFilters, '', window.location.href);
+
+    const menuGrid = document.getElementById('menuGrid');
+    if (menuGrid) {
+        menuGrid.classList.remove('menu-grid-loading');
+    }
+
+    // ── Visibility: restart timer when tab resumes ────────────────────
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && hasActiveFilters() && !filterKeepRequested) {
+            startFilterResetTimer();
+        }
+    });
+
+    // ── Cleanup timers on unload ──────────────────────────────────────
+    window.addEventListener('beforeunload', function () {
+        cancelFilterResetTimer();
+    });
 })();

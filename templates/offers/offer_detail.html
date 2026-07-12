@@ -9,9 +9,9 @@
     <div class="container" style="max-width:800px;">
         <!-- Breadcrumb -->
         <div style="margin-bottom:2rem;">
-            <a href="{% url 'offers:list' %}" style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;gap:0.5rem;">
+                <a href="{% url 'loyalty:dashboard' %}" style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;gap:0.5rem;">
                 <i class="ph ph-arrow-left"></i>
-                Back to Offers
+                Back to Rewards
             </a>
         </div>
 
@@ -72,7 +72,7 @@
                 Available in store only
             </div>
             {% endif %}
-            <a href="{% url 'offers:list' %}" class="btn btn--secondary">
+            <a href="{% url 'loyalty:dashboard' %}#offers" class="btn btn--secondary">
                 <i class="ph-bold ph-tag"></i>
                 View All Offers
             </a>

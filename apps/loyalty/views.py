@@ -3,23 +3,38 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.core.models import SiteSettings
+from apps.offers.models import Offer
 from apps.orders.services import clear_reward_wallet_item, store_reward_wallet_item
 
 from .models import LoyaltyTransaction, RewardWalletItem
 from .services import get_user_loyalty_summary
 
 
+def _active_offers(user):
+    now = timezone.now()
+    return [
+        offer for offer in Offer.objects.filter(
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now,
+        ).order_by("display_order", "-created_at")
+        if offer.is_available_for_user(user)
+    ]
+
+
 @login_required
 def rewards_dashboard(request):
-    """Main rewards dashboard."""
+    """Unified Rewards hub — loyalty dashboard + public offers."""
     summary = get_user_loyalty_summary(request.user)
 
     context = {
         **summary,
+        "offers": _active_offers(request.user),
         "title": f"{SiteSettings.get().shop_name} Rewards",
     }
     return render(request, "loyalty/dashboard.html", context)
