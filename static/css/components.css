@@ -1509,25 +1509,57 @@
 
 @media (max-width: 767px) {
     .desktop-item-detail {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         height: auto;
     }
 
-    .desktop-item-detail__media {
-        border-right: none;
-        border-bottom: 1px solid var(--border-light);
-        padding: var(--space-4);
+    /* Flatten both columns so their children can be reordered on phones:
+       image → title/price/add-ons → meta → recommendations, with the
+       actions bar pinned to the bottom of the sheet. */
+    .desktop-item-detail__media,
+    .desktop-item-detail__main {
+        display: contents;
     }
 
-    .desktop-item-detail__body,
-    .desktop-item-detail__actions {
-        padding: var(--space-4);
+    .desktop-item-detail__image-shell {
+        order: 1;
+        margin: var(--space-4) var(--space-4) 0;
+        flex-shrink: 0;
     }
 
-    .desktop-item-detail__heading,
-    .desktop-item-detail__actions {
+    .desktop-item-detail__body {
+        order: 2;
+        padding: var(--space-4);
+        overflow: visible;
+    }
+
+    .desktop-item-detail__meta {
+        order: 3;
+        padding: 0 var(--space-4);
+    }
+
+    .desktop-item-detail__recommendations {
+        order: 4;
+        padding: var(--space-4) var(--space-4) var(--space-5);
+    }
+
+    .desktop-item-detail__heading {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .desktop-item-detail__actions {
+        order: 5;
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        margin-top: auto;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
     }
 
     .desktop-item-detail__add-btn {
