@@ -119,7 +119,7 @@
         <div class="desktop-item-detail__body">
             <div class="desktop-item-detail__heading">
                 <div>
-                    <h2 class="desktop-item-detail__title">{{ item.name }}</h2>
+                    <h2 class="desktop-item-detail__title"><span class="item-number">{{ item.id }}</span>{{ item.name }}</h2>
                     {% if item.description %}
                     <p class="desktop-item-detail__description">{{ item.description }}</p>
                     {% endif %}

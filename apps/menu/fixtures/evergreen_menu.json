@@ -1,0 +1,2699 @@
+[
+  {
+    "model": "menu.menucategory",
+    "pk": 1,
+    "fields": {
+      "name": "Appetisers",
+      "description": "",
+      "sort_order": 1,
+      "is_active": true,
+      "icon": "🥟",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 2,
+    "fields": {
+      "name": "Curry Dishes",
+      "description": "Including boiled rice",
+      "sort_order": 2,
+      "is_active": true,
+      "icon": "🍛",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 3,
+    "fields": {
+      "name": "Sweet & Sour Dishes",
+      "description": "",
+      "sort_order": 3,
+      "is_active": true,
+      "icon": "🍍",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 4,
+    "fields": {
+      "name": "Black Bean Sauce Dishes",
+      "description": "",
+      "sort_order": 4,
+      "is_active": true,
+      "icon": "🫘",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 5,
+    "fields": {
+      "name": "Mushroom Dishes",
+      "description": "",
+      "sort_order": 5,
+      "is_active": true,
+      "icon": "🍄",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 6,
+    "fields": {
+      "name": "Noodle Dishes (Chow Mein)",
+      "description": "",
+      "sort_order": 6,
+      "is_active": true,
+      "icon": "🍜",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 7,
+    "fields": {
+      "name": "Rice Dishes",
+      "description": "",
+      "sort_order": 7,
+      "is_active": true,
+      "icon": "🍚",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 8,
+    "fields": {
+      "name": "Sauce",
+      "description": "",
+      "sort_order": 8,
+      "is_active": true,
+      "icon": "🥣",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 9,
+    "fields": {
+      "name": "Extra Dishes",
+      "description": "",
+      "sort_order": 9,
+      "is_active": true,
+      "icon": "➕",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 10,
+    "fields": {
+      "name": "Evergreen Fish",
+      "description": "",
+      "sort_order": 10,
+      "is_active": true,
+      "icon": "🐟",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 11,
+    "fields": {
+      "name": "Chips",
+      "description": "",
+      "sort_order": 11,
+      "is_active": true,
+      "icon": "🍟",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 12,
+    "fields": {
+      "name": "Chicken",
+      "description": "",
+      "sort_order": 12,
+      "is_active": true,
+      "icon": "🍗",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 13,
+    "fields": {
+      "name": "Sausages",
+      "description": "",
+      "sort_order": 13,
+      "is_active": true,
+      "icon": "🌭",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 14,
+    "fields": {
+      "name": "Pies",
+      "description": "",
+      "sort_order": 14,
+      "is_active": true,
+      "icon": "🥧",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 15,
+    "fields": {
+      "name": "Drinks",
+      "description": "",
+      "sort_order": 15,
+      "is_active": true,
+      "icon": "🥤",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 16,
+    "fields": {
+      "name": "Dessert",
+      "description": "",
+      "sort_order": 16,
+      "is_active": true,
+      "icon": "🍰",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 17,
+    "fields": {
+      "name": "Sushi Maki",
+      "description": "6 pieces per roll",
+      "sort_order": 17,
+      "is_active": true,
+      "icon": "🍣",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 18,
+    "fields": {
+      "name": "Nigiri",
+      "description": "Price for 2 pcs",
+      "sort_order": 18,
+      "is_active": true,
+      "icon": "🍣",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 19,
+    "fields": {
+      "name": "Sashimi",
+      "description": "Price for 4 pcs",
+      "sort_order": 19,
+      "is_active": true,
+      "icon": "🐠",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 20,
+    "fields": {
+      "name": "Classic Roll",
+      "description": "",
+      "sort_order": 20,
+      "is_active": true,
+      "icon": "🍥",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 21,
+    "fields": {
+      "name": "Crunchy Roll",
+      "description": "8 pcs. All rolls with spicy mayo, fried onion, teriyaki sauce",
+      "sort_order": 21,
+      "is_active": true,
+      "icon": "🍤",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 22,
+    "fields": {
+      "name": "Evergreen Special Roll",
+      "description": "",
+      "sort_order": 22,
+      "is_active": true,
+      "icon": "🐉",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 23,
+    "fields": {
+      "name": "Bento Box",
+      "description": "Served with boiled rice, edamame, spring roll",
+      "sort_order": 23,
+      "is_active": true,
+      "icon": "🍱",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menucategory",
+    "pk": 24,
+    "fields": {
+      "name": "Sushi Set Meal",
+      "description": "",
+      "sort_order": 24,
+      "is_active": true,
+      "icon": "🍱",
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menumodifier",
+    "pk": 1,
+    "fields": {
+      "name": "Large",
+      "price_adjustment": "1.00",
+      "is_active": true,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menumodifier",
+    "pk": 2,
+    "fields": {
+      "name": "Large",
+      "price_adjustment": "1.00",
+      "is_active": true,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menumodifier",
+    "pk": 3,
+    "fields": {
+      "name": "Large",
+      "price_adjustment": "0.50",
+      "is_active": true,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menumodifier",
+    "pk": 4,
+    "fields": {
+      "name": "Large",
+      "price_adjustment": "0.50",
+      "is_active": true,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menumodifier",
+    "pk": 5,
+    "fields": {
+      "name": "Half (½)",
+      "price_adjustment": "7.50",
+      "is_active": true,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 1,
+    "fields": {
+      "category": 1,
+      "name": "Vegetable Spring Rolls (8 pcs)",
+      "description": "",
+      "price": "3.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 1,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 2,
+    "fields": {
+      "category": 1,
+      "name": "Spare Ribs in BBQ Sauce",
+      "description": "",
+      "price": "6.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 2,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 3,
+    "fields": {
+      "category": 1,
+      "name": "Spare Ribs in Salt & Pepper",
+      "description": "",
+      "price": "6.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 3,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 4,
+    "fields": {
+      "category": 1,
+      "name": "Japanese Wakame Salad",
+      "description": "",
+      "price": "3.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 4,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 5,
+    "fields": {
+      "category": 1,
+      "name": "Tagoyaki (Octopus Ball) (5 pcs)",
+      "description": "",
+      "price": "5.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 5,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 6,
+    "fields": {
+      "category": 1,
+      "name": "Chicken Gyoza (5 pcs)",
+      "description": "",
+      "price": "5.40",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 6,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 7,
+    "fields": {
+      "category": 1,
+      "name": "Prawn Gyoza (5 pcs)",
+      "description": "",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 7,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 8,
+    "fields": {
+      "category": 1,
+      "name": "Vegetable Gyoza (5 pcs)",
+      "description": "",
+      "price": "5.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 8,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 9,
+    "fields": {
+      "category": 1,
+      "name": "Pumpkin Croquette (3 pcs)",
+      "description": "",
+      "price": "4.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 9,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 10,
+    "fields": {
+      "category": 1,
+      "name": "Crispy Aromatic Duck",
+      "description": "",
+      "price": "9.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [
+        5
+      ],
+      "sort_order": 10,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 11,
+    "fields": {
+      "category": 1,
+      "name": "Japanese Panko Fried Crispy Prawn (5 pcs)",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 11,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 12,
+    "fields": {
+      "category": 1,
+      "name": "Edamame (Japanese Bean with Salt)",
+      "description": "",
+      "price": "3.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 12,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 13,
+    "fields": {
+      "category": 1,
+      "name": "Curry Samosa (12 pcs)",
+      "description": "",
+      "price": "4.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 13,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 14,
+    "fields": {
+      "category": 1,
+      "name": "Prawn Crackers",
+      "description": "",
+      "price": "2.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 14,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 15,
+    "fields": {
+      "category": 1,
+      "name": "Salt & Pepper Chicken Wings",
+      "description": "",
+      "price": "5.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 15,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 16,
+    "fields": {
+      "category": 1,
+      "name": "Salt & Pepper King Prawn",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 16,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 17,
+    "fields": {
+      "category": 1,
+      "name": "Salt & Pepper Chips",
+      "description": "",
+      "price": "3.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 17,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 18,
+    "fields": {
+      "category": 2,
+      "name": "Curry Special",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 18,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 19,
+    "fields": {
+      "category": 2,
+      "name": "Curry King Prawn",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 19,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 20,
+    "fields": {
+      "category": 2,
+      "name": "Curry Chicken (Chinese Style)",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 20,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 21,
+    "fields": {
+      "category": 2,
+      "name": "Curry Katsu Chicken (Japanese Style)",
+      "description": "",
+      "price": "6.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 21,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 22,
+    "fields": {
+      "category": 2,
+      "name": "Curry Beef",
+      "description": "",
+      "price": "6.40",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 22,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 23,
+    "fields": {
+      "category": 2,
+      "name": "Curry Mushroom",
+      "description": "",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 23,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 24,
+    "fields": {
+      "category": 2,
+      "name": "Curry Roast Pork",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 24,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 25,
+    "fields": {
+      "category": 3,
+      "name": "Sweet & Sour Chicken",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 25,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 26,
+    "fields": {
+      "category": 3,
+      "name": "Sweet & Sour King Prawn",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 26,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 27,
+    "fields": {
+      "category": 3,
+      "name": "Special Sweet & Sour",
+      "description": "",
+      "price": "6.90",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 27,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 28,
+    "fields": {
+      "category": 4,
+      "name": "Special with Black Bean Sauce",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 28,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 29,
+    "fields": {
+      "category": 4,
+      "name": "King Prawn with Black Bean Sauce",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 29,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 30,
+    "fields": {
+      "category": 4,
+      "name": "Chicken with Black Bean Sauce",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 30,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 31,
+    "fields": {
+      "category": 4,
+      "name": "Beef with Black Bean Sauce",
+      "description": "",
+      "price": "6.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 31,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 32,
+    "fields": {
+      "category": 4,
+      "name": "Mushroom with Black Bean Sauce",
+      "description": "",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 32,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 33,
+    "fields": {
+      "category": 5,
+      "name": "Mushroom Special",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 33,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 34,
+    "fields": {
+      "category": 5,
+      "name": "Mushroom King Prawn",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 34,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 35,
+    "fields": {
+      "category": 5,
+      "name": "Mushroom Chicken",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 35,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 36,
+    "fields": {
+      "category": 5,
+      "name": "Mushroom Beef",
+      "description": "",
+      "price": "6.40",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 36,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 37,
+    "fields": {
+      "category": 5,
+      "name": "Mushroom Roast Pork",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 37,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 38,
+    "fields": {
+      "category": 6,
+      "name": "Special Chow Mein",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 38,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 39,
+    "fields": {
+      "category": 6,
+      "name": "King Prawn Chow Mein",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 39,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 40,
+    "fields": {
+      "category": 6,
+      "name": "Chicken Chow Mein",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 40,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 41,
+    "fields": {
+      "category": 6,
+      "name": "Beef Chow Mein",
+      "description": "",
+      "price": "6.40",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 41,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 42,
+    "fields": {
+      "category": 6,
+      "name": "Roast Pork Chow Mein",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 42,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 43,
+    "fields": {
+      "category": 6,
+      "name": "Mushroom Chow Mein",
+      "description": "",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 43,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 44,
+    "fields": {
+      "category": 7,
+      "name": "Special Fried Rice",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 44,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 45,
+    "fields": {
+      "category": 7,
+      "name": "King Prawn Fried Rice",
+      "description": "",
+      "price": "6.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 45,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 46,
+    "fields": {
+      "category": 7,
+      "name": "Chicken Fried Rice",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 46,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 47,
+    "fields": {
+      "category": 7,
+      "name": "Beef Fried Rice",
+      "description": "",
+      "price": "6.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 47,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 48,
+    "fields": {
+      "category": 7,
+      "name": "Roast Pork Fried Rice",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 48,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 49,
+    "fields": {
+      "category": 7,
+      "name": "Mushroom Fried Rice",
+      "description": "",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 49,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 50,
+    "fields": {
+      "category": 7,
+      "name": "Eel with Boiled Rice",
+      "description": "",
+      "price": "8.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 50,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 51,
+    "fields": {
+      "category": 8,
+      "name": "Curry Sauce",
+      "description": "",
+      "price": "1.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 51,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 52,
+    "fields": {
+      "category": 8,
+      "name": "Sweet & Sour Sauce",
+      "description": "",
+      "price": "1.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 52,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 53,
+    "fields": {
+      "category": 8,
+      "name": "Barbeque Sauce",
+      "description": "",
+      "price": "1.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 53,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 54,
+    "fields": {
+      "category": 8,
+      "name": "Wasabi",
+      "description": "",
+      "price": "0.10",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 54,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 55,
+    "fields": {
+      "category": 8,
+      "name": "Ginger",
+      "description": "",
+      "price": "0.10",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 55,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 56,
+    "fields": {
+      "category": 8,
+      "name": "Soy Sauce",
+      "description": "",
+      "price": "0.10",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 56,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 57,
+    "fields": {
+      "category": 8,
+      "name": "Spicy Mayonnaise",
+      "description": "",
+      "price": "1.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 57,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 58,
+    "fields": {
+      "category": 8,
+      "name": "Teriyaki Sauce (Sweet Soya)",
+      "description": "",
+      "price": "1.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 58,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 59,
+    "fields": {
+      "category": 9,
+      "name": "Egg Fried Rice",
+      "description": "",
+      "price": "3.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 59,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 60,
+    "fields": {
+      "category": 9,
+      "name": "Plain Noodle",
+      "description": "",
+      "price": "3.30",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 60,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 61,
+    "fields": {
+      "category": 9,
+      "name": "Boiled Rice",
+      "description": "",
+      "price": "2.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 61,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 62,
+    "fields": {
+      "category": 10,
+      "name": "Cod",
+      "description": "",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [
+        1
+      ],
+      "sort_order": 62,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 64,
+    "fields": {
+      "category": 10,
+      "name": "Fish Cake",
+      "description": "",
+      "price": "1.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 64,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 65,
+    "fields": {
+      "category": 11,
+      "name": "Chips",
+      "description": "",
+      "price": "2.30",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [
+        2
+      ],
+      "sort_order": 65,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 67,
+    "fields": {
+      "category": 12,
+      "name": "Chicken Breast",
+      "description": "",
+      "price": "4.10",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 67,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 68,
+    "fields": {
+      "category": 12,
+      "name": "Chicken Leg",
+      "description": "",
+      "price": "3.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 68,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 69,
+    "fields": {
+      "category": 12,
+      "name": "Chicken Nugget (8 pcs)",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 69,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 70,
+    "fields": {
+      "category": 13,
+      "name": "Sausages",
+      "description": "",
+      "price": "1.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [
+        3
+      ],
+      "sort_order": 70,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 71,
+    "fields": {
+      "category": 13,
+      "name": "Battered Sausages",
+      "description": "",
+      "price": "1.40",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [
+        4
+      ],
+      "sort_order": 71,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 72,
+    "fields": {
+      "category": 13,
+      "name": "Saveloy",
+      "description": "",
+      "price": "1.30",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 72,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 73,
+    "fields": {
+      "category": 14,
+      "name": "Steak",
+      "description": "",
+      "price": "2.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 73,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 74,
+    "fields": {
+      "category": 14,
+      "name": "Beef & Onion",
+      "description": "",
+      "price": "2.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 74,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 75,
+    "fields": {
+      "category": 14,
+      "name": "Steak & Kidney",
+      "description": "",
+      "price": "2.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 75,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 76,
+    "fields": {
+      "category": 14,
+      "name": "Chicken & Mushroom",
+      "description": "",
+      "price": "2.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 76,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 77,
+    "fields": {
+      "category": 15,
+      "name": "Can of Drinks",
+      "description": "",
+      "price": "1.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 77,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 78,
+    "fields": {
+      "category": 15,
+      "name": "Large Bottle of Drink",
+      "description": "",
+      "price": "2.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 78,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 79,
+    "fields": {
+      "category": 15,
+      "name": "Still Water",
+      "description": "",
+      "price": "1.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 79,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 80,
+    "fields": {
+      "category": 16,
+      "name": "Cheese Cake",
+      "description": "",
+      "price": "2.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 80,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 81,
+    "fields": {
+      "category": 16,
+      "name": "Dorayaki Red Bean",
+      "description": "",
+      "price": "2.30",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 81,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 82,
+    "fields": {
+      "category": 16,
+      "name": "Dorayaki Chocolate",
+      "description": "",
+      "price": "2.30",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 82,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 83,
+    "fields": {
+      "category": 16,
+      "name": "Dorayaki Custard",
+      "description": "",
+      "price": "2.30",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 83,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 84,
+    "fields": {
+      "category": 17,
+      "name": "Avocado Maki",
+      "description": "",
+      "price": "2.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 84,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 85,
+    "fields": {
+      "category": 17,
+      "name": "Cucumber Maki",
+      "description": "",
+      "price": "2.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 85,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 86,
+    "fields": {
+      "category": 17,
+      "name": "Salmon Maki",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 86,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 87,
+    "fields": {
+      "category": 17,
+      "name": "Tuna Maki",
+      "description": "",
+      "price": "3.40",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 87,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 88,
+    "fields": {
+      "category": 17,
+      "name": "Prawn Maki",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 88,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 89,
+    "fields": {
+      "category": 17,
+      "name": "Eel Maki",
+      "description": "",
+      "price": "3.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 89,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 90,
+    "fields": {
+      "category": 17,
+      "name": "Takuan Maki",
+      "description": "",
+      "price": "2.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 90,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 91,
+    "fields": {
+      "category": 17,
+      "name": "Crab Stick Maki",
+      "description": "",
+      "price": "2.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 91,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 92,
+    "fields": {
+      "category": 18,
+      "name": "Salmon Nigiri",
+      "description": "",
+      "price": "2.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 92,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 93,
+    "fields": {
+      "category": 18,
+      "name": "Tuna Nigiri",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 93,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 94,
+    "fields": {
+      "category": 18,
+      "name": "Prawn Nigiri",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 94,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 95,
+    "fields": {
+      "category": 18,
+      "name": "Scallop Nigiri",
+      "description": "",
+      "price": "3.60",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 95,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 96,
+    "fields": {
+      "category": 18,
+      "name": "Eel Nigiri",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 96,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 97,
+    "fields": {
+      "category": 18,
+      "name": "Inari (Sweet Tofu)",
+      "description": "",
+      "price": "2.60",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 97,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 98,
+    "fields": {
+      "category": 18,
+      "name": "Tobiko",
+      "description": "",
+      "price": "3.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 98,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 99,
+    "fields": {
+      "category": 18,
+      "name": "Salmon Rose",
+      "description": "",
+      "price": "3.60",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 99,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 100,
+    "fields": {
+      "category": 19,
+      "name": "Salmon Sashimi",
+      "description": "",
+      "price": "4.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 100,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 101,
+    "fields": {
+      "category": 19,
+      "name": "Tuna Sashimi",
+      "description": "",
+      "price": "5.60",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 101,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 102,
+    "fields": {
+      "category": 19,
+      "name": "Scallop Sashimi",
+      "description": "",
+      "price": "5.60",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 102,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 103,
+    "fields": {
+      "category": 20,
+      "name": "Salmon Avocado Roll",
+      "description": "Salmon, avocado, mayonnaise, sesame seed",
+      "price": "5.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 103,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 104,
+    "fields": {
+      "category": 20,
+      "name": "Spicy Tuna Roll",
+      "description": "Tuna, avocado, cucumber, spicy mayo, spicy pepper",
+      "price": "5.90",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 104,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 105,
+    "fields": {
+      "category": 20,
+      "name": "Salmon Cheese Roll",
+      "description": "Salmon, avocado, soft cheese & sesame seeds",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 105,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 106,
+    "fields": {
+      "category": 20,
+      "name": "Salmon California Roll",
+      "description": "Salmon, tobiko, mayonnaise, avocado, sesame seed",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 106,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 107,
+    "fields": {
+      "category": 20,
+      "name": "Prawn Tempura Roll",
+      "description": "Fried prawn, avocado, sesame seeds",
+      "price": "5.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 107,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 108,
+    "fields": {
+      "category": 20,
+      "name": "Crispy Duck Roll with Batter (5 pcs)",
+      "description": "Crispy duck, cucumber, hoi sin sauce, tempura batter",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 108,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 109,
+    "fields": {
+      "category": 21,
+      "name": "Salmon Crunchy Roll",
+      "description": "",
+      "price": "5.90",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 109,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 110,
+    "fields": {
+      "category": 21,
+      "name": "Chicken Crunchy Roll",
+      "description": "",
+      "price": "5.90",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 110,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 111,
+    "fields": {
+      "category": 21,
+      "name": "Tuna Crunchy Roll",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 111,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 112,
+    "fields": {
+      "category": 21,
+      "name": "Crunchy Veggie Roll",
+      "description": "",
+      "price": "5.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 112,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 113,
+    "fields": {
+      "category": 21,
+      "name": "Crunchy Prawn Roll (No Crispy Prawn)",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 113,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 114,
+    "fields": {
+      "category": 21,
+      "name": "Crunchy Tempura Prawn Roll (Fried Crispy Prawn)",
+      "description": "",
+      "price": "6.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 114,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 115,
+    "fields": {
+      "category": 21,
+      "name": "Crab Stick Crunchy Roll",
+      "description": "",
+      "price": "5.70",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 115,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 116,
+    "fields": {
+      "category": 21,
+      "name": "Crunchy Eel Roll",
+      "description": "",
+      "price": "7.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 116,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 117,
+    "fields": {
+      "category": 21,
+      "name": "Crunchy Salmon Cheese Roll",
+      "description": "",
+      "price": "6.20",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 117,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 118,
+    "fields": {
+      "category": 22,
+      "name": "Black Dragon",
+      "description": "Avocado, crab stick, topped with eel, tobiko",
+      "price": "13.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 118,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 119,
+    "fields": {
+      "category": 22,
+      "name": "Red Dragon",
+      "description": "Avocado, crab stick, topped with salmon, tobiko",
+      "price": "12.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 119,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 120,
+    "fields": {
+      "category": 22,
+      "name": "Green Dragon",
+      "description": "Prawn tempura, topped with sliced avocado, tobiko",
+      "price": "12.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 120,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 121,
+    "fields": {
+      "category": 23,
+      "name": "Sweet & Sour Chicken Bento Box",
+      "description": "",
+      "price": "12.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 121,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 122,
+    "fields": {
+      "category": 23,
+      "name": "Salmon Teriyaki Bento Box",
+      "description": "",
+      "price": "13.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 122,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 123,
+    "fields": {
+      "category": 23,
+      "name": "Teriyaki Beef Bento Box",
+      "description": "",
+      "price": "13.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 123,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 124,
+    "fields": {
+      "category": 23,
+      "name": "Katsu Chicken Bento Box",
+      "description": "",
+      "price": "12.50",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 124,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 125,
+    "fields": {
+      "category": 23,
+      "name": "Roast Eel Bento Box",
+      "description": "",
+      "price": "13.00",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 125,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 126,
+    "fields": {
+      "category": 23,
+      "name": "Inari Sushi Bento Box",
+      "description": "",
+      "price": "9.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [
+        "vegetarian"
+      ],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 126,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 127,
+    "fields": {
+      "category": 24,
+      "name": "Salmon Set",
+      "description": "3 pcs salmon nigiri, 3 salmon sashimi, 6 pcs salmon avocado roll",
+      "price": "8.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 127,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 128,
+    "fields": {
+      "category": 24,
+      "name": "Tuna Set",
+      "description": "3 pcs tuna nigiri, 3 pcs tuna sashimi, 6 pcs tuna avocado roll",
+      "price": "9.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 128,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 129,
+    "fields": {
+      "category": 24,
+      "name": "Salmon Special",
+      "description": "4 pcs salmon nigiri, 4 pcs salmon rose, 6 pcs salmon avocado roll",
+      "price": "10.80",
+      "is_available": true,
+      "is_popular": false,
+      "dietary_tags": [],
+      "allergens": [],
+      "modifiers": [],
+      "sort_order": 129,
+      "created_at": "2026-07-16T17:53:40Z",
+      "updated_at": "2026-07-16T17:53:40Z"
+    }
+  }
+]

@@ -8,7 +8,7 @@
         <span style="font-size: 48px;">{{ category.icon|default:"🍽️" }}</span>
         {% endif %}
     </div>
-    <div class="food-name">{{ item.name }}</div>
+    <div class="food-name"><span class="item-number">{{ item.id }}</span>{{ item.name }}</div>
     <div class="food-price">£{{ item.price }}</div>
 </div>
 {% empty %}

@@ -22,6 +22,7 @@
     --orange-500: #FF6B35;
     --orange-600: #E55A2B;
     --orange-700: #CC4E1E;
+    --brand-rgb:  255, 107, 53;  /* --orange-500 as R,G,B for rgba() tints */
 
     /* Warm accent (offers / loyalty) */
     --gold-400: #F7B733;
@@ -46,6 +47,7 @@
     --brand-dark:   var(--orange-700);
     --brand-light:  var(--orange-50);
     --accent:       var(--gold-500);
+    --promo:        var(--brand);   /* deal/offer highlight; themes may override */
 
     --bg:            var(--cream-bg);
     --surface:       #FFFFFF;
@@ -76,7 +78,7 @@
     --shadow:    0 4px 14px rgba(23, 19, 15, 0.07);
     --shadow-lg: 0 12px 30px rgba(23, 19, 15, 0.10);
     --shadow-xl: 0 24px 60px rgba(23, 19, 15, 0.16);
-    --shadow-brand: 0 12px 26px rgba(255, 107, 53, 0.28);
+    --shadow-brand: 0 12px 26px rgba(var(--brand-rgb), 0.28);
 
     /* ── Radii ─────────────────────────────────────────────────────── */
     --radius-sm: 8px;

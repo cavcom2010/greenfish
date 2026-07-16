@@ -94,7 +94,7 @@
 }
 
 .deal-option:hover {
-    border-color: rgba(255, 107, 53, 0.4);
+    border-color: rgba(var(--brand-rgb), 0.4);
 }
 
 .deal-option input[type="radio"] {

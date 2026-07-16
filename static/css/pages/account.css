@@ -645,7 +645,7 @@
 /* ── App home (rewards hub) ────────────────────────────────────────── */
 .app-hero {
     background:
-        radial-gradient(circle at 82% 18%, rgba(255, 107, 53, 0.25), transparent 32%),
+        radial-gradient(circle at 82% 18%, rgba(var(--brand-rgb), 0.25), transparent 32%),
         linear-gradient(135deg, #121212 0%, #1C1B19 60%, #2B211D 100%);
     color: #fff;
     border-radius: var(--radius-xl);

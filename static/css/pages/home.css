@@ -17,7 +17,7 @@
     min-height: 500px;
     border-radius: 34px;
     background:
-        radial-gradient(circle at 78% 20%, rgba(255, 107, 53, 0.32), transparent 27%),
+        radial-gradient(circle at 78% 20%, rgba(var(--brand-rgb), 0.32), transparent 27%),
         radial-gradient(circle at 86% 92%, rgba(255, 255, 255, 0.12), transparent 24%),
         linear-gradient(135deg, #121212 0%, #1C1B19 48%, #2B211D 100%);
     box-shadow: var(--shadow-xl);
@@ -54,8 +54,8 @@
     align-items: center;
     gap: 0.5rem;
     color: #FFD8CA;
-    background: rgba(255, 107, 53, 0.18);
-    border: 1px solid rgba(255, 107, 53, 0.28);
+    background: rgba(var(--brand-rgb), 0.18);
+    border: 1px solid rgba(var(--brand-rgb), 0.28);
     padding: 0.55rem 0.9rem;
     border-radius: var(--radius-full);
     font-size: var(--text-sm);
@@ -123,7 +123,7 @@
     width: 440px;
     height: 440px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 107, 53, 0.25), transparent 62%);
+    background: radial-gradient(circle, rgba(var(--brand-rgb), 0.25), transparent 62%);
     filter: blur(2px);
 }
 
@@ -374,7 +374,7 @@
 
 .category-tile:hover {
     transform: translateY(-2px);
-    border-color: rgba(255, 107, 53, 0.35);
+    border-color: rgba(var(--brand-rgb), 0.35);
     box-shadow: var(--shadow);
 }
 

@@ -1,0 +1,36 @@
+/* ==========================================================================
+   Evergreen — theme overlay
+   Load AFTER tokens.css. Overrides brand primitives + semantic aliases only;
+   layout, spacing and structure are untouched. Delete the <link> in base.html
+   to revert greenfish to its default orange theme (fully reusable base).
+   ========================================================================== */
+:root {
+    /* brand ramp → Evergreen green */
+    --orange-50:  #EAF7EC;
+    --orange-100: #CDEBD1;
+    --orange-300: #78C883;
+    --orange-500: #2E9E3A;
+    --orange-600: #248030;
+    --orange-700: #1C6626;
+    --brand-rgb:  46, 158, 58;   /* green glow for the refactored rgba() spots */
+
+    /* accent → Evergreen gold */
+    --gold-400: #E9C15A;
+    --gold-500: #E3B23C;
+
+    /* semantic aliases — buttons use --brand behind white text.
+       #248030 clears WCAG AA (~4.6:1); the vivid #2E9E3A is kept for
+       fills, icons and glows via the ramp/--brand-rgb above. */
+    --brand:       #248030;
+    --brand-hover: #1C6626;
+    --brand-dark:  #154D1D;
+    --brand-light: #EAF7EC;
+    --accent:      #E3B23C;
+    --promo:       #C4283B;   /* leaflet promo red — meal deals / offers */
+
+    /* cooler cream to match the printed menu stock */
+    --cream-bg:  #F8F7EF;
+    --cream-mid: #F1EFE4;
+
+    --shadow-brand: 0 12px 26px rgba(46, 158, 58, 0.28);
+}
