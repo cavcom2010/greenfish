@@ -68,7 +68,9 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-export DJANGO_SETTINGS_MODULE="${HOME_DJANGO_SETTINGS_MODULE:-${DJANGO_SETTINGS_MODULE:-config.settings.local}}"
+# config.settings.home = local + hashed static filenames (cache-safe on
+# phones); override with HOME_DJANGO_SETTINGS_MODULE if needed.
+export DJANGO_SETTINGS_MODULE="${HOME_DJANGO_SETTINGS_MODULE:-${DJANGO_SETTINGS_MODULE:-config.settings.home}}"
 export ALLOW_SQLITE_PRODUCTION="${ALLOW_SQLITE_PRODUCTION:-1}"
 export DJANGO_ENFORCE_STRONG_SECRET_KEY="${DJANGO_ENFORCE_STRONG_SECRET_KEY:-0}"
 
