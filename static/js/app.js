@@ -188,6 +188,38 @@
             });
     });
 
+    // Favourite toggle inside the item modal: swap the heart in place
+    // instead of the form's full-page fallback navigation.
+    document.addEventListener('submit', function(e) {
+        const form = e.target.closest('[data-favorite-form]');
+        if (!form) return;
+
+        e.preventDefault();
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Favourite toggle failed');
+                return res.json();
+            })
+            .then(data => {
+                const btn = form.querySelector('.favorite-btn');
+                const icon = btn.querySelector('i');
+                const label = btn.querySelector('[data-favorite-label]');
+                btn.classList.toggle('is-favorite', data.is_favorite);
+                icon.className = data.is_favorite ? 'ph-fill ph-heart' : 'ph ph-heart';
+                if (label) label.textContent = data.is_favorite ? 'Saved to favourites' : 'Save to favourites';
+                if (data.message) showToast(data.message, 'success', 2000);
+            })
+            .catch(() => {
+                showToast('Could not update favourites. Please try again.', 'error');
+            });
+    });
+
     // ── Mobile hamburger menu ────────────────────────────────────────────
     let mobileMenuOpen = false;
 

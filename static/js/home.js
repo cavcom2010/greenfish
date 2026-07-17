@@ -8,6 +8,24 @@
 
     var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // ── Favourites discovery hint (dismiss persists locally) ──────────
+    var HINT_KEY = 'favouritesHintDismissed';
+    var hint = document.getElementById('favouritesHint');
+    if (hint) {
+        var dismissed = false;
+        try { dismissed = localStorage.getItem(HINT_KEY) === '1'; } catch (e) { /* private mode */ }
+        if (!dismissed) {
+            hint.hidden = false;
+            var dismissBtn = hint.querySelector('[data-dismiss-hint]');
+            if (dismissBtn) {
+                dismissBtn.addEventListener('click', function () {
+                    hint.hidden = true;
+                    try { localStorage.setItem(HINT_KEY, '1'); } catch (e) { /* ignore */ }
+                });
+            }
+        }
+    }
+
     // ── Scroll reveal ──────────────────────────────────────────────────
     if (!reducedMotion && 'IntersectionObserver' in window) {
         document.documentElement.classList.add('js-reveal');

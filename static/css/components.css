@@ -759,6 +759,28 @@
     border-color: var(--brand);
 }
 
+.favorite-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-light);
+    background: var(--bg);
+    color: var(--text-secondary);
+    font-weight: 800;
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+}
+
+.favorite-btn:hover {
+    border-color: rgba(var(--brand-rgb), 0.28);
+}
+
+.favorite-btn.is-favorite {
+    color: var(--brand);
+}
+
 .dietary-filter-pill.clear {
     color: var(--error);
     background: var(--error-bg);

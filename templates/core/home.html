@@ -25,8 +25,13 @@
                 {% endwith %}
                 {% else %}
                 <div class="hero-badge">
+                    {% if request.user.is_authenticated %}
+                    <i class="ph-fill ph-hand-waving"></i>
+                    Welcome back{% if request.user.first_name %}, {{ request.user.first_name }}{% endif %}
+                    {% else %}
                     <i class="ph-fill ph-fire"></i>
                     {{ site_settings.tagline|default:"Fresh & Made to Order" }}
+                    {% endif %}
                 </div>
                 <h1>{{ site_settings.shop_name }} <span>Online</span></h1>
                 <p>{{ site_settings.shop_description|default:"Your favourite dishes, freshly prepared." }} Ready for pickup{% if delivery_enabled %} or delivered to your door{% endif %}.</p>
@@ -125,13 +130,23 @@
             <form method="post" action="{% url 'accounts:reorder' order.id %}" class="reorder-card">
                 {% csrf_token %}
                 <div class="reorder-card-head">
-                    <span class="reorder-card-icon">
-                        <i class="ph ph-clock-counter-clockwise"></i>
-                    </span>
-                    <div>
-                        <div class="reorder-card-number">{{ order.order_number }}</div>
-                        <div class="reorder-card-date">{{ order.created_at|date:"d M Y" }}</div>
+                    <div class="reorder-card-thumbs" aria-hidden="true">
+                        {% for order_item in order.items.all|slice:":3" %}
+                        <span class="reorder-card-thumb">
+                            {% if order_item.menu_item.image %}
+                            <img src="{{ order_item.menu_item.image|image_variant:'thumb' }}" alt="" loading="lazy" width="160" height="160">
+                            {% else %}
+                            <span class="reorder-card-thumb-icon">{{ order_item.menu_item.category.icon|default:"🍽️" }}</span>
+                            {% endif %}
+                        </span>
+                        {% endfor %}
                     </div>
+                    <div class="reorder-card-date">{{ order.created_at|date:"d M Y" }}</div>
+                </div>
+                <div class="reorder-card-dishes">
+                    {% with line_count=order.items.all|length %}
+                    {% for order_item in order.items.all|slice:":2" %}{% if not forloop.first %}, {% endif %}{{ order_item.item_name }}{% endfor %}{% if line_count > 2 %} +{{ line_count|add:"-2" }} more{% endif %}
+                    {% endwith %}
                 </div>
                 <div class="reorder-card-meta">
                     <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>
@@ -185,6 +200,22 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+</section>
+{% elif request.user.is_authenticated %}
+<section class="section" id="favouritesHint" hidden>
+    <div class="container">
+        <div class="favourites-hint">
+            <span class="favourites-hint-icon" aria-hidden="true"><i class="ph ph-heart"></i></span>
+            <div class="favourites-hint-copy">
+                <strong>Save your go-to dishes</strong>
+                <p>Tap the ♡ on any dish and it'll be waiting for you here.</p>
+            </div>
+            <a href="{% url 'menu:menu' %}" class="btn btn--primary">Browse Menu</a>
+            <button type="button" class="favourites-hint-dismiss" data-dismiss-hint aria-label="Dismiss">
+                <i class="ph ph-x"></i>
+            </button>
         </div>
     </div>
 </section>

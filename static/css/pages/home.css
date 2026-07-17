@@ -417,6 +417,112 @@
     }
 }
 
+/* ── Order Again: food-first cards ─────────────────────────────────── */
+.reorder-card-thumbs {
+    display: flex;
+}
+
+.reorder-card-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--surface);
+    background: var(--cream-mid);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.reorder-card-thumb + .reorder-card-thumb {
+    margin-left: -12px;
+}
+
+.reorder-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.reorder-card-thumb-icon {
+    font-size: 1.3rem;
+}
+
+.reorder-card-dishes {
+    font-weight: 800;
+    font-size: var(--text-base);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ── Favourites discovery hint ─────────────────────────────────────── */
+.favourites-hint {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    background: var(--surface-warm);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+}
+
+.favourites-hint-icon {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background: var(--brand-light);
+    color: var(--brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.favourites-hint-copy {
+    flex: 1;
+}
+
+.favourites-hint-copy strong {
+    display: block;
+    font-size: var(--text-md);
+}
+
+.favourites-hint-copy p {
+    margin: 0.15rem 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.favourites-hint-dismiss {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    border: 0;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: var(--radius-full);
+}
+
+.favourites-hint-dismiss:hover {
+    color: var(--text);
+    background: var(--gray-100);
+}
+
+@media (max-width: 640px) {
+    .favourites-hint {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
 /* ── Meal-deal spotlight ───────────────────────────────────────────── */
 .deal-spotlight-grid {
     display: grid;
