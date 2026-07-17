@@ -235,6 +235,89 @@
 </section>
 {% endif %}
 
+{% if meal_deals %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>Meal <span>Deals</span></h2>
+                <p>Big boxes, small prices — build yours in a few taps.</p>
+            </div>
+            <a href="{% url 'mealdeals:list' %}" class="section-link">
+                All Deals <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="deal-spotlight-grid">
+            {% for deal in meal_deals %}
+            <a href="{% url 'mealdeals:detail' deal.id %}" class="deal-spotlight-card">
+                <div class="deal-spotlight-media">
+                    {% if deal.image %}
+                    <img src="{{ deal.image|image_variant:'card' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="640" height="640">
+                    {% else %}
+                    <span class="deal-spotlight-icon" aria-hidden="true">🍱</span>
+                    {% endif %}
+                </div>
+                <div class="deal-spotlight-body">
+                    <span class="deal-badge">Deal</span>
+                    <h3>{{ deal.name }}</h3>
+                    {% if deal.description %}
+                    <p>{{ deal.description|truncatechars:90 }}</p>
+                    {% endif %}
+                    <div class="deal-spotlight-footer">
+                        <span class="deal-spotlight-price">£{{ deal.deal_price }}</span>
+                        <span class="deal-spotlight-cta">Build Yours <i class="ph-bold ph-arrow-right"></i></span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if signature_items %}
+<section class="section signature-section">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <h2>House <span>Signatures</span></h2>
+                <p>House signatures you won't find anywhere else.</p>
+            </div>
+            <a href="{% url 'menu:menu' %}?category={{ signature_items.0.category_id }}" class="section-link">
+                See Them All <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="signature-strip">
+            {% for item in signature_items %}
+            <div class="signature-card" onclick="openItemModal({{ item.id }})">
+                <div class="signature-card-media">
+                    {% if item.image %}
+                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
+                    {% else %}
+                    <span class="placeholder-icon" aria-hidden="true">{{ item.category.icon|default:"🍣" }}</span>
+                    {% endif %}
+                </div>
+                <div class="signature-card-body">
+                    <div class="signature-card-title"><span class="item-number">{{ item.id }}</span>{{ item.name }}</div>
+                    {% if item.description %}
+                    <p class="signature-card-desc">{{ item.description }}</p>
+                    {% endif %}
+                    <div class="signature-card-footer">
+                        <span class="signature-card-price">£{{ item.price }}</span>
+                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
 {% if hero_offers|length > 1 %}
 <section class="section">
     <div class="container">
@@ -300,4 +383,63 @@
     </div>
 </section>
 
+<!-- ═══ REWARDS TEASER ═══ -->
+<section class="section">
+    <div class="container">
+        <a href="{% url 'loyalty:dashboard' %}" class="rewards-teaser">
+            <div class="rewards-teaser-icon" aria-hidden="true">
+                <i class="ph-fill ph-gift"></i>
+            </div>
+            <div class="rewards-teaser-copy">
+                <h3>Earn points on every order</h3>
+                <p>Collect rewards and unlock offers as you order.</p>
+            </div>
+            <span class="rewards-teaser-cta">
+                View Rewards <i class="ph-bold ph-arrow-right"></i>
+            </span>
+        </a>
+    </div>
+</section>
+
+{% if opening_hours_rows or opening_hours_text or site_settings.address or site_settings.phone %}
+<!-- ═══ VISIT / HOURS ═══ -->
+<section class="section info-strip-section">
+    <div class="container">
+        <div class="info-strip">
+            {% if opening_hours_rows or opening_hours_text %}
+            <div class="info-strip-block">
+                <h3><i class="ph ph-clock"></i> Opening Hours</h3>
+                {% if opening_hours_rows %}
+                <ul class="hours-list">
+                    {% for row in opening_hours_rows %}
+                    <li{% if not row.open %} class="hours-closed"{% endif %}>
+                        <span>{{ row.day }}</span>
+                        <span>{% if row.open %}{{ row.open }} – {{ row.close }}{% else %}Closed{% endif %}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="hours-text">{{ opening_hours_text }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% if site_settings.address or site_settings.phone %}
+            <div class="info-strip-block">
+                <h3><i class="ph ph-map-pin"></i> Find Us</h3>
+                {% if site_settings.address %}<p>{{ site_settings.address|linebreaksbr }}</p>{% endif %}
+                {% if site_settings.phone %}<p><a href="tel:{{ site_settings.phone|cut:' ' }}" class="info-strip-phone"><i class="ph ph-phone"></i> {{ site_settings.phone }}</a></p>{% endif %}
+                {% if delivery_enabled %}<p class="info-strip-delivery"><i class="ph ph-moped"></i> Local delivery available</p>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{{ hero_rotation_images|json_script:"heroRotationImages" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/home.js' %}" defer></script>
 {% endblock %}

@@ -12,6 +12,9 @@ from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.models import CustomerProfile
 from apps.core.forms import LargeOrderRequestForm
+from apps.core.media import get_image_variant_url
+from apps.core.models import SiteSettings
+from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuCategory, MenuItem
 from apps.menu.services import get_popular_menu_items
 from apps.offers.models import Offer
@@ -26,6 +29,9 @@ def home(request):
 
     # Best sellers from recent paid orders (admin is_popular flag as fallback)
     popular_items = get_popular_menu_items(limit=6)
+    hero_rotation_images = [
+        get_image_variant_url(item.image, "card") for item in popular_items if item.image
+    ]
 
     # Get active offers for hero banner
     now = timezone.now()
@@ -39,6 +45,39 @@ def home(request):
         ).order_by("-created_at")
         if offer.is_valid()
     ][:3]
+
+    meal_deals = MealDeal.objects.filter(is_active=True).order_by("deal_price")[:2]
+
+    # Chef's showcase: items of the first active "special" category
+    # (e.g. Evergreen Special Roll); hidden when no such category exists.
+    signature_items = []
+    signature_category = (
+        MenuCategory.objects.filter(is_active=True, name__icontains="special")
+        .order_by("sort_order")
+        .first()
+    )
+    if signature_category:
+        signature_items = list(
+            signature_category.items.filter(is_available=True)
+            .select_related("category")
+            .order_by("sort_order")[:4]
+        )
+
+    # Opening-hours strip: the JSONField holds {"0": {"open","close"}, ...}
+    # keyed by weekday (0=Monday) or free text; normalise for the template.
+    opening_hours_rows = []
+    opening_hours_text = ""
+    raw_hours = SiteSettings.get().opening_hours
+    if isinstance(raw_hours, dict) and raw_hours:
+        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        for day_index, name in enumerate(day_names):
+            entry = raw_hours.get(str(day_index))
+            if isinstance(entry, dict) and entry.get("open") and entry.get("close"):
+                opening_hours_rows.append({"day": name, "open": entry["open"], "close": entry["close"]})
+            else:
+                opening_hours_rows.append({"day": name, "open": "", "close": ""})
+    elif raw_hours:
+        opening_hours_text = str(raw_hours)
 
     favorite_items = []
     recent_orders = []
@@ -60,6 +99,11 @@ def home(request):
         "recent_orders": recent_orders,
         "hero_offers": hero_offers,
         "service_type": service_type,
+        "meal_deals": meal_deals,
+        "signature_items": signature_items,
+        "opening_hours_rows": opening_hours_rows,
+        "opening_hours_text": opening_hours_text,
+        "hero_rotation_images": hero_rotation_images,
     }
 
     return render(request, "core/home.html", context)
