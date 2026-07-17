@@ -302,6 +302,17 @@
         });
     }
 
+    // ── Sticky chips: shadow only while actually stuck ─────────────────
+    var pillRow = document.querySelector('.pill-row');
+    var pillSentinel = document.querySelector('.pill-row-sentinel');
+    if (pillRow && pillSentinel && 'IntersectionObserver' in window) {
+        var headerHeight = parseInt(
+            getComputedStyle(document.documentElement).getPropertyValue('--header-height'), 10) || 0;
+        new IntersectionObserver(function (entries) {
+            pillRow.classList.toggle('is-stuck', !entries[0].isIntersecting);
+        }, { rootMargin: '-' + headerHeight + 'px 0px 0px 0px', threshold: 0 }).observe(pillSentinel);
+    }
+
     // ── Initial state from URL ─────────────────────────────────────────
     const initialFilters = readMenuFiltersFromUrl();
     applyMenuFilters(initialFilters, { updateUrl: false });

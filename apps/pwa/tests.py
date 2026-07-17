@@ -126,6 +126,6 @@ class PwaViewTests(TestCase):
         self.assertIn("UNCACHEABLE_PREFIXES", body)
         self.assertIn("'/media/'", body)
         self.assertIn("'/payments/'", body)
-        self.assertIn("restaurant-static-v16", body)
+        self.assertIn("restaurant-static-v17", body)
         self.assertNotIn("'/accounts/app/'", body)
         self.assertNotIn("cache.put(event.request, clonedResponse)", body)

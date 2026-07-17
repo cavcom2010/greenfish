@@ -686,6 +686,40 @@
     display: none;
 }
 
+/* Menu page: category chips stick just below the sticky site header.
+   Bleeds over the container padding so cards never peek beside it. */
+.page-menu .pill-row {
+    position: sticky;
+    top: var(--header-height);
+    z-index: var(--z-sticky);
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    margin-inline: calc(-1 * var(--space-8));
+    padding-inline: var(--space-8);
+    border-bottom: 1px solid transparent;
+    transition: box-shadow var(--transition), border-color var(--transition);
+}
+
+.page-menu .pill-row.is-stuck {
+    border-bottom-color: var(--border-light);
+    box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 767px) {
+    .page-menu .pill-row {
+        margin-inline: calc(-1 * var(--space-4));
+        padding-inline: var(--space-4);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-menu .pill-row {
+        transition: none;
+    }
+}
+
 .pill,
 .category-nav-inner a,
 .dietary-filter-pill,

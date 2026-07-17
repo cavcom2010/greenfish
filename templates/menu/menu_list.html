@@ -3,6 +3,8 @@
 
 {% block title %}Menu - {{ site_settings.shop_name }}{% endblock %}
 
+{% block body_class %}page-menu{% endblock %}
+
 {% block content %}
 
 <section class="section" style="padding-top:2rem;">
@@ -22,7 +24,8 @@
             </div>
         </div>
 
-        <!-- Category pills (client-side filter) -->
+        <!-- Category pills (client-side filter; sticky under the header) -->
+        <div class="pill-row-sentinel" aria-hidden="true"></div>
         <div class="pill-row">
             <button type="button" class="pill {% if not active_category %}active{% endif %}"
                     data-menu-category="" data-menu-label="Full Menu"
