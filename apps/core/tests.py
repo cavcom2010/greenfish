@@ -203,7 +203,7 @@ class PublicRouteTests(TestCase):
         self.assertEqual(response.context["active_category"], category)
 
         # Home is the shop window: no embedded full-menu grid, category
-        # tiles link into the menu page instead.
+        # chips link into the menu page instead.
         home_response = self.client.get(
             reverse("core:home"),
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
@@ -211,7 +211,7 @@ class PublicRouteTests(TestCase):
         self.assertEqual(home_response.status_code, 200)
         self.assertNotContains(home_response, 'id="menuGrid"')
         self.assertNotContains(home_response, "data-menu-category")
-        self.assertContains(home_response, 'class="category-tile"')
+        self.assertContains(home_response, 'class="category-chip"')
         self.assertContains(home_response, f'{reverse("menu:menu")}?category={category.id}')
 
     def test_category_fragment_renders(self):

@@ -394,12 +394,11 @@
         </div>
 
         {% if categories %}
-        <div class="category-tile-grid">
+        <div class="category-strip" aria-label="Menu categories">
             {% for category in categories %}
-            <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-tile">
-                <span class="category-tile-icon">{{ category.icon|default:"🍽️" }}</span>
-                <span class="category-tile-name">{{ category.name }}</span>
-                <i class="ph-bold ph-arrow-right category-tile-arrow"></i>
+            <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-chip">
+                <span aria-hidden="true">{{ category.icon|default:"🍽️" }}</span>
+                {{ category.name }}
             </a>
             {% endfor %}
         </div>
