@@ -1,6 +1,7 @@
 """
 Staff-facing operations boards and actions.
 """
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.db import transaction
 from django.shortcuts import get_object_or_404, render
@@ -134,6 +135,9 @@ def order_action(request, order_id):
             )
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
+    except ValidationError as exc:
+        message = " ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+        return JsonResponse({"error": message}, status=400)
 
     order.available_actions = available_actions(order, user=request.user)
 

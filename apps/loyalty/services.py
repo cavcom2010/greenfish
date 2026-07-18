@@ -1,6 +1,8 @@
 """Service functions for loyalty system."""
 from decimal import Decimal, ROUND_DOWN
 
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 
@@ -153,14 +155,18 @@ def award_points_for_order(order):
     final_points = int(base_points * Decimal(str(multiplier)))
     
     if final_points > 0:
-        transaction = LoyaltyTransaction.objects.create(
-            user=user,
-            order=order,
-            transaction_type=LoyaltyTransaction.TransactionType.EARNED,
-            points=final_points,
-            description=f"Points earned for order #{order.order_number}"
-        )
-        return transaction
+        try:
+            with transaction.atomic():
+                return LoyaltyTransaction.objects.create(
+                    user=user,
+                    order=order,
+                    transaction_type=LoyaltyTransaction.TransactionType.EARNED,
+                    points=final_points,
+                    description=f"Points earned for order #{order.order_number}"
+                )
+        except IntegrityError:
+            # A concurrent save already awarded points for this order.
+            return None
     return None
 
 
@@ -192,35 +198,42 @@ def calculate_max_redeemable_points(user, order_total):
 
 
 def redeem_points_for_order(user, order, points_to_redeem):
-    """Redeem points for an order discount."""
+    """Redeem points for an order discount.
+
+    Serialized on the user row so concurrent redemptions cannot spend the
+    same points twice.
+    """
     settings = LoyaltySettings.get()
-    
-    # Validate
-    max_redeemable = calculate_max_redeemable_points(user, order.subtotal)
-    if points_to_redeem > max_redeemable:
-        raise ValueError(f"Cannot redeem more than {max_redeemable} points")
-    
-    # Calculate discount
-    discount = Decimal(points_to_redeem) * settings.points_value
-    discount = discount.quantize(Decimal("0.01"))
-    
-    # Create transaction
-    LoyaltyTransaction.objects.create(
-        user=user,
-        order=order,
-        transaction_type=LoyaltyTransaction.TransactionType.REDEEMED,
-        points=-points_to_redeem,
-        description=f"Points redeemed for order #{order.order_number}"
-    )
-    
-    # Create redemption record
-    redemption = PointsRedemption.objects.create(
-        user=user,
-        order=order,
-        points_used=points_to_redeem,
-        discount_amount=discount
-    )
-    
+
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=user.pk)
+
+        # Validate under lock
+        max_redeemable = calculate_max_redeemable_points(user, order.subtotal)
+        if points_to_redeem > max_redeemable:
+            raise ValueError(f"Cannot redeem more than {max_redeemable} points")
+
+        # Calculate discount
+        discount = Decimal(points_to_redeem) * settings.points_value
+        discount = discount.quantize(Decimal("0.01"))
+
+        # Create transaction
+        LoyaltyTransaction.objects.create(
+            user=user,
+            order=order,
+            transaction_type=LoyaltyTransaction.TransactionType.REDEEMED,
+            points=-points_to_redeem,
+            description=f"Points redeemed for order #{order.order_number}"
+        )
+
+        # Create redemption record
+        redemption = PointsRedemption.objects.create(
+            user=user,
+            order=order,
+            points_used=points_to_redeem,
+            discount_amount=discount
+        )
+
     return redemption
 
 

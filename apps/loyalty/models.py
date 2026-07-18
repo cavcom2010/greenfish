@@ -111,6 +111,13 @@ class LoyaltyTransaction(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Loyalty Transaction"
         verbose_name_plural = "Loyalty Transactions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "order"],
+                condition=models.Q(transaction_type="earned"),
+                name="unique_earned_points_per_order",
+            )
+        ]
     
     def __str__(self):
         return f"{self.user.email}: {self.points:+d} points ({self.transaction_type})"
@@ -319,7 +326,19 @@ class RewardWalletItem(models.Model):
         return True
 
     def mark_used(self, order=None):
+        """Consume this wallet item exactly once.
+
+        Raises ValidationError if the item was already used, expired, or
+        cancelled by a concurrent request.
+        """
+        from django.core.exceptions import ValidationError
+
+        now = timezone.now()
+        claimed = type(self).objects.filter(
+            pk=self.pk, status=self.Status.AVAILABLE
+        ).update(status=self.Status.USED, used_at=now, used_order=order, updated_at=now)
+        if not claimed:
+            raise ValidationError("This reward has already been used.")
         self.status = self.Status.USED
-        self.used_at = timezone.now()
+        self.used_at = now
         self.used_order = order
-        self.save(update_fields=["status", "used_at", "used_order", "updated_at"])

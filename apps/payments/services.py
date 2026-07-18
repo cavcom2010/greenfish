@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db import transaction
 from django.utils import timezone
 
 from apps.orders.models import Order
@@ -95,40 +96,55 @@ def refresh_payment_status(payment, *, external_id=None, payload=None, event_typ
 
 
 def process_refund_request(refund_request):
-    """Process a staff refund request through the payment's provider service."""
-    refund_request = RefundRequest.objects.select_related("payment", "payment__order").get(pk=refund_request.pk)
-    if refund_request.status != RefundRequest.Status.REQUESTED:
-        return refund_request
+    """Process a staff refund request through the payment's provider service.
 
-    payment = refund_request.payment
-    if payment.status != Payment.Status.PAID:
-        refund_request.status = RefundRequest.Status.FAILED
-        refund_request.error_message = "Only paid payments can be refunded."
+    The refund row is claimed under a row lock so concurrent staff actions or
+    overlapping management-command runs can never refund the same request twice.
+    """
+    with transaction.atomic():
+        refund_request = (
+            RefundRequest.objects.select_for_update()
+            .select_related("payment", "payment__order")
+            .get(pk=refund_request.pk)
+        )
+        if refund_request.status != RefundRequest.Status.REQUESTED:
+            return refund_request
+
+        payment = refund_request.payment
+        if payment.status != Payment.Status.PAID:
+            return _fail_refund(refund_request, "Only paid payments can be refunded.")
+
+        if refund_request.amount is not None and refund_request.amount > payment.amount:
+            return _fail_refund(
+                refund_request,
+                "Refund amount cannot exceed the original payment amount.",
+            )
+
+        service = payment_service_for_payment(payment)
+        if not service:
+            return _fail_refund(refund_request, "No refund-capable payment service is configured.")
+
+        success = service.refund_payment(payment, amount=refund_request.amount)
         refund_request.processed_at = timezone.now()
-        refund_request.save(update_fields=["status", "error_message", "processed_at"])
-        return refund_request
-
-    service = payment_service_for_payment(payment)
-    if not service:
-        refund_request.status = RefundRequest.Status.FAILED
-        refund_request.error_message = "No refund-capable payment service is configured."
-        refund_request.processed_at = timezone.now()
-        refund_request.save(update_fields=["status", "error_message", "processed_at"])
-        return refund_request
-
-    success = service.refund_payment(payment, amount=refund_request.amount)
-    refund_request.processed_at = timezone.now()
-    if success:
-        refund_request.status = RefundRequest.Status.SUCCEEDED
-        refund_request.provider_reference = payment.payment_reference
-    else:
-        refund_request.status = RefundRequest.Status.FAILED
-        refund_request.error_message = "Provider refund failed. Check payment logs."
-    refund_request.save(update_fields=["status", "provider_reference", "error_message", "processed_at"])
+        if success:
+            refund_request.status = RefundRequest.Status.SUCCEEDED
+            refund_request.provider_reference = payment.payment_reference
+        else:
+            refund_request.status = RefundRequest.Status.FAILED
+            refund_request.error_message = "Provider refund failed. Check payment logs."
+        refund_request.save(update_fields=["status", "provider_reference", "error_message", "processed_at"])
     if refund_request.status == RefundRequest.Status.SUCCEEDED:
         from apps.core.customer_notifications import enqueue_refund_processed
 
         enqueue_refund_processed(refund_request)
+    return refund_request
+
+
+def _fail_refund(refund_request, message):
+    refund_request.status = RefundRequest.Status.FAILED
+    refund_request.error_message = message
+    refund_request.processed_at = timezone.now()
+    refund_request.save(update_fields=["status", "error_message", "processed_at"])
     return refund_request
 
 
@@ -329,32 +345,68 @@ def mark_offline_payment_paid(payment, *, actor=None, **payment_evidence):
 
 
 def expire_offline_pending_payment(payment, *, reason="Payment not received within the hold window."):
-    """Expire an unpaid fallback payment and cancel the related order."""
-    payment.status = Payment.Status.EXPIRED
-    payment.save(update_fields=["status", "updated_at"])
+    """Expire an unpaid fallback payment and cancel the related order.
 
-    order = payment.order
-    order.payment_status = Order.PaymentStatus.FAILED
-    if reason and reason != order.cancel_reason:
-        order.cancel_reason = reason
-        order.save(update_fields=["payment_status", "cancel_reason", "updated_at"])
-    else:
-        order.save(update_fields=["payment_status", "updated_at"])
-    if order.status == Order.OrderStatus.PENDING:
-        order.update_status(Order.OrderStatus.CANCELLED)
-    else:
-        from apps.orders.fulfilment import release_fulfilment_slot
-        from apps.orders.inventory import release_order_stock
+    Claims the payment atomically so overlapping cron runs, or a race with a
+    staff member recording a manual payment, can never double-process it.
+    """
+    with transaction.atomic():
+        claimed = Payment.objects.filter(
+            pk=payment.pk,
+            provider=Payment.Provider.OFFLINE_PENDING,
+            status=Payment.Status.PENDING,
+        ).update(status=Payment.Status.EXPIRED, updated_at=timezone.now())
+        if not claimed:
+            payment.refresh_from_db()
+            return payment
 
-        release_fulfilment_slot(order)
-        release_order_stock(order)
+        payment.status = Payment.Status.EXPIRED
+        order = Order.objects.select_for_update().get(pk=payment.order_id)
+        order.payment_status = Order.PaymentStatus.FAILED
+        if reason and reason != order.cancel_reason:
+            order.cancel_reason = reason
+            order.save(update_fields=["payment_status", "cancel_reason", "updated_at"])
+        else:
+            order.save(update_fields=["payment_status", "updated_at"])
+        if order.status == Order.OrderStatus.PENDING:
+            order.update_status(Order.OrderStatus.CANCELLED)
+        else:
+            from apps.orders.fulfilment import release_fulfilment_slot
+            from apps.orders.inventory import release_order_stock
 
-    _log_payment_event(
-        payment,
-        "offline_payment_expired",
-        {"reason": reason},
-    )
+            release_fulfilment_slot(order)
+            release_order_stock(order)
+
+        _log_payment_event(
+            payment,
+            "offline_payment_expired",
+            {"reason": reason},
+        )
     return payment
+
+
+#: Legal payment state transitions. Anything not listed is ignored, which
+#: protects paid records from stale/out-of-order provider events.
+PAYMENT_STATE_TRANSITIONS = {
+    Payment.Status.PENDING: {
+        Payment.Status.AUTHORIZED,
+        Payment.Status.PAID,
+        Payment.Status.FAILED,
+        Payment.Status.EXPIRED,
+        Payment.Status.CANCELLED,
+    },
+    Payment.Status.AUTHORIZED: {
+        Payment.Status.PAID,
+        Payment.Status.FAILED,
+        Payment.Status.EXPIRED,
+        Payment.Status.CANCELLED,
+    },
+    Payment.Status.PAID: {Payment.Status.REFUNDED},
+    Payment.Status.FAILED: set(),
+    Payment.Status.EXPIRED: set(),
+    Payment.Status.CANCELLED: set(),
+    Payment.Status.REFUNDED: set(),
+}
 
 
 def _apply_local_payment_state(
@@ -366,48 +418,70 @@ def _apply_local_payment_state(
     metadata=None,
     paid_at=None,
 ):
-    """Apply a provider status update to the local payment and order records."""
-    old_status = payment.status
-    payment.status = new_status
+    """Apply a provider status update to the local payment and order records.
 
-    if payment_method:
-        payment.external_payment_method = payment_method
+    Runs under row locks (payment first, then order) so concurrent webhook
+    deliveries, admin refreshes, and return-page syncs serialize cleanly, and
+    validates the state transition so stale events cannot corrupt paid records.
+    """
+    with transaction.atomic():
+        payment = Payment.objects.select_for_update().get(pk=payment.pk)
+        old_status = payment.status
 
-    if metadata is not None:
-        payment.metadata = metadata
+        if new_status != old_status and new_status not in PAYMENT_STATE_TRANSITIONS.get(old_status, set()):
+            logger.warning(
+                "Ignoring invalid payment transition %s -> %s for %s",
+                old_status,
+                new_status,
+                payment.payment_reference,
+            )
+            return payment
 
-    if payment.status == Payment.Status.PAID:
-        payment.paid_at = paid_at or payment.paid_at or timezone.now()
-        payment.order.mark_as_paid()
-    elif payment.status == Payment.Status.REFUNDED:
-        payment.order.payment_status = Order.PaymentStatus.REFUNDED
-        payment.order.save(update_fields=["payment_status", "updated_at"])
-    elif payment.status in {Payment.Status.FAILED, Payment.Status.EXPIRED, Payment.Status.CANCELLED}:
-        payment.order.payment_status = Order.PaymentStatus.FAILED
-        if payment.order.status == Order.OrderStatus.PENDING:
-            payment.order.save(update_fields=["payment_status", "updated_at"])
-            payment.order.update_status(Order.OrderStatus.CANCELLED)
-        else:
-            payment.order.save(update_fields=["payment_status", "updated_at"])
-            from apps.orders.fulfilment import release_fulfilment_slot
-            from apps.orders.inventory import release_order_stock
+        if payment_method:
+            payment.external_payment_method = payment_method
 
-            release_fulfilment_slot(payment.order)
-            release_order_stock(payment.order)
+        if metadata is not None:
+            payment.metadata = metadata
 
-    payment.save()
+        payment.status = new_status
+        if payment.status == Payment.Status.PAID:
+            payment.paid_at = paid_at or payment.paid_at or timezone.now()
+        payment.save()
 
-    if old_status != payment.status:
-        _log_payment_event(
-            payment,
-            "status_changed",
-            {
-                "provider": payment.provider,
-                "old_status": old_status,
-                "new_status": payment.status,
-                "provider_status": provider_status,
-            },
-        )
+        order = Order.objects.select_for_update().get(pk=payment.order_id)
+        payment.order = order
+
+        if payment.status == Payment.Status.PAID and old_status != Payment.Status.PAID:
+            order.mark_as_paid()
+        elif payment.status == Payment.Status.REFUNDED and old_status != Payment.Status.REFUNDED:
+            order.payment_status = Order.PaymentStatus.REFUNDED
+            order.save(update_fields=["payment_status", "updated_at"])
+        elif (
+            payment.status in {Payment.Status.FAILED, Payment.Status.EXPIRED, Payment.Status.CANCELLED}
+            and old_status != payment.status
+        ):
+            order.payment_status = Order.PaymentStatus.FAILED
+            order.save(update_fields=["payment_status", "updated_at"])
+            if order.status == Order.OrderStatus.PENDING:
+                order.update_status(Order.OrderStatus.CANCELLED)
+            else:
+                from apps.orders.fulfilment import release_fulfilment_slot
+                from apps.orders.inventory import release_order_stock
+
+                release_fulfilment_slot(order)
+                release_order_stock(order)
+
+        if old_status != payment.status:
+            _log_payment_event(
+                payment,
+                "status_changed",
+                {
+                    "provider": payment.provider,
+                    "old_status": old_status,
+                    "new_status": payment.status,
+                    "provider_status": provider_status,
+                },
+            )
 
     return payment
 
@@ -533,9 +607,28 @@ class StripePaymentService:
         )
 
     def refund_payment(self, payment, amount=None):
-        """Refund a Stripe payment intent when one exists on the checkout session."""
+        """Refund the Stripe payment intent behind a checkout session."""
         payment_intent = (payment.metadata or {}).get("payment_intent")
+        if not payment_intent and payment.external_payment_id:
+            # Session metadata captured before completion has no payment_intent;
+            # fetch the finished session directly from Stripe.
+            try:
+                session_data = _serialize_stripe_object(self.get_payment(payment.external_payment_id))
+            except Exception as exc:
+                logger.error(
+                    "Stripe error loading session %s for refund: %s",
+                    payment.external_payment_id,
+                    exc,
+                )
+                session_data = {}
+            payment_intent = session_data.get("payment_intent")
+        if isinstance(payment_intent, dict):
+            payment_intent = payment_intent.get("id")
         if not payment_intent:
+            logger.error(
+                "Cannot refund payment %s: no payment_intent available from Stripe.",
+                payment.payment_reference,
+            )
             return False
 
         refund_kwargs = {"payment_intent": payment_intent}

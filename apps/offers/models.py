@@ -5,8 +5,10 @@ import re
 from decimal import Decimal
 
 from django.apps import apps
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
+from django.db.models import F
 from django.utils import timezone
 
 from apps.core.media import (
@@ -195,9 +197,13 @@ class Offer(models.Model):
         return Decimal("0.00")
     
     def increment_usage(self):
-        """Increment usage count."""
-        self.usage_count += 1
-        self.save(update_fields=["usage_count"])
+        """Atomically consume one use of this offer, enforcing the usage cap."""
+        with transaction.atomic():
+            offer = Offer.objects.select_for_update().get(pk=self.pk)
+            if offer.max_usage_count > 0 and offer.usage_count >= offer.max_usage_count:
+                raise ValidationError("This offer is no longer available.")
+            Offer.objects.filter(pk=self.pk).update(usage_count=F("usage_count") + 1)
+        self.refresh_from_db(fields=["usage_count"])
 
     def save(self, *args, **kwargs):
         changed_images = get_changed_image_names(self, OFFER_IMAGE_VARIANTS.keys())
@@ -299,18 +305,43 @@ class VoucherCode(models.Model):
         return self.offer.calculate_discount(order_subtotal)
     
     def record_usage(self, user=None, order=None):
-        """Record that this voucher was used."""
-        self.uses_count += 1
-        self.save(update_fields=["uses_count"])
-        
-        if user and user.is_authenticated:
-            VoucherUsage.objects.create(
-                voucher=self,
-                user=user,
-                order=order
-            )
-        
-        self.offer.increment_usage()
+        """Atomically consume one use of this voucher, re-checking limits under lock.
+
+        Raises ValidationError when a concurrent checkout has exhausted the
+        voucher, which rolls back the caller's order-creation transaction.
+        """
+        with transaction.atomic():
+            voucher = VoucherCode.objects.select_for_update().get(pk=self.pk)
+
+            if voucher.max_uses > 0 and voucher.uses_count >= voucher.max_uses:
+                raise ValidationError("This voucher has just reached its usage limit.")
+
+            if voucher.max_uses_per_customer > 0:
+                if user and user.is_authenticated:
+                    used = VoucherUsage.objects.filter(voucher=voucher, user=user).count()
+                    if used >= voucher.max_uses_per_customer:
+                        raise ValidationError("You have already used this voucher.")
+                elif order is not None:
+                    # The current order already carries this voucher code, so a
+                    # count above the limit means another guest order got there first.
+                    guest_uses = voucher._guest_usage_count(
+                        guest_phone=order.customer_phone,
+                        guest_email=order.customer_email,
+                    )
+                    if guest_uses > voucher.max_uses_per_customer:
+                        raise ValidationError("This voucher has already been used.")
+
+            VoucherCode.objects.filter(pk=self.pk).update(uses_count=F("uses_count") + 1)
+
+            if user and user.is_authenticated:
+                VoucherUsage.objects.create(
+                    voucher=voucher,
+                    user=user,
+                    order=order
+                )
+
+            self.offer.increment_usage()
+        self.refresh_from_db(fields=["uses_count"])
 
 
 class VoucherUsage(models.Model):

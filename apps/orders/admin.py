@@ -1,7 +1,7 @@
 """
 Admin configuration for the orders app.
 """
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from .models import (
     DeliveryDriver,
@@ -142,25 +142,41 @@ class OrderAdmin(admin.ModelAdmin):
     )
     
     actions = ["mark_as_confirmed", "mark_as_preparing", "mark_as_ready", "mark_as_completed"]
-    
-    def mark_as_confirmed(self, request, queryset):
+
+    def _bulk_update_status(self, request, queryset, new_status):
+        from django.core.exceptions import ValidationError
+
+        updated = 0
+        skipped = []
         for order in queryset:
-            order.update_status(Order.OrderStatus.CONFIRMED, request.user)
+            try:
+                order.update_status(new_status, request.user)
+                updated += 1
+            except ValidationError:
+                skipped.append(order.order_number)
+        if updated:
+            self.message_user(request, f"{updated} order(s) updated.")
+        if skipped:
+            self.message_user(
+                request,
+                f"Skipped invalid transitions for: {', '.join(skipped)}",
+                level=messages.WARNING,
+            )
+
+    def mark_as_confirmed(self, request, queryset):
+        self._bulk_update_status(request, queryset, Order.OrderStatus.CONFIRMED)
     mark_as_confirmed.short_description = "Mark selected orders as Confirmed"
     
     def mark_as_preparing(self, request, queryset):
-        for order in queryset:
-            order.update_status(Order.OrderStatus.PREPARING, request.user)
+        self._bulk_update_status(request, queryset, Order.OrderStatus.PREPARING)
     mark_as_preparing.short_description = "Mark selected orders as Preparing"
     
     def mark_as_ready(self, request, queryset):
-        for order in queryset:
-            order.update_status(Order.OrderStatus.READY, request.user)
+        self._bulk_update_status(request, queryset, Order.OrderStatus.READY)
     mark_as_ready.short_description = "Mark selected orders as Ready"
     
     def mark_as_completed(self, request, queryset):
-        for order in queryset:
-            order.update_status(Order.OrderStatus.COMPLETED, request.user)
+        self._bulk_update_status(request, queryset, Order.OrderStatus.COMPLETED)
     mark_as_completed.short_description = "Mark selected orders as Completed"
 
     @admin.display(description="Payment Reference")

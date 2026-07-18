@@ -6,6 +6,7 @@ from decimal import Decimal
 from secrets import token_urlsafe
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
@@ -268,11 +269,17 @@ class Order(models.Model):
         self.save(update_fields=["subtotal", "total_amount", "updated_at"])
     
     def mark_as_paid(self, changed_by=None):
-        """Mark order as paid."""
+        """Mark order as paid exactly once, safe under concurrent callers."""
+        now = timezone.now()
+        claimed = Order.objects.filter(pk=self.pk).exclude(
+            payment_status=self.PaymentStatus.PAID
+        ).update(payment_status=self.PaymentStatus.PAID, paid_at=now, updated_at=now)
+        if not claimed:
+            self.refresh_from_db(fields=["payment_status", "paid_at", "status"])
+            return False
+
         self.payment_status = self.PaymentStatus.PAID
-        self.paid_at = timezone.now()
-        update_fields = ["payment_status", "paid_at", "updated_at"]
-        self.save(update_fields=update_fields)
+        self.paid_at = now
 
         from .fulfilment import confirm_fulfilment_slot
         from .inventory import consume_order_stock
@@ -287,6 +294,7 @@ class Order(models.Model):
         from apps.core.customer_notifications import enqueue_order_confirmed_by_id
 
         transaction.on_commit(lambda order_id=self.pk: enqueue_order_confirmed_by_id(order_id))
+        return True
 
     def preparation_time_minutes(self):
         """Return the order prep estimate using the slowest line item."""
@@ -304,11 +312,32 @@ class Order(models.Model):
         base_time = base_time or timezone.now()
         return base_time + timezone.timedelta(minutes=self.preparation_time_minutes())
     
+    #: Valid forward transitions for the order lifecycle. Orders may skip
+    #: forward steps but may never move backwards or leave a terminal state.
+    STATUS_TRANSITIONS = {
+        "pending": {"confirmed", "cancelled"},
+        "confirmed": {"preparing", "ready", "out_for_delivery", "completed", "cancelled"},
+        "preparing": {"ready", "out_for_delivery", "completed", "cancelled"},
+        "ready": {"out_for_delivery", "completed", "cancelled"},
+        "out_for_delivery": {"completed", "cancelled"},
+        "completed": set(),
+        "cancelled": set(),
+    }
+
+    def can_transition_to(self, new_status):
+        return new_status in self.STATUS_TRANSITIONS.get(self.status, set())
+
     def update_status(self, new_status, changed_by=None):
         """Update order status and log the change."""
         old_status = self.status
         if old_status == new_status:
             return
+
+        if not self.can_transition_to(new_status):
+            raise ValidationError(
+                f"Cannot move order {self.order_number} from "
+                f"{self.get_status_display()} to {new_status}."
+            )
 
         now = timezone.now()
         self.status = new_status

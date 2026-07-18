@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 
 from .models import FulfilmentBlackout, FulfilmentCapacityRule, FulfilmentSlotReservation, Order
@@ -163,16 +164,28 @@ def available_fulfilment_options(service_type, *, limit=8):
 def reserve_fulfilment_slot(order):
     if not order.fulfilment_slot_start:
         return None
-    slot_start = validate_fulfilment_slot(order.service_type, order.fulfilment_slot_start)
-    if slot_start and order.fulfilment_slot_start != slot_start:
-        order.fulfilment_slot_start = slot_start
-        order.requested_pickup_time = slot_start
-        order.save(update_fields=["fulfilment_slot_start", "requested_pickup_time", "updated_at"])
-    return FulfilmentSlotReservation.objects.create(
-        order=order,
-        service_type=order.service_type,
-        slot_start=slot_start or order.fulfilment_slot_start,
-    )
+    with transaction.atomic():
+        requested_start = order.fulfilment_slot_start
+        requested_start = (
+            timezone.localtime(requested_start)
+            if timezone.is_aware(requested_start)
+            else timezone.make_aware(requested_start)
+        )
+        rule = _candidate_rule(order.service_type, requested_start)
+        if rule:
+            # Serialize capacity checks for this rule so concurrent checkouts
+            # cannot both pass the count-then-create validation.
+            FulfilmentCapacityRule.objects.select_for_update().get(pk=rule.pk)
+        slot_start = validate_fulfilment_slot(order.service_type, order.fulfilment_slot_start)
+        if slot_start and order.fulfilment_slot_start != slot_start:
+            order.fulfilment_slot_start = slot_start
+            order.requested_pickup_time = slot_start
+            order.save(update_fields=["fulfilment_slot_start", "requested_pickup_time", "updated_at"])
+        return FulfilmentSlotReservation.objects.create(
+            order=order,
+            service_type=order.service_type,
+            slot_start=slot_start or order.fulfilment_slot_start,
+        )
 
 
 def confirm_fulfilment_slot(order):

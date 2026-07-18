@@ -262,6 +262,9 @@ def create_payment(request):
                 if not service:
                     raise RuntimeError("No payment provider is configured.")
                 payment = service.create_payment(order, request)
+    except ValidationError as exc:
+        message = " ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+        return _payment_error_response(request, message)
     except Exception:
         logger.exception(
             "Error creating payment for order %s",
@@ -339,27 +342,39 @@ def _stripe_webhook(request):
     event_id = event.get("id") or f"stripe:{event_type}:{checkout_session_id or uuid.uuid4().hex}"
 
     if event_type.startswith("checkout.session.") and checkout_session_id:
-        webhook_event, created = PaymentWebhookEvent.objects.get_or_create(
+        webhook_event, _ = PaymentWebhookEvent.objects.get_or_create(
             provider=Payment.Provider.STRIPE,
             event_id=event_id,
             defaults={"event_type": event_type, "payload": event},
         )
-        if not created and webhook_event.processed_at:
+        # Atomically claim the event: exactly one concurrent delivery wins.
+        claimed = PaymentWebhookEvent.objects.filter(
+            pk=webhook_event.pk, processed_at__isnull=True
+        ).update(processed_at=timezone.now())
+        if not claimed:
             return HttpResponse("OK", status=200)
-        payment = StripePaymentService().update_payment_status(
-            checkout_session_id,
-            payload=session_payload,
-            event_type=event_type,
-        )
+
+        try:
+            payment = StripePaymentService().update_payment_status(
+                checkout_session_id,
+                payload=session_payload,
+                event_type=event_type,
+            )
+        except Exception:
+            logger.exception("Error processing Stripe webhook event %s", event_id)
+            PaymentWebhookEvent.objects.filter(pk=webhook_event.pk).update(processed_at=None)
+            return HttpResponse("Error", status=500)
+
         if payment:
-            webhook_event.payment = payment
-            webhook_event.processed_at = timezone.now()
-            webhook_event.save(update_fields=["payment", "processed_at"])
+            PaymentWebhookEvent.objects.filter(pk=webhook_event.pk).update(payment=payment)
             PaymentLog.objects.create(
                 payment=payment,
                 event_type="webhook_received",
                 event_data={"provider": Payment.Provider.STRIPE, "event_type": event_type},
             )
+        else:
+            logger.warning("No payment found for Stripe session %s", checkout_session_id)
+            PaymentWebhookEvent.objects.filter(pk=webhook_event.pk).update(processed_at=None)
 
     return HttpResponse("OK", status=200)
 
@@ -402,16 +417,24 @@ def demo_checkout(request, order_number):
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "pay":
-            payment.status = Payment.Status.PAID
-            payment.save(update_fields=["status", "updated_at"])
-            order.mark_as_paid()
+            with transaction.atomic():
+                claimed = Payment.objects.filter(
+                    pk=payment.pk, status=Payment.Status.PENDING
+                ).update(status=Payment.Status.PAID, updated_at=timezone.now())
+                if claimed:
+                    payment.refresh_from_db()
+                    order.mark_as_paid()
             return redirect(order_customer_url("orders:confirmation", order))
 
         if action == "cancel":
-            payment.status = Payment.Status.CANCELLED
-            payment.save(update_fields=["status", "updated_at"])
-            order.status = Order.OrderStatus.CANCELLED
-            order.save(update_fields=["status", "updated_at"])
+            with transaction.atomic():
+                claimed = Payment.objects.filter(
+                    pk=payment.pk, status=Payment.Status.PENDING
+                ).update(status=Payment.Status.CANCELLED, updated_at=timezone.now())
+                if claimed:
+                    payment.refresh_from_db()
+                    if order.status == Order.OrderStatus.PENDING:
+                        order.update_status(Order.OrderStatus.CANCELLED)
             messages.info(request, "Demo payment cancelled. Your order was not charged.")
             return redirect("orders:checkout")
 

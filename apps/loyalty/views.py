@@ -1,6 +1,8 @@
 """Views for loyalty app."""
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -83,13 +85,18 @@ def activate_wallet_item(request, pk):
         return redirect("orders:checkout")
 
     if wallet_item.points_value > 0:
-        LoyaltyTransaction.objects.create(
-            user=request.user,
-            transaction_type=LoyaltyTransaction.TransactionType.BONUS,
-            points=wallet_item.points_value,
-            description=wallet_item.title,
-        )
-        wallet_item.mark_used(None)
+        try:
+            with transaction.atomic():
+                wallet_item.mark_used(None)
+                LoyaltyTransaction.objects.create(
+                    user=request.user,
+                    transaction_type=LoyaltyTransaction.TransactionType.BONUS,
+                    points=wallet_item.points_value,
+                    description=wallet_item.title,
+                )
+        except ValidationError:
+            messages.error(request, "This reward has already been claimed.")
+            return redirect("loyalty:dashboard")
         messages.success(request, f"{wallet_item.points_value} points added to your account.")
         return redirect("loyalty:dashboard")
 
