@@ -1,7 +1,22 @@
 # Systemd units for GreenFish
 
-Version-controlled templates for the production services. Copy, adjust
-paths/users, then enable:
+Version-controlled templates for the production services.
+
+## Quick install (recommended)
+
+On the server, from the repo checkout:
+
+```bash
+sudo bash deploy/production/systemd/install.sh
+```
+
+This templates the unit files to the real repo path/user, installs the
+celery worker + beat units, and enables them. Add `--with-gunicorn` to also
+install the gunicorn units, or `--dry-run` to preview.
+
+## Manual install
+
+Copy, adjust paths/users, then enable:
 
 ```bash
 sudo cp deploy/production/systemd/*.socket deploy/production/systemd/*.service /etc/systemd/system/
