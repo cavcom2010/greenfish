@@ -673,6 +673,51 @@
     color: var(--brand);
 }
 
+/* ── Popular strip: signature-style swipe carousel on phones ───────── */
+@media (max-width: 640px) {
+    .popular-strip {
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(260px, 320px);
+        gap: var(--space-5);
+        overflow-x: auto;
+        padding-bottom: var(--space-3);
+        scrollbar-width: none;
+        scroll-snap-type: x mandatory;
+    }
+
+    .popular-strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Undo the ≤640px compact horizontal card from components.css;
+       mirror .signature-card proportions */
+    .popular-strip .menu-card {
+        display: flex;
+        flex-direction: column;
+        scroll-snap-align: start;
+        border-radius: var(--radius-xl);
+        background: linear-gradient(160deg, var(--surface) 55%, var(--brand-light));
+    }
+
+    .popular-strip .menu-card-image {
+        height: 170px;
+        min-height: 0;
+    }
+
+    .popular-strip .menu-card-image .placeholder-icon {
+        font-size: 3.4rem;
+    }
+
+    .popular-strip .menu-card-body {
+        padding: var(--space-5);
+    }
+
+    .popular-strip .menu-card-desc {
+        -webkit-line-clamp: 2;
+    }
+}
+
 /* ── Rewards teaser ────────────────────────────────────────────────── */
 .rewards-teaser {
     display: flex;
