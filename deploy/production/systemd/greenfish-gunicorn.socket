@@ -1,0 +1,12 @@
+# Gunicorn socket for GreenFish.
+# Install: sudo cp *.socket *.service /etc/systemd/system/ && sudo systemctl daemon-reload
+[Unit]
+Description=GreenFish gunicorn socket
+
+[Socket]
+ListenStream=/run/greenfish-gunicorn.sock
+SocketUser=www-data
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target

@@ -1,0 +1,22 @@
+# Celery worker for GreenFish (order notifications, cleanup jobs).
+[Unit]
+Description=GreenFish celery worker
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=deploy
+Group=www-data
+WorkingDirectory=/home/deploy/greenfish
+Environment=DJANGO_SETTINGS_MODULE=config.settings.production
+ExecStart=/home/deploy/greenfish/venv/bin/celery -A config worker \
+    --loglevel=INFO \
+    --concurrency=2 \
+    --max-tasks-per-child=500
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

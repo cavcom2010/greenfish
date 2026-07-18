@@ -26,6 +26,25 @@ except Exception:  # pragma: no cover - dependency is installed in runtime, this
     stripe = None
     stripe_error = None
 
+_STRIPE_CLIENT_CONFIGURED = False
+
+
+def _configure_stripe_client():
+    """Apply explicit network timeouts and retries so a hung Stripe API
+    cannot pin web workers indefinitely."""
+    global _STRIPE_CLIENT_CONFIGURED
+    if _STRIPE_CLIENT_CONFIGURED or stripe is None:
+        return
+    timeout_seconds = getattr(settings, "STRIPE_HTTP_TIMEOUT_SECONDS", 20)
+    try:
+        stripe.max_network_retries = 2
+        stripe.default_http_client = stripe.http_client.new_default_http_client(
+            timeout=timeout_seconds
+        )
+    except Exception:  # pragma: no cover - stripe internals changed; defaults still work.
+        logger.warning("Could not configure Stripe HTTP client timeout", exc_info=True)
+    _STRIPE_CLIENT_CONFIGURED = True
+
 
 def normalize_payment_provider(raw_provider):
     """Return a supported payment provider identifier."""
@@ -385,6 +404,26 @@ def expire_offline_pending_payment(payment, *, reason="Payment not received with
     return payment
 
 
+def expire_due_offline_payments(now=None):
+    """Expire all unpaid offline fallback payments whose hold window elapsed."""
+    now = now or timezone.now()
+    hold_minutes = payment_fallback_hold_minutes()
+    reason = f"Payment not received within {hold_minutes} minutes. Order automatically cancelled."
+    queryset = Payment.objects.select_related("order").filter(
+        provider=Payment.Provider.OFFLINE_PENDING,
+        status=Payment.Status.PENDING,
+        expires_at__isnull=False,
+        expires_at__lte=now,
+        order__payment_status__in=[Order.PaymentStatus.PENDING],
+    )
+    expired = 0
+    for payment in queryset:
+        payment = expire_offline_pending_payment(payment, reason=reason)
+        if payment.status == Payment.Status.EXPIRED:
+            expired += 1
+    return expired
+
+
 #: Legal payment state transitions. Anything not listed is ignored, which
 #: protects paid records from stale/out-of-order provider events.
 PAYMENT_STATE_TRANSITIONS = {
@@ -493,6 +532,7 @@ class StripePaymentService:
         if stripe is None:
             raise ImproperlyConfigured("The stripe package is required for Stripe payments.")
         stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", "").strip()
+        _configure_stripe_client()
 
     def create_payment(self, order, request):
         """Create a Stripe Checkout Session for an order."""

@@ -194,21 +194,52 @@ def large_order_request(request):
 
 @require_GET
 def health(request):
-    """Minimal health endpoint for deployment checks and monitors."""
+    """Health endpoint for deployment checks and monitors.
+
+    Always verifies the database and cache. Pass ?full=1 to also ping a
+    Celery worker (slower; for uptime dashboards, not load balancers).
+    """
     payload = {
         "status": "ok",
         "database": "ok",
+        "cache": "ok",
         "service": "greenfish",
         "timestamp": timezone.now().isoformat(),
     }
+    healthy = True
 
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
     except Exception:
-        payload["status"] = "degraded"
         payload["database"] = "error"
+        healthy = False
+
+    try:
+        from django.core.cache import cache
+
+        cache_key = "greenfish-healthcheck"
+        cache.set(cache_key, "ok", timeout=10)
+        if cache.get(cache_key) != "ok":
+            raise RuntimeError("cache roundtrip failed")
+    except Exception:
+        payload["cache"] = "error"
+        healthy = False
+
+    if request.GET.get("full") == "1":
+        payload["celery"] = "ok"
+        try:
+            from config.celery import app as celery_app
+
+            replies = celery_app.control.inspect(timeout=1.0).ping()
+            if not replies:
+                payload["celery"] = "no-workers"
+        except Exception:
+            payload["celery"] = "error"
+
+    if not healthy:
+        payload["status"] = "degraded"
         return JsonResponse(payload, status=503)
 
     return JsonResponse(payload)
