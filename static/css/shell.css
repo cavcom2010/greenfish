@@ -520,46 +520,6 @@ body.has-cart-bar {
     background: var(--orange-50);
 }
 
-/* ── Scroll to top ─────────────────────────────────────────────────── */
-.scroll-to-top {
-    position: fixed;
-    right: 22px;
-    bottom: 92px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--brand);
-    color: #fff;
-    display: grid;
-    place-items: center;
-    font-size: 1.15rem;
-    box-shadow: var(--shadow-brand);
-    z-index: 500;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(18px);
-    transition: opacity var(--transition), visibility var(--transition), transform var(--transition), background var(--transition);
-}
-
-.scroll-to-top.visible {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.scroll-to-top:hover {
-    background: var(--brand-hover);
-}
-
-@media (max-width: 767px) {
-    .scroll-to-top {
-        right: 16px;
-        bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 84px);
-        width: 44px;
-        height: 44px;
-    }
-}
-
 /* ── Messages strip (Django messages) ──────────────────────────────── */
 .messages-strip {
     width: min(100%, var(--content-width));

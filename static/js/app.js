@@ -1,7 +1,7 @@
 /* ==========================================================================
    App JavaScript — unified shell interactions (all viewports)
    Cart drawer, toasts, item modal/bottom sheet, service toggle,
-   lazy images, scroll-to-top, PWA registration, cookie consent.
+   lazy images, PWA registration, cookie consent.
    ========================================================================== */
 
 (function () {
@@ -264,19 +264,6 @@
         };
         window.addEventListener('scroll', toggleHeaderShadow, { passive: true });
         toggleHeaderShadow();
-    }
-
-    // ── Scroll to Top ───────────────────────────────────────────────────
-    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-    if (scrollToTopBtn) {
-        const toggleScrollButton = () => {
-            scrollToTopBtn.classList.toggle('visible', window.scrollY > 360);
-        };
-        window.addEventListener('scroll', toggleScrollButton, { passive: true });
-        scrollToTopBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        toggleScrollButton();
     }
 
     // ── Service Type Toggle ──────────────────────────────────────────────
