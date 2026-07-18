@@ -23,7 +23,7 @@ stripe==15.2.0
 # Utilities
 django-extensions==4.1
 requests==2.34.2
-resend>=4.0.0
+resend==2.32.2
 python-dateutil==2.9.0.post0
 # Web push notifications (order status updates to installed PWA)
 pywebpush==2.3.0
