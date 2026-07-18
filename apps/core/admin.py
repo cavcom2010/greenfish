@@ -21,6 +21,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ("Settings", {
             "fields": (
                 "currency",
+                "homepage_hero_enabled",
                 "delivery_enabled",
                 "delivery_minimum_order_amount",
                 "delivery_default_fee",

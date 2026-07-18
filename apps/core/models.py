@@ -98,6 +98,10 @@ class SiteSettings(models.Model):
     logo = models.ImageField(upload_to="site/", blank=True, validators=LOGO_IMAGE_VALIDATORS)
     favicon = models.ImageField(upload_to="site/", blank=True, validators=FAVICON_IMAGE_VALIDATORS)
     theme_color = models.CharField(max_length=7, default="#FF6B35", help_text="Hex color code for PWA theme")
+    homepage_hero_enabled = models.BooleanField(
+        default=True,
+        help_text="Show the marketing hero banner at the top of the homepage.",
+    )
     
     # Social links
     facebook_url = models.URLField(blank=True)
