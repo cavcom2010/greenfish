@@ -21,7 +21,7 @@ Tinashe Takeaway is a production-ready Django web application designed for takea
 - **Mobile-First Design** - Native app experience on smartphones
 - **PWA Capabilities** - Installable on home screens, works offline
 - **Operations Boards** - Separate kitchen and collection boards for live staff order handling
-- **Mollie Payments** - Secure European payment processing
+- **Stripe Payments** - Secure payment processing
 - **Promotions System** - Voucher codes and automatic discounts
 
 ## Architecture
@@ -35,7 +35,7 @@ greenfish/
 │   ├── orders/        # Order management, cart, checkout
 │   ├── operations/    # Staff boards, workflows, permissions
 │   ├── offers/        # Promotions and voucher codes
-│   ├── payments/      # Mollie payment integration
+│   ├── payments/      # Stripe payment integration
 │   └── pwa/           # Service worker, manifest
 ├── config/            # Django settings
 ├── templates/         # HTML templates

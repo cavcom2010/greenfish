@@ -52,14 +52,12 @@ class PaymentAdmin(admin.ModelAdmin):
     list_filter = ["provider", "status", "currency", "created_at", "expires_at"]
     search_fields = [
         "external_payment_id",
-        "mollie_payment_id",
         "order__order_number",
         "order__customer_email",
     ]
     readonly_fields = [
         "provider",
         "external_payment_id",
-        "mollie_payment_id",
         "created_at",
         "updated_at",
         "paid_at",
@@ -81,7 +79,7 @@ class PaymentAdmin(admin.ModelAdmin):
 class PaymentLogAdmin(admin.ModelAdmin):
     list_display = ["payment", "event_type", "created_at"]
     list_filter = ["event_type", "created_at"]
-    search_fields = ["payment__external_payment_id", "payment__mollie_payment_id"]
+    search_fields = ["payment__external_payment_id"]
     readonly_fields = ["payment", "event_type", "event_data", "created_at"]
 
 

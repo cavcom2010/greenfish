@@ -55,9 +55,6 @@ PAYMENT_PROVIDER=stripe
 STRIPE_SECRET_KEY=sk_test_your_stripe_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_local_webhook_secret
 
-# Mollie Payments (optional alternate provider)
-MOLLIE_API_KEY=
-MOLLIE_WEBHOOK_SECRET=
 
 # Shop Settings
 SHOP_NAME=Tinashe Takeaway

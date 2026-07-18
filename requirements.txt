@@ -18,7 +18,6 @@ django-htmx==1.27.0
 django-allauth==65.18.0
 
 # Mollie Payments
-mollie-api-python==4.0.0
 stripe==15.2.0
 
 # Utilities

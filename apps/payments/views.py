@@ -3,7 +3,6 @@ Views for the payments app.
 """
 import logging
 import uuid
-from secrets import compare_digest
 
 from django.conf import settings
 from django.contrib import messages
@@ -113,19 +112,6 @@ def _payment_error_response(request, message, *, status=400):
         return JsonResponse({"error": message}, status=status)
     messages.error(request, message)
     return redirect("orders:checkout")
-
-
-def _valid_mollie_webhook_token(request):
-    configured_secret = getattr(settings, "MOLLIE_WEBHOOK_SECRET", "").strip()
-    if not configured_secret:
-        return False
-
-    supplied_secret = (
-        request.GET.get("token")
-        or request.POST.get("token")
-        or request.headers.get("X-Webhook-Token", "")
-    ).strip()
-    return bool(supplied_secret) and compare_digest(supplied_secret, configured_secret)
 
 
 def _sync_order_payment(order, request=None):
@@ -378,39 +364,6 @@ def _stripe_webhook(request):
     return HttpResponse("OK", status=200)
 
 
-def _mollie_webhook(request):
-    if not _valid_mollie_webhook_token(request):
-        logger.warning("Rejected Mollie webhook due to invalid token")
-        return HttpResponse("Forbidden", status=403)
-
-    payment_id = request.POST.get("id")
-    if not payment_id:
-        logger.warning("Mollie webhook received without payment ID")
-        return HttpResponse("OK", status=200)
-
-    if payment_id.startswith("demo_"):
-        return HttpResponse("OK", status=200)
-
-    webhook_event, created = PaymentWebhookEvent.objects.get_or_create(
-        provider=Payment.Provider.MOLLIE,
-        event_id=payment_id,
-        defaults={"event_type": "payment.updated", "payload": {"id": payment_id}},
-    )
-    if not created and webhook_event.processed_at:
-        return HttpResponse("OK", status=200)
-
-    logger.info("Mollie webhook received for payment: %s", payment_id)
-    payment = payment_service_for_provider(Payment.Provider.MOLLIE).update_payment_status(payment_id)
-    if payment:
-        webhook_event.payment = payment
-        webhook_event.processed_at = timezone.now()
-        webhook_event.save(update_fields=["payment", "processed_at"])
-        logger.info("Payment %s updated to %s", payment_id, payment.status)
-    else:
-        logger.warning("Payment %s not found", payment_id)
-    return HttpResponse("OK", status=200)
-
-
 @csrf_exempt
 @require_POST
 @rate_limit("payments-webhook", limit=120, window_seconds=60, response_type="plain")
@@ -419,8 +372,6 @@ def webhook(request):
     provider = normalize_payment_provider(active_payment_provider())
     if provider == Payment.Provider.STRIPE:
         return _stripe_webhook(request)
-    if provider == Payment.Provider.MOLLIE:
-        return _mollie_webhook(request)
     return HttpResponse("Unavailable", status=503)
 
 

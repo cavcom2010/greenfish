@@ -124,7 +124,7 @@
 
 ### Payment Issues
 
-1. Check Mollie dashboard for failed payments
+1. Check Stripe dashboard for failed payments
 2. Verify webhook URL is correct
 3. Check logs in Admin
 

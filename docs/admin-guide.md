@@ -230,7 +230,7 @@ To process a refund:
 2. Find the payment
 3. Click "Refresh payment status" to verify
 4. Contact customer for refund method
-5. Process refund via Mollie Dashboard
+5. Process refund via Stripe Dashboard
 6. Update order status to "Refunded"
 
 ## Customer Management

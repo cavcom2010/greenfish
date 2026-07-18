@@ -174,8 +174,6 @@ Quick repo signals from this review:
   - unique address labels per user when appropriate
 - Review indexing on the highest-traffic lookup fields in orders, payments,
   loyalty, and SMS models.
-- Remove legacy Mollie compatibility fields from `Payment` once the migration
-  path is settled.
 - Consider a shared singleton base model for settings-style tables instead of
   repeating the same `get()` pattern.
 

@@ -28,7 +28,7 @@ How to use Tinashe Takeaway for customers and staff.
    - Tap "Pay" to proceed to secure payment
 
 5. **Payment**
-   - Complete payment via Mollie (cards, Apple Pay, etc.)
+   - Complete payment via Stripe (cards, Apple Pay, etc.)
    - Wait for confirmation page
 
 6. **Pickup**

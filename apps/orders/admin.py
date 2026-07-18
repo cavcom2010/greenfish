@@ -168,7 +168,7 @@ class OrderAdmin(admin.ModelAdmin):
         payment = getattr(obj, "payment", None)
         if payment:
             return payment.payment_reference
-        return obj.mollie_payment_id or "-"
+        return "-"
 
 
 @admin.register(OrderItem)

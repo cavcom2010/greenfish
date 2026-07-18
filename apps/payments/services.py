@@ -5,23 +5,14 @@ import logging
 import re
 import uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Q
-from django.urls import reverse
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
-from mollie.api.client import Client
-from mollie.api.error import Error as MollieError
 
 from apps.orders.models import Order
 from apps.orders.access import order_customer_url
-from config.settings.payment_credentials import (
-    mollie_credentials_configured,
-    stripe_credentials_configured,
-)
+from config.settings.payment_credentials import stripe_credentials_configured
 
 from .models import ManualPaymentReceipt, Payment, PaymentLog, RefundRequest
 
@@ -59,12 +50,6 @@ def payment_provider_configured(provider=None):
             getattr(settings, "STRIPE_WEBHOOK_SECRET", ""),
         )
 
-    if provider == Payment.Provider.MOLLIE:
-        return mollie_credentials_configured(
-            getattr(settings, "MOLLIE_API_KEY", ""),
-            getattr(settings, "MOLLIE_WEBHOOK_SECRET", ""),
-        )
-
     return False
 
 
@@ -87,8 +72,6 @@ def payment_service_for_provider(provider=None):
 
     if provider == Payment.Provider.STRIPE:
         return StripePaymentService()
-    if provider == Payment.Provider.MOLLIE:
-        return MolliePaymentService()
     return None
 
 
@@ -105,7 +88,7 @@ def refresh_payment_status(payment, *, external_id=None, payload=None, event_typ
     if not service:
         return payment
 
-    payment_reference = external_id or payment.external_payment_id or payment.mollie_payment_id
+    payment_reference = external_id or payment.external_payment_id
     if not payment_reference:
         return payment
     return service.update_payment_status(payment_reference, payload=payload, event_type=event_type)
@@ -195,10 +178,11 @@ def _serialize_stripe_object(obj):
 
 
 def _get_payment(provider, external_payment_id):
-    query = Q(provider=provider, external_payment_id=external_payment_id)
-    if provider == Payment.Provider.MOLLIE:
-        query |= Q(mollie_payment_id=external_payment_id)
-    return Payment.objects.select_related("order").filter(query).first()
+    return (
+        Payment.objects.select_related("order")
+        .filter(provider=provider, external_payment_id=external_payment_id)
+        .first()
+    )
 
 
 def _log_payment_event(payment, event_type, event_data):
@@ -388,8 +372,6 @@ def _apply_local_payment_state(
 
     if payment_method:
         payment.external_payment_method = payment_method
-        if payment.provider == Payment.Provider.MOLLIE:
-            payment.mollie_payment_method = payment_method
 
     if metadata is not None:
         payment.metadata = metadata
@@ -582,145 +564,3 @@ class StripePaymentService:
         )
         return True
 
-
-class MolliePaymentService:
-    """Service for handling Mollie payments."""
-
-    def __init__(self):
-        self.client = Client()
-        api_key = getattr(settings, "MOLLIE_API_KEY", "")
-        if api_key:
-            self.client.set_api_key(api_key)
-
-    def create_payment(self, order, request):
-        """Create a new Mollie payment for an order."""
-        try:
-            base_url = f"{request.scheme}://{request.get_host()}"
-            redirect_url = f"{base_url}{order_customer_url('payments:return', order)}"
-            webhook_url = f"{base_url}{reverse('payments:webhook')}"
-            webhook_secret = getattr(settings, "MOLLIE_WEBHOOK_SECRET", "").strip()
-            if webhook_secret:
-                webhook_url = f"{webhook_url}?{urlencode({'token': webhook_secret})}"
-
-            payment_data = {
-                "amount": {
-                    "currency": getattr(settings, "CURRENCY", "GBP"),
-                    "value": f"{order.total_amount:.2f}",
-                },
-                "description": f"Order {order.order_number} - {order.customer_name}",
-                "redirectUrl": redirect_url,
-                "webhookUrl": webhook_url,
-                "metadata": {
-                    "order_number": order.order_number,
-                    "order_id": order.id,
-                    "customer_name": order.customer_name,
-                    "customer_email": order.customer_email,
-                },
-            }
-
-            mollie_payment = self.client.payments.create(payment_data)
-            payment = Payment.objects.create(
-                order=order,
-                provider=Payment.Provider.MOLLIE,
-                external_payment_id=mollie_payment["id"],
-                mollie_payment_id=mollie_payment["id"],
-                amount=order.total_amount,
-                currency=getattr(settings, "CURRENCY", "GBP"),
-                status=Payment.Status.PENDING,
-                checkout_url=mollie_payment["checkoutUrl"],
-                metadata=mollie_payment,
-            )
-
-            order.mollie_payment_id = mollie_payment["id"]
-            order.save(update_fields=["mollie_payment_id", "updated_at"])
-
-            _log_payment_event(
-                payment,
-                "payment_created",
-                {
-                    "provider": Payment.Provider.MOLLIE,
-                    "mollie_payment_id": mollie_payment["id"],
-                },
-            )
-            return payment
-
-        except MollieError as exc:
-            logger.error("Mollie error creating payment: %s", exc)
-            raise
-        except Exception as exc:
-            logger.error("Error creating Mollie payment: %s", exc)
-            raise
-
-    def get_payment(self, mollie_payment_id):
-        """Get payment details from Mollie."""
-        if not getattr(settings, "MOLLIE_API_KEY", ""):
-            return None
-        try:
-            return self.client.payments.get(mollie_payment_id)
-        except MollieError as exc:
-            logger.error("Mollie error getting payment: %s", exc)
-            return None
-
-    def update_payment_status(self, mollie_payment_id, payload=None, event_type=""):
-        """Update local payment status from Mollie."""
-        payment = _get_payment(Payment.Provider.MOLLIE, mollie_payment_id)
-        if not payment:
-            logger.warning("Payment not found: %s", mollie_payment_id)
-            return None
-
-        mollie_payment = payload or self.get_payment(mollie_payment_id)
-        if not mollie_payment:
-            return None
-
-        status_map = {
-            "pending": Payment.Status.PENDING,
-            "authorized": Payment.Status.AUTHORIZED,
-            "paid": Payment.Status.PAID,
-            "failed": Payment.Status.FAILED,
-            "expired": Payment.Status.EXPIRED,
-            "canceled": Payment.Status.CANCELLED,
-            "refunded": Payment.Status.REFUNDED,
-        }
-        mollie_status = mollie_payment.get("status", "pending")
-        return _apply_local_payment_state(
-            payment,
-            new_status=status_map.get(mollie_status, Payment.Status.PENDING),
-            provider_status=mollie_status,
-            payment_method=mollie_payment.get("method", ""),
-            metadata=mollie_payment,
-            paid_at=parse_datetime(mollie_payment.get("paidAt", "")) or None,
-        )
-
-    def refund_payment(self, payment, amount=None):
-        """Refund a payment."""
-        try:
-            refund_data = {}
-            if amount:
-                refund_data["amount"] = {
-                    "currency": payment.currency,
-                    "value": f"{amount:.2f}",
-                }
-
-            self.client.payment_refunds.with_parent_id(
-                payment.mollie_payment_id or payment.external_payment_id
-            ).create(refund_data)
-
-            _apply_local_payment_state(
-                payment,
-                new_status=Payment.Status.REFUNDED,
-                provider_status="refunded",
-                metadata=payment.metadata,
-            )
-            _log_payment_event(
-                payment,
-                "refunded",
-                {
-                    "provider": Payment.Provider.MOLLIE,
-                    "amount": str(amount) if amount else "full",
-                },
-            )
-            return True
-
-        except MollieError as exc:
-            logger.error("Mollie error refunding payment: %s", exc)
-            return False

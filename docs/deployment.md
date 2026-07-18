@@ -113,9 +113,6 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_signing_secret
 
 # Customer checkout prefers online payment. If fallback is enabled, schedule expire_unpaid_orders and train staff to mark paid before preparation.
 
-# Mollie Payments (optional alternate provider)
-MOLLIE_API_KEY=
-MOLLIE_WEBHOOK_SECRET=
 
 # Email
 # Leave credentials blank to print emails to the shell/console until SMTP/SendGrid/Sender.net is ready.

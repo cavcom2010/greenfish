@@ -26,12 +26,10 @@ Complete reference for all configuration options in Tinashe Takeaway.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PAYMENT_PROVIDER` | `stripe` | Active payment provider. Supported values: `stripe`, `mollie`. |
+| `PAYMENT_PROVIDER` | `stripe` | Active payment provider. Set to `stripe`. |
 | `STRIPE_SECRET_KEY` | None | **Required when `PAYMENT_PROVIDER=stripe`.** Your Stripe secret key. |
 | `STRIPE_PUBLISHABLE_KEY` | Empty | Optional publishable key for future frontend Stripe work. |
 | `STRIPE_WEBHOOK_SECRET` | None | **Required when `PAYMENT_PROVIDER=stripe`.** Stripe webhook signing secret. |
-| `MOLLIE_API_KEY` | Empty | Optional alternate provider key when `PAYMENT_PROVIDER=mollie`. |
-| `MOLLIE_WEBHOOK_SECRET` | Empty | Optional alternate provider webhook secret when `PAYMENT_PROVIDER=mollie`. |
 | `PAYMENT_FALLBACK_ENABLED` | `True` | Allow held unpaid orders when online payment is unavailable. |
 | `PAYMENT_FALLBACK_HOLD_MINUTES` | `15` | Minutes before unpaid fallback orders are cancelled by `expire_unpaid_orders`. |
 
@@ -41,11 +39,7 @@ Complete reference for all configuration options in Tinashe Takeaway.
 3. Add `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
 4. Point your Stripe webhook endpoint to `/payments/webhook/`.
 
-**Optional Mollie fallback:**
-1. Keep your Mollie keys in `.env`, but leave `PAYMENT_PROVIDER=stripe` while Stripe is active.
-2. Switch `PAYMENT_PROVIDER=mollie` only when you want to route checkout through Mollie again.
-
-Customer checkout prefers online payment. If Stripe/Mollie is unavailable and `PAYMENT_FALLBACK_ENABLED=True`, customers can explicitly place an unpaid held order and must call or visit the shop to pay within `PAYMENT_FALLBACK_HOLD_MINUTES`; the kitchen must not prepare it until staff mark it paid.
+Customer checkout prefers online payment. If Stripe is unavailable and `PAYMENT_FALLBACK_ENABLED=True`, customers can explicitly place an unpaid held order and must call or visit the shop to pay within `PAYMENT_FALLBACK_HOLD_MINUTES`; the kitchen must not prepare it until staff mark it paid.
 
 ### Email Settings
 

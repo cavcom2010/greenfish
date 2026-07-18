@@ -40,14 +40,14 @@ wiring.*
 |-----|---------|----------|--------------|
 | `menu` | Product catalog (categories, items, modifiers) | ✅ Yes | None |
 | `orders` | Order management, checkout, kitchen display | ⚠️ Partial | accounts, menu |
-| `payments` | Payment processing (Mollie) | ✅ Yes | orders |
+| `payments` | Payment processing (Stripe) | ✅ Yes | orders |
 
 **menu**: Generic product catalog. Can be used for any restaurant/shop.
 
 **orders**: Order lifecycle management and the active session-cart
 implementation. Depends on specific business flow.
 
-**payments**: Payment gateway abstraction. Currently Mollie. Can add Stripe, etc.
+**payments**: Payment gateway abstraction. Currently Stripe.
 
 ---
 

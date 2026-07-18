@@ -26,11 +26,10 @@ Use this checklist before deploying to production.
 
 ## Payments
 
-- [ ] Using Mollie LIVE API key (not test)
-- [ ] Mollie account fully verified
-- [ ] Website profile complete in Mollie dashboard
-- [ ] Webhook URL configured in Mollie
-- [ ] Webhook secret set and matches
+- [ ] Using Stripe LIVE API key (not test key)
+- [ ] Stripe account fully verified
+- [ ] Webhook endpoint configured in Stripe dashboard (`/payments/webhook/`)
+- [ ] Webhook signing secret (`STRIPE_WEBHOOK_SECRET`) set and matches
 - [ ] Tested payment flow end-to-end
 - [ ] Tested webhook reception
 - [ ] Confirmed checkout prefers online payment and fallback pay-shop copy is clear when provider is unavailable

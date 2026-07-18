@@ -11,7 +11,6 @@ class Payment(models.Model):
 
     class Provider(models.TextChoices):
         STRIPE = "stripe", "Stripe"
-        MOLLIE = "mollie", "Mollie"
         DEMO = "demo", "Demo"
         OFFLINE_PENDING = "offline_pending", "Offline Pending"
     
@@ -39,10 +38,6 @@ class Payment(models.Model):
 
     external_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
     external_payment_method = models.CharField(max_length=50, blank=True)
-    
-    # Legacy Mollie fields kept for backwards compatibility and future re-enablement.
-    mollie_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
-    mollie_payment_method = models.CharField(max_length=50, blank=True)
     
     # Amount
     amount = models.DecimalField(max_digits=8, decimal_places=2)
@@ -77,11 +72,11 @@ class Payment(models.Model):
 
     @property
     def payment_reference(self):
-        return self.external_payment_id or self.mollie_payment_id or f"payment-{self.pk}"
+        return self.external_payment_id or f"payment-{self.pk}"
 
     @property
     def payment_method_label(self):
-        return self.external_payment_method or self.mollie_payment_method
+        return self.external_payment_method
 
     @property
     def is_demo(self):
@@ -90,20 +85,6 @@ class Payment(models.Model):
     @property
     def is_offline_pending(self):
         return self.provider == self.Provider.OFFLINE_PENDING
-
-    def save(self, *args, **kwargs):
-        if not self.external_payment_id and self.mollie_payment_id:
-            self.external_payment_id = self.mollie_payment_id
-        if not self.external_payment_method and self.mollie_payment_method:
-            self.external_payment_method = self.mollie_payment_method
-
-        if self.provider == self.Provider.MOLLIE:
-            if self.external_payment_id and not self.mollie_payment_id:
-                self.mollie_payment_id = self.external_payment_id
-            if self.external_payment_method and not self.mollie_payment_method:
-                self.mollie_payment_method = self.external_payment_method
-
-        super().save(*args, **kwargs)
 
 
 class ManualPaymentReceipt(models.Model):

@@ -245,10 +245,6 @@ STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 PAYMENT_FALLBACK_ENABLED = env("PAYMENT_FALLBACK_ENABLED", default=True, cast=bool)
 PAYMENT_FALLBACK_HOLD_MINUTES = env("PAYMENT_FALLBACK_HOLD_MINUTES", default=15, cast=int)
 
-# Mollie Settings
-MOLLIE_API_KEY = env("MOLLIE_API_KEY", default="")
-MOLLIE_WEBHOOK_SECRET = env("MOLLIE_WEBHOOK_SECRET", default="")
-
 # Email Settings (Google Workspace SMTP — transactional emails)
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="").strip() or "django.core.mail.backends.console.EmailBackend"
 EMAIL_HOST = env("EMAIL_HOST", default="")

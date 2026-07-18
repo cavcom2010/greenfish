@@ -77,9 +77,6 @@ DATABASE_URL=postgres://dbuser:secure_password@localhost:5432/restaurant_db
 PAYMENT_PROVIDER=stripe
 STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxx
 STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
-# Optional alternate provider:
-# MOLLIE_API_KEY=
-# MOLLIE_WEBHOOK_SECRET=
 # Customer checkout prefers online payment. If fallback is enabled, schedule expire_unpaid_orders and train staff to mark paid before preparation.
 # ... other settings
 ```

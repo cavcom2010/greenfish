@@ -186,7 +186,7 @@ POST /payments/create/
 | customer_email | string | No | Email address |
 | special_instructions | string | No | Order notes |
 
-**Response:** Redirects to Mollie payment page
+**Response:** Redirects to Stripe Checkout
 
 #### Check Payment Status
 
@@ -261,17 +261,15 @@ GET /orders/dashboard/orders/{order_id}/detail/
 
 ## Webhooks
 
-### Mollie Webhook
+### Stripe Webhook
 
 ```http
 POST /payments/webhook/
 ```
 
-**Description:** Receives payment status updates from Mollie
+**Description:** Receives payment status updates from Stripe
 
-**Note:** This endpoint is called by Mollie servers, not by your application.
-
-**Payload:** Form data with `id` parameter (payment ID)
+**Note:** This endpoint is called by Stripe servers, not by your application. The request is verified using the `Stripe-Signature` header.
 
 **Response:** Always return 200 OK
 
