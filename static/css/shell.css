@@ -456,6 +456,17 @@
     pointer-events: auto;
 }
 
+/* Reserve room for the pill below the content (66px pill + offset + gap) */
+body.has-cart-bar {
+    --cart-bar-clearance: 100px;
+}
+
+@media (max-width: 767px) {
+    body.has-cart-bar {
+        --cart-bar-clearance: 78px;
+    }
+}
+
 @media (max-width: 767px) {
     .sticky-cart-bar {
         bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 12px);

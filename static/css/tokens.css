@@ -116,6 +116,11 @@
     --max-width: 1280px;
     --content-width: 1180px;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    /* Clearance the fixed bottom bars need below the page content.
+       --nav-clearance switches on with the phone tab bar; --cart-bar-clearance
+       switches on via body.has-cart-bar while the basket pill is shown. */
+    --nav-clearance: 0px;
+    --cart-bar-clearance: 0px;
 
     /* ── Z-index scale ─────────────────────────────────────────────── */
     --z-header: 1000;
@@ -134,5 +139,6 @@
 @media (max-width: 767px) {
     :root {
         --header-height: 60px;
+        --nav-clearance: var(--bottom-nav-height);
     }
 }

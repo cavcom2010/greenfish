@@ -589,6 +589,7 @@
 
         stickyBar.classList.toggle('visible', count > 0);
         stickyBar.setAttribute('aria-hidden', count > 0 ? 'false' : 'true');
+        document.body.classList.toggle('has-cart-bar', count > 0);
 
         const countEl = document.getElementById('stickyCartCount');
         if (countEl) countEl.textContent = `${count} ${pluralizeItems(count)}`;

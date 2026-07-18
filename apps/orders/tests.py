@@ -76,6 +76,22 @@ class OrderFlowTests(TestCase):
         self.assertEqual(remove_response.status_code, 302)
         self.assertEqual(self.client.session.get("cart"), {})
 
+    def test_body_reserves_cart_bar_space_only_when_basket_has_items(self):
+        response = self.client.get(reverse("core:home"))
+        self.assertNotContains(response, "has-cart-bar")
+
+        self.client.post(
+            reverse("orders:add_to_cart"),
+            {"menu_item_id": self.menu_item.pk, "quantity": 1, "modifiers": "[]"},
+            HTTP_ACCEPT="application/json",
+        )
+        response = self.client.get(reverse("core:home"))
+        self.assertContains(response, "has-cart-bar")
+
+        # Checkout renders its own summary — no floating bar, no reserved space
+        response = self.client.get(reverse("orders:checkout"))
+        self.assertNotContains(response, "has-cart-bar")
+
     def test_ajax_cart_updates_return_count_and_total(self):
         self.client.post(
             reverse("orders:add_to_cart"),

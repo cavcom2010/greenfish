@@ -40,7 +40,7 @@
 
     {% block extra_css %}{% endblock %}
 </head>
-<body class="page-fade-in {% block body_class %}{% endblock %}">
+<body class="page-fade-in {% block body_class %}{% endblock %}{% if cart_count > 0 and 'checkout' not in request.path and 'cart' not in request.path %} has-cart-bar{% endif %}">
 
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
