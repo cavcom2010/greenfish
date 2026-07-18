@@ -715,90 +715,6 @@
     }
 }
 
-/* ── Signature specials strip ──────────────────────────────────────── */
-.signature-strip {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(260px, 320px);
-    gap: var(--space-5);
-    overflow-x: auto;
-    padding-bottom: var(--space-3);
-    scrollbar-width: none;
-    scroll-snap-type: x mandatory;
-}
-
-.signature-strip::-webkit-scrollbar {
-    display: none;
-}
-
-.signature-card {
-    scroll-snap-align: start;
-    background: linear-gradient(160deg, var(--surface) 55%, var(--brand-light));
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: transform var(--transition), box-shadow var(--transition);
-}
-
-.signature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-brand);
-}
-
-.signature-card-media {
-    height: 170px;
-    background: var(--cream-mid);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.signature-card-media img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.signature-card-media .placeholder-icon {
-    font-size: 3.4rem;
-}
-
-.signature-card-body {
-    padding: var(--space-5);
-}
-
-.signature-card-title {
-    font-weight: 900;
-    font-size: var(--text-md);
-    line-height: 1.3;
-}
-
-.signature-card-desc {
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-    margin: 0.4rem 0 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.signature-card-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 0.85rem;
-}
-
-.signature-card-price {
-    font-size: var(--text-lg);
-    font-weight: 900;
-    color: var(--brand);
-}
-
 /* ── Popular strip: signature-style swipe carousel on phones ───────── */
 @media (max-width: 640px) {
     .popular-strip {
@@ -817,7 +733,7 @@
     }
 
     /* Undo the ≤640px compact horizontal card from components.css;
-       mirror .signature-card proportions */
+       tall swipe-strip proportions instead */
     .popular-strip .menu-card {
         display: flex;
         flex-direction: column;

@@ -68,43 +68,7 @@
         <!-- Menu grid: all items rendered, filtered client-side -->
         <div class="menu-grid-desktop menu-grid-loading" style="margin-top:1.5rem;" id="menuGrid">
             {% for item in all_items %}
-            <div class="menu-card" onclick="openItemModal({{ item.id }})"
-                 data-category-id="{{ item.category_id }}"
-                 data-dietary-tags="{{ item.dietary_tags|join:','|lower }}"
-                 data-search-name="{{ item.name|lower }}"
-                 data-search-desc="{{ item.description|default:''|lower }}">
-                <div class="menu-card-image">
-                    {% if item.image %}
-                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-                    {% else %}
-                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
-                    {% endif %}
-                    {% if item.dietary_tags %}
-                    <div class="menu-card-badges">
-                        {% for tag in item.dietary_tags|slice:":2" %}
-                        <span class="dietary-badge">{{ tag }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    {% if item.is_popular %}
-                    <div class="menu-card-badges" style="left:auto;right:0.75rem;">
-                        <span class="popular-badge">Popular</span>
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="menu-card-body">
-                    <div class="menu-card-title"><span class="item-number">{{ item.id }}</span>{{ item.name }}</div>
-                    {% if item.description %}
-                    <div class="menu-card-desc">{{ item.description }}</div>
-                    {% endif %}
-                    <div class="menu-card-footer">
-                        <span class="menu-card-price">£{{ item.price }}</span>
-                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
-                            <i class="ph-bold ph-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {% include "partials/item_card.html" with item=item filterable=True show_number=True show_dietary=True badge=item.is_popular|yesno:"Popular," %}
             {% empty %}
             <div class="empty-state" style="grid-column:1/-1;">
                 <i class="ph ph-fork-knife"></i>

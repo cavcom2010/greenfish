@@ -1,0 +1,50 @@
+{% load media_tags %}
+{% comment %}
+Shared dish card. The menu-card-* classes and data-quick-add hook are
+load-bearing for app.js and the responsive grid styles.
+
+Context:
+  item          MenuItem (required)
+  badge         optional badge text shown top-right (e.g. "Popular", "Saved")
+  badge_icon    optional phosphor icon class rendered inside the badge
+  show_number   show the dish number in the title
+  show_dietary  render up to two dietary tags top-left
+  filterable    add the data-* attributes menu list filtering/search reads
+{% endcomment %}
+<div class="menu-card" onclick="openItemModal({{ item.id }})"{% if filterable %}
+     data-category-id="{{ item.category_id }}"
+     data-dietary-tags="{{ item.dietary_tags|join:','|lower }}"
+     data-search-name="{{ item.name|lower }}"
+     data-search-desc="{{ item.description|default:''|lower }}"{% endif %}>
+    <div class="menu-card-image">
+        {% if item.image %}
+        <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
+        {% else %}
+        <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
+        {% endif %}
+        {% if show_dietary and item.dietary_tags %}
+        <div class="menu-card-badges">
+            {% for tag in item.dietary_tags|slice:":2" %}
+            <span class="dietary-badge">{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if badge %}
+        <div class="menu-card-badges" style="left:auto;right:0.75rem;">
+            <span class="popular-badge">{% if badge_icon %}<i class="{{ badge_icon }}"></i> {% endif %}{{ badge }}</span>
+        </div>
+        {% endif %}
+    </div>
+    <div class="menu-card-body">
+        <div class="menu-card-title">{% if show_number %}<span class="item-number">{{ item.id }}</span>{% endif %}{{ item.name }}</div>
+        {% if item.description %}
+        <div class="menu-card-desc">{{ item.description }}</div>
+        {% endif %}
+        <div class="menu-card-footer">
+            <span class="menu-card-price">£{{ item.price }}</span>
+            <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
+                <i class="ph-bold ph-plus"></i>
+            </button>
+        </div>
+    </div>
+</div>

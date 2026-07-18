@@ -222,30 +222,7 @@
 
         <div class="menu-grid-desktop">
             {% for item in favorite_items %}
-            <div class="menu-card" onclick="openItemModal({{ item.id }})">
-                <div class="menu-card-image">
-                    {% if item.image %}
-                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-                    {% else %}
-                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
-                    {% endif %}
-                    <div class="menu-card-badges">
-                        <span class="popular-badge"><i class="ph-fill ph-heart"></i> Saved</span>
-                    </div>
-                </div>
-                <div class="menu-card-body">
-                    <div class="menu-card-title">{{ item.name }}</div>
-                    {% if item.description %}
-                    <div class="menu-card-desc">{{ item.description }}</div>
-                    {% endif %}
-                    <div class="menu-card-footer">
-                        <span class="menu-card-price">£{{ item.price }}</span>
-                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
-                            <i class="ph-bold ph-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {% include "partials/item_card.html" with item=item badge="Saved" badge_icon="ph-fill ph-heart" %}
             {% endfor %}
         </div>
     </div>
@@ -283,30 +260,7 @@
 
         <div class="menu-grid-desktop popular-strip">
             {% for item in popular_items %}
-            <div class="menu-card" onclick="openItemModal({{ item.id }})">
-                <div class="menu-card-image">
-                    {% if item.image %}
-                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-                    {% else %}
-                    <div class="placeholder-icon">{{ item.category.icon|default:"🍽️" }}</div>
-                    {% endif %}
-                    <div class="menu-card-badges">
-                        <span class="popular-badge">Popular</span>
-                    </div>
-                </div>
-                <div class="menu-card-body">
-                    <div class="menu-card-title">{{ item.name }}</div>
-                    {% if item.description %}
-                    <div class="menu-card-desc">{{ item.description }}</div>
-                    {% endif %}
-                    <div class="menu-card-footer">
-                        <span class="menu-card-price">£{{ item.price }}</span>
-                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
-                            <i class="ph-bold ph-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {% include "partials/item_card.html" with item=item badge=item.home_badge|default:"Popular" show_number=item.is_signature %}
             {% endfor %}
         </div>
     </div>
@@ -350,48 +304,6 @@
                     </div>
                 </div>
             </a>
-            {% endfor %}
-        </div>
-    </div>
-</section>
-{% endif %}
-
-{% if signature_items %}
-<section class="section signature-section">
-    <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>House <span>Signatures</span></h2>
-                <p>House signatures you won't find anywhere else.</p>
-            </div>
-            <a href="{% url 'menu:menu' %}?category={{ signature_items.0.category_id }}" class="section-link">
-                See Them All <i class="ph-bold ph-arrow-right"></i>
-            </a>
-        </div>
-
-        <div class="signature-strip">
-            {% for item in signature_items %}
-            <div class="signature-card" onclick="openItemModal({{ item.id }})">
-                <div class="signature-card-media">
-                    {% if item.image %}
-                    <img src="{{ item.image|image_variant:'card' }}" alt="{{ item.name }}" loading="lazy" decoding="async" width="640" height="640">
-                    {% else %}
-                    <span class="placeholder-icon" aria-hidden="true">{{ item.category.icon|default:"🍣" }}</span>
-                    {% endif %}
-                </div>
-                <div class="signature-card-body">
-                    <div class="signature-card-title"><span class="item-number">{{ item.id }}</span>{{ item.name }}</div>
-                    {% if item.description %}
-                    <p class="signature-card-desc">{{ item.description }}</p>
-                    {% endif %}
-                    <div class="signature-card-footer">
-                        <span class="signature-card-price">£{{ item.price }}</span>
-                        <button class="menu-card-add" data-quick-add="{{ item.id }}" onclick="event.stopPropagation(); quickAddToCart({{ item.id }})" aria-label="Add {{ item.name }} to basket">
-                            <i class="ph-bold ph-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
             {% endfor %}
         </div>
     </div>

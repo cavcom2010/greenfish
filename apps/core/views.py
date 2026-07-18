@@ -54,20 +54,28 @@ def home(request):
         .order_by("deal_price")[:2]
     )
 
-    # Chef's showcase: items of the first active "special" category
-    # (e.g. Evergreen Special Roll); hidden when no such category exists.
-    signature_items = []
+    # House signatures (items of the first active "special" category) join
+    # the Popular strip with their own badge instead of a separate section.
+    popular_items = list(popular_items)
+    for item in popular_items:
+        item.home_badge = "Popular"
     signature_category = (
         MenuCategory.objects.filter(is_active=True, name__icontains="special")
         .order_by("sort_order")
         .first()
     )
     if signature_category:
-        signature_items = list(
+        popular_ids = {item.id for item in popular_items}
+        signature_items = (
             signature_category.items.filter(is_available=True)
             .select_related("category")
             .order_by("sort_order")[:4]
         )
+        for item in signature_items:
+            if item.id not in popular_ids:
+                item.home_badge = "Signature"
+                item.is_signature = True
+                popular_items.append(item)
 
     status = opening_status(SiteSettings.get().opening_hours)
 
@@ -92,7 +100,6 @@ def home(request):
         "hero_offers": hero_offers,
         "service_type": service_type,
         "meal_deals": meal_deals,
-        "signature_items": signature_items,
         "opening_status": status,
         "hero_rotation_images": hero_rotation_images,
     }
