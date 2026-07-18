@@ -10,6 +10,7 @@ logs/
 backups/
 
 *.pyc
+*.egg-info/
 
 venv/
 
