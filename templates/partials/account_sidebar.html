@@ -1,6 +1,6 @@
 {# Shared account sidebar. Usage:                                         #}
 {#   {% include "partials/account_sidebar.html" with active="rewards" %}  #}
-{# active: profile | orders | rewards | transactions | refer              #}
+{# active: profile | orders | rewards | transactions | refer | privacy    #}
 <div class="account-sidebar">
     <div class="account-avatar-desktop">
         <i class="ph-fill ph-user"></i>
@@ -23,6 +23,9 @@
         </a>
         <a href="{% url 'loyalty:refer' %}" {% if active == "refer" %}class="active"{% endif %}>
             <i class="ph ph-share-network"></i> Refer a Friend
+        </a>
+        <a href="{% url 'accounts:privacy_center' %}" {% if active == "privacy" %}class="active"{% endif %}>
+            <i class="ph ph-shield-check"></i> Privacy &amp; Data
         </a>
         <a href="{% url 'menu:menu' %}">
             <i class="ph ph-fork-knife"></i> Browse Menu

@@ -7,6 +7,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+# Local dev may use the fake demo checkout when Stripe keys are absent.
+DEMO_CHECKOUT_ENABLED = env("DEMO_CHECKOUT_ENABLED", default=True, cast=bool)
+
 # Email backend is inherited from base settings so .env can switch local
 # development between console output and a local SMTP inbox such as Mailpit.
 

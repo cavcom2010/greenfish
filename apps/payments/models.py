@@ -206,6 +206,9 @@ class RefundRequest(models.Model):
     class Meta:
         ordering = ["-requested_at"]
         indexes = [models.Index(fields=["status", "requested_at"])]
+        permissions = [
+            ("can_process_refunds", "Can process refund requests against the payment provider"),
+        ]
 
     def __str__(self):
         return f"Refund {self.payment.payment_reference} ({self.status})"

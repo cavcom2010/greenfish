@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.core.media import get_image_variant_url
-from apps.core.rate_limits import client_identity, consume_rate_limit, session_identity
+from apps.core.rate_limits import client_identity, consume_rate_limit, rate_limit, session_identity
 from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuItem
 
@@ -720,6 +720,7 @@ def confirmation_instore(request, order_number):
     return render(request, "orders/confirmation_instore.html", {"order": order, "tracking_url": order_customer_url("orders:tracking", order)})
 
 
+@rate_limit("order-tracking", limit=120, window_seconds=60, methods=("GET",), response_type="plain")
 def order_tracking(request, order_number):
     """Public order tracking page - no login required."""
     order = get_accessible_order_or_404(
@@ -747,6 +748,7 @@ def order_tracking(request, order_number):
     )
 
 
+@rate_limit("order-issues", limit=5, window_seconds=3600)
 def create_order_issue(request, order_number):
     """Let a customer raise a structured issue for their own order."""
     order = get_object_or_404(

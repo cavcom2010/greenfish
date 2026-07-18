@@ -16,10 +16,10 @@ class CustomSignupForm(SignupForm):
     
     def save(self, request):
         user = super().save(request)
-        user.first_name = self.cleaned_data["first_name"]
-        user.last_name = self.cleaned_data["last_name"]
-        user.phone_number = self.cleaned_data["phone_number"]
-        user.save()
+        user.first_name = self.cleaned_data.get("first_name", "").strip()
+        user.last_name = self.cleaned_data.get("last_name", "").strip()
+        user.phone_number = self.cleaned_data.get("phone_number", "").strip()
+        user.save(update_fields=["first_name", "last_name", "phone_number"])
         return user
 
 

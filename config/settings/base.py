@@ -36,6 +36,14 @@ CSRF_TRUSTED_ORIGINS = env(
     cast=lambda v: [s.strip() for s in v.split(",") if s.strip()] if v else [],
 )
 
+# Sessions & cookies. Session cart persistence wants a reasonably long
+# session, but two weeks (Django default) is excessive for an app taking
+# payments — one week balances convenience and hijack window.
+SESSION_COOKIE_AGE = env("SESSION_COOKIE_AGE", default=60 * 60 * 24 * 7, cast=int)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -195,10 +203,20 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_FORMS = {"signup": "apps.accounts.forms.CustomSignupForm"}
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_VERIFICATION = "optional"
+ACCOUNT_EMAIL_VERIFICATION = env("ACCOUNT_EMAIL_VERIFICATION", default="optional")
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_LOGOUT_ON_GET = False
+# Brute-force protection (backed by the shared cache; Redis in production).
+# Explicit rather than relying on allauth defaults so limits are visible here.
+ACCOUNT_RATE_LIMITS = {
+    "login_failed": "5/5m/key,10/5m/ip",
+    "signup": "10/h/ip",
+    "reset_password": "5/15m/key,10/h/ip",
+    "reset_password_from_key": "10/15m/ip",
+    "confirm_email": "3/10m/key",
+}
 ALLAUTH_TRUSTED_PROXY_COUNT = env("ALLAUTH_TRUSTED_PROXY_COUNT", default=0, cast=int)
 
 # REST Framework
@@ -244,6 +262,10 @@ STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 PAYMENT_FALLBACK_ENABLED = env("PAYMENT_FALLBACK_ENABLED", default=True, cast=bool)
 PAYMENT_FALLBACK_HOLD_MINUTES = env("PAYMENT_FALLBACK_HOLD_MINUTES", default=15, cast=int)
+STRIPE_HTTP_TIMEOUT_SECONDS = env("STRIPE_HTTP_TIMEOUT_SECONDS", default=20, cast=int)
+# Demo checkout is an explicit opt-in on top of DEBUG so a misconfigured
+# staging box can never silently accept fake payments.
+DEMO_CHECKOUT_ENABLED = env("DEMO_CHECKOUT_ENABLED", default=False, cast=bool)
 
 # Email Settings (Google Workspace SMTP — transactional emails)
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="").strip() or "django.core.mail.backends.console.EmailBackend"

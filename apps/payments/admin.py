@@ -1,7 +1,7 @@
 """
 Admin configuration for the payments app.
 """
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from .models import ManualPaymentReceipt, Payment, PaymentLog, PaymentWebhookEvent, RefundRequest
 
@@ -141,6 +141,15 @@ class RefundRequestAdmin(admin.ModelAdmin):
 
     def process_refunds(self, request, queryset):
         from .services import process_refund_request
+
+        if not request.user.has_perm("payments.can_process_refunds"):
+            self.message_user(
+                request,
+                "You do not have permission to process refunds. "
+                "Ask a manager for the 'Can process refund requests' permission.",
+                level=messages.ERROR,
+            )
+            return
 
         for refund in queryset:
             process_refund_request(refund)

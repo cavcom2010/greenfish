@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Privacy & Data - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/account.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="account-page-desktop">
+    <div class="container">
+        <div class="account-layout">
+            {% include "partials/account_sidebar.html" with active="privacy" %}
+
+            <div class="account-content">
+                <h2>Privacy &amp; Data</h2>
+                <p style="color:var(--text-muted);margin-bottom:1.5rem;">
+                    Download a copy of the personal data we hold about you, or ask us to
+                    delete it. Deletion anonymises your orders and deactivates your account.
+                </p>
+
+                <div style="display:grid;gap:1rem;margin-bottom:2rem;">
+                    <div style="padding:1.25rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+                        <h3 style="font-size:var(--text-md);margin-bottom:0.35rem;">Export my data</h3>
+                        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:0.85rem;">
+                            Get a JSON file with your profile details and order history.
+                        </p>
+                        {% if has_open_export %}
+                        <p style="font-weight:700;">An export is being prepared. Check back shortly.</p>
+                        {% else %}
+                        <form method="post" action="{% url 'accounts:create_data_request' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_type" value="export">
+                            <button type="submit" class="btn btn--secondary">
+                                <i class="ph-bold ph-download-simple"></i>
+                                Request Export
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+
+                    <div style="padding:1.25rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+                        <h3 style="font-size:var(--text-md);margin-bottom:0.35rem;">Delete my account data</h3>
+                        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:0.85rem;">
+                            Your orders are anonymised, your details removed, and your account
+                            deactivated. This cannot be undone.
+                        </p>
+                        {% if has_open_deletion %}
+                        <p style="font-weight:700;">A deletion request is in progress.</p>
+                        {% else %}
+                        <form method="post" action="{% url 'accounts:create_data_request' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_type" value="anonymisation">
+                            <div class="form-field" style="max-width:280px;">
+                                <label for="confirm">Type "delete" to confirm</label>
+                                <input type="text" id="confirm" name="confirm" autocomplete="off" placeholder="delete">
+                            </div>
+                            <button type="submit" class="btn btn--primary" style="background:var(--error);border-color:var(--error);">
+                                <i class="ph-bold ph-trash"></i>
+                                Request Deletion
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if data_requests %}
+                <h3 style="font-size:var(--text-md);margin-bottom:0.75rem;">Your requests</h3>
+                <div style="display:grid;gap:0.5rem;">
+                    {% for data_request in data_requests %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:0.85rem 1rem;border:1px solid var(--border-light);border-radius:var(--radius);background:var(--surface);">
+                        <div>
+                            <strong>{{ data_request.get_request_type_display }}</strong>
+                            <span style="color:var(--text-muted);font-size:0.85rem;">
+                                — {{ data_request.requested_at|date:"j M Y H:i" }}
+                            </span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <span style="font-weight:700;font-size:0.85rem;">{{ data_request.get_status_display }}</span>
+                            {% if data_request.request_type == "export" and data_request.status == "completed" %}
+                            <a class="btn btn--secondary btn--sm" href="{% url 'accounts:download_data_export' data_request.pk %}">
+                                Download
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -14,6 +14,7 @@ from apps.accounts.models import CustomerProfile
 from apps.core.forms import LargeOrderRequestForm
 from apps.core.media import get_image_variant_url
 from apps.core.models import SiteSettings
+from apps.core.rate_limits import rate_limit
 from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuCategory, MenuItem
 from apps.menu.services import get_popular_menu_items
@@ -156,6 +157,7 @@ def _large_order_basket_snapshot(request):
     }, summary["total"]
 
 
+@rate_limit("large-order-request", limit=5, window_seconds=3600)
 def large_order_request(request):
     """Capture party, corporate, and catering-size order enquiries."""
     initial = _large_order_initial(request)
@@ -246,6 +248,7 @@ def health(request):
 
 
 @require_POST
+@rate_limit("newsletter-signup", limit=5, window_seconds=3600, response_type="plain")
 def newsletter_signup(request):
     """Handle newsletter sign-up via HTMX."""
     email = request.POST.get("email", "").strip()

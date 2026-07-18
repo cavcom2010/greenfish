@@ -208,10 +208,14 @@ def online_payment_available():
 
 
 def demo_payment_enabled():
-    """Allow demo checkout only in debug/local-style environments."""
+    """Allow demo checkout only when explicitly enabled, in debug, with no real provider."""
     from apps.payments.services import active_payment_provider, payment_provider_configured
 
-    return settings.DEBUG and not payment_provider_configured(active_payment_provider())
+    return (
+        getattr(settings, "DEMO_CHECKOUT_ENABLED", False)
+        and settings.DEBUG
+        and not payment_provider_configured(active_payment_provider())
+    )
 
 
 def payment_fallback_available():

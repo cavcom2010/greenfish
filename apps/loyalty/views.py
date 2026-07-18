@@ -104,6 +104,7 @@ def activate_wallet_item(request, pk):
     return redirect("loyalty:dashboard")
 
 
+@login_required
 @require_POST
 def clear_wallet_item(request):
     """Clear the active checkout wallet reward."""

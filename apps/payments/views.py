@@ -390,6 +390,7 @@ def webhook(request):
     return HttpResponse("Unavailable", status=503)
 
 
+@rate_limit("payment-status-api", limit=60, window_seconds=60, methods=("GET",))
 def payment_status_api(request, order_number):
     """API endpoint to check payment status."""
     order = get_accessible_order_or_404(request, order_number)

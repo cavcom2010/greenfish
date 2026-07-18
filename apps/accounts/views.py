@@ -12,6 +12,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.orders.access import order_customer_url, request_has_order_token
+from apps.core.rate_limits import rate_limit
 from apps.orders.models import Order, OrderItem
 from apps.orders.reorder import is_reorderable_order, reorderable_orders
 from apps.orders.services import add_menu_item_to_cart
@@ -313,3 +314,85 @@ def add_saved_meal_to_cart(request, saved_meal_id):
     saved_meal.save(update_fields=["last_added_at", "updated_at"])
     messages.success(request, f"Added {saved_meal.name} to your basket.")
     return redirect("orders:cart")
+
+
+@login_required
+def privacy_center(request):
+    """Self-service GDPR hub: data export and account deletion requests."""
+    from .models import CustomerDataRequest
+
+    data_requests = CustomerDataRequest.objects.filter(user=request.user).order_by("-requested_at")[:10]
+    open_statuses = {CustomerDataRequest.Status.REQUESTED, CustomerDataRequest.Status.PROCESSING}
+    context = {
+        "data_requests": data_requests,
+        "has_open_export": any(
+            r.request_type == CustomerDataRequest.RequestType.EXPORT and r.status in open_statuses
+            for r in data_requests
+        ),
+        "has_open_deletion": any(
+            r.request_type == CustomerDataRequest.RequestType.ANONYMISATION and r.status in open_statuses
+            for r in data_requests
+        ),
+        "title": "Privacy & Data",
+    }
+    return render(request, "accounts/privacy_center.html", context)
+
+
+@login_required
+@require_POST
+@rate_limit("privacy-requests", limit=5, window_seconds=3600)
+def create_data_request(request):
+    """Create a GDPR export or anonymisation request for the logged-in user."""
+    from .models import CustomerDataRequest
+
+    request_type = request.POST.get("request_type", "")
+    valid_types = {choice for choice, _ in CustomerDataRequest.RequestType.choices}
+    if request_type not in valid_types:
+        messages.error(request, "Choose a valid request type.")
+        return redirect("accounts:privacy_center")
+
+    open_request = CustomerDataRequest.objects.filter(
+        user=request.user,
+        request_type=request_type,
+        status__in=[CustomerDataRequest.Status.REQUESTED, CustomerDataRequest.Status.PROCESSING],
+    ).exists()
+    if open_request:
+        messages.info(request, "You already have a request of this type in progress.")
+        return redirect("accounts:privacy_center")
+
+    if request_type == CustomerDataRequest.RequestType.ANONYMISATION and request.POST.get("confirm") != "delete":
+        messages.error(request, 'Type "delete" in the confirmation box to request account deletion.')
+        return redirect("accounts:privacy_center")
+
+    CustomerDataRequest.objects.create(
+        user=request.user,
+        email=request.user.email,
+        request_type=request_type,
+        notes="Submitted via self-service privacy page.",
+    )
+    if request_type == CustomerDataRequest.RequestType.EXPORT:
+        messages.success(request, "Export requested. Your data will be ready to download here shortly.")
+    else:
+        messages.success(
+            request,
+            "Deletion requested. Your personal data will be anonymised and your account "
+            "deactivated within 30 days (usually much sooner).",
+        )
+    return redirect("accounts:privacy_center")
+
+
+@login_required
+def download_data_export(request, request_id):
+    """Download a completed export as JSON. Owners only."""
+    from .models import CustomerDataRequest
+
+    data_request = get_object_or_404(
+        CustomerDataRequest,
+        pk=request_id,
+        user=request.user,
+        request_type=CustomerDataRequest.RequestType.EXPORT,
+        status=CustomerDataRequest.Status.COMPLETED,
+    )
+    response = JsonResponse(data_request.export_payload, json_dumps_params={"indent": 2})
+    response["Content-Disposition"] = f'attachment; filename="my-data-{data_request.pk}.json"'
+    return response
