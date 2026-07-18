@@ -87,32 +87,77 @@
 </section>
 {% endif %}
 
-<!-- ═══ SERVICE TOGGLE ═══ -->
-<div class="service-bar">
-    <div class="service-bar-inner">
-        <div class="service-toggle-desktop">
-            <button type="button" data-desktop-service="pickup" class="{% if service_type == 'pickup' %}active{% endif %}">
-                <i class="ph ph-storefront" style="margin-right:6px;"></i>Pickup
-            </button>
-            {% if delivery_enabled %}
-            <button type="button" data-desktop-service="delivery" class="{% if service_type == 'delivery' %}active{% endif %}">
-                <i class="ph ph-moped" style="margin-right:6px;"></i>Delivery
-            </button>
-            {% endif %}
-        </div>
-        <div class="service-info">
-            <i class="ph-fill ph-check-circle"></i>
-            <span id="serviceInfoText">
-                {% if delivery_enabled and service_type == 'delivery' %}
-                Delivered to your door
-                {% else %}
-                Collect from the shop
+<!-- ═══ STATUS BAND — open state, delivery facts, service toggle ═══ -->
+<section class="status-band">
+    <div class="container">
+        <div class="status-band-card">
+            <div class="status-band-facts">
+                {% if opening_status %}
+                <span class="open-pill {% if opening_status.is_open %}open-pill--open{% else %}open-pill--closed{% endif %}">
+                    <i class="ph-fill ph-circle" aria-hidden="true"></i>
+                    {{ opening_status.label }}
+                </span>
                 {% endif %}
-            </span>
+                {% if delivery_enabled %}
+                <span class="status-band-fact">
+                    <i class="ph ph-moped" aria-hidden="true"></i>
+                    {% if site_settings.delivery_eta_text %}{{ site_settings.delivery_eta_text }}{% if site_settings.delivery_minimum_order_amount %} · {% endif %}{% endif %}{% if site_settings.delivery_minimum_order_amount %}£{{ site_settings.delivery_minimum_order_amount|floatformat:"-2" }} min order{% endif %}
+                </span>
+                {% endif %}
+            </div>
+            <div class="service-toggle-desktop">
+                <button type="button" data-desktop-service="pickup" class="{% if service_type == 'pickup' %}active{% endif %}">
+                    <i class="ph ph-storefront" style="margin-right:6px;"></i>Pickup
+                </button>
+                {% if delivery_enabled %}
+                <button type="button" data-desktop-service="delivery" class="{% if service_type == 'delivery' %}active{% endif %}">
+                    <i class="ph ph-moped" style="margin-right:6px;"></i>Delivery
+                </button>
+                {% endif %}
+            </div>
+            <input type="hidden" id="desktopServiceType" value="{{ service_type }}">
         </div>
-        <input type="hidden" id="desktopServiceType" value="{{ service_type }}">
     </div>
-</div>
+</section>
+
+{% if not site_settings.homepage_hero_enabled and hero_offers %}
+{% with offer=hero_offers.0 %}
+<!-- ═══ OFFER BANNER (dismissible; full list lives on Rewards) ═══ -->
+<section class="offer-banner-section">
+    <div class="container">
+        <div class="offer-banner" id="offerBanner" data-offer-id="{{ offer.id }}" hidden>
+            <a href="{% url 'offers:detail' offer.id %}" class="offer-banner-link">
+                <i class="ph-fill ph-fire" aria-hidden="true"></i>
+                <span class="offer-banner-text"><strong>{{ offer.name }}</strong>{% with blurb=offer.hero_subtitle|default:offer.description %}{% if blurb %} — {{ blurb|truncatechars:70 }}{% endif %}{% endwith %}</span>
+                <span class="offer-banner-cta">View <i class="ph-bold ph-arrow-right"></i></span>
+            </a>
+            <button type="button" class="offer-banner-dismiss" data-dismiss-offer aria-label="Dismiss offer">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+    </div>
+</section>
+{% endwith %}
+{% endif %}
+
+{% if categories %}
+<!-- ═══ CATEGORY CHIPS (single unscoped full-menu CTA lives here) ═══ -->
+<section class="section chips-section" id="menu-section">
+    <div class="container">
+        <div class="category-strip" aria-label="Menu categories">
+            {% for category in categories %}
+            <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-chip">
+                <span aria-hidden="true">{{ category.icon|default:"🍽️" }}</span>
+                {{ category.name }}
+            </a>
+            {% endfor %}
+            <a href="{% url 'menu:menu' %}" class="category-chip category-chip--all">
+                Full menu <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
 
 {% if recent_orders %}
 <section class="section">
@@ -348,123 +393,6 @@
                 </div>
             </div>
             {% endfor %}
-        </div>
-    </div>
-</section>
-{% endif %}
-
-{% if hero_offers|length > 1 %}
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Today's <span>Offers</span></h2>
-                <p>Don't miss out on these limited-time deals.</p>
-            </div>
-            <a href="{% url 'loyalty:dashboard' %}" class="section-link">
-                All Rewards <i class="ph-bold ph-arrow-right"></i>
-            </a>
-        </div>
-
-        <div class="offers-grid">
-            {% for offer in hero_offers|slice:"1:" %}
-            <a href="{% url 'offers:detail' offer.id %}" class="offer-card-desktop">
-                <div class="offer-bg"></div>
-                <div class="offer-card-content">
-                    <h3>{{ offer.name }}</h3>
-                    <p>{{ offer.description }}</p>
-                    <span class="offer-btn-desktop">
-                        View Offer <i class="ph-bold ph-arrow-right"></i>
-                    </span>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-    </div>
-</section>
-{% endif %}
-
-<!-- ═══ BROWSE THE MENU (shop window → /menu/) ═══ -->
-<section class="section" id="menu-section">
-    <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Browse the <span>Menu</span></h2>
-                <p>Pick a category or explore everything on the full menu.</p>
-            </div>
-            <a href="{% url 'menu:menu' %}" class="section-link">
-                Full Menu <i class="ph-bold ph-arrow-right"></i>
-            </a>
-        </div>
-
-        {% if categories %}
-        <div class="category-strip" aria-label="Menu categories">
-            {% for category in categories %}
-            <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-chip">
-                <span aria-hidden="true">{{ category.icon|default:"🍽️" }}</span>
-                {{ category.name }}
-            </a>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="text-center" style="margin-top:2rem;">
-            <a href="{% url 'menu:menu' %}" class="btn btn--primary btn--lg">
-                <i class="ph-bold ph-fork-knife"></i>
-                View the Full Menu
-            </a>
-        </div>
-    </div>
-</section>
-
-<!-- ═══ REWARDS TEASER ═══ -->
-<section class="section">
-    <div class="container">
-        <a href="{% url 'loyalty:dashboard' %}" class="rewards-teaser">
-            <div class="rewards-teaser-icon" aria-hidden="true">
-                <i class="ph-fill ph-gift"></i>
-            </div>
-            <div class="rewards-teaser-copy">
-                <h3>Earn points on every order</h3>
-                <p>Collect rewards and unlock offers as you order.</p>
-            </div>
-            <span class="rewards-teaser-cta">
-                View Rewards <i class="ph-bold ph-arrow-right"></i>
-            </span>
-        </a>
-    </div>
-</section>
-
-{% if opening_hours_rows or opening_hours_text or site_settings.address or site_settings.phone %}
-<!-- ═══ VISIT / HOURS ═══ -->
-<section class="section info-strip-section">
-    <div class="container">
-        <div class="info-strip">
-            {% if opening_hours_rows or opening_hours_text %}
-            <div class="info-strip-block">
-                <h3><i class="ph ph-clock"></i> Opening Hours</h3>
-                {% if opening_hours_rows %}
-                <ul class="hours-list">
-                    {% for row in opening_hours_rows %}
-                    <li{% if not row.open %} class="hours-closed"{% endif %}>
-                        <span>{{ row.day }}</span>
-                        <span>{% if row.open %}{{ row.open }} – {{ row.close }}{% else %}Closed{% endif %}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="hours-text">{{ opening_hours_text }}</p>
-                {% endif %}
-            </div>
-            {% endif %}
-            {% if site_settings.address or site_settings.phone %}
-            <div class="info-strip-block">
-                <h3><i class="ph ph-map-pin"></i> Find Us</h3>
-                {% if site_settings.address %}<p>{{ site_settings.address|linebreaksbr }}</p>{% endif %}
-                {% if site_settings.phone %}<p><a href="tel:{{ site_settings.phone|cut:' ' }}" class="info-strip-phone"><i class="ph ph-phone"></i> {{ site_settings.phone }}</a></p>{% endif %}
-                {% if delivery_enabled %}<p class="info-strip-delivery"><i class="ph ph-moped"></i> Local delivery available</p>{% endif %}
-            </div>
-            {% endif %}
         </div>
     </div>
 </section>

@@ -553,8 +553,8 @@ body.has-cart-bar {
     margin-inline: auto;
     padding: var(--space-16) var(--space-6);
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: var(--space-12);
+    grid-template-columns: 2fr 1fr 1fr 1.3fr 1.1fr;
+    gap: var(--space-10);
 }
 
 @media (max-width: 1023px) {
@@ -600,6 +600,63 @@ body.has-cart-bar {
     color: rgba(255, 255, 255, 0.65);
     transition: color var(--transition);
     text-align: left;
+}
+
+.footer-hours-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.footer-hours-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.25rem 0;
+    font-size: var(--text-sm);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.footer-hours-list li span:last-child {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.footer-hours-list li.hours-closed span:last-child {
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+}
+
+.footer-hours-text {
+    font-size: var(--text-sm);
+    color: rgba(255, 255, 255, 0.65);
+    white-space: pre-line;
+}
+
+.mobile-menu-hours {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mobile-menu-hours li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    border-bottom: 1px dashed var(--border-light);
+}
+
+.mobile-menu-hours li span:last-child {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mobile-menu-hours li.hours-closed span:last-child {
+    color: var(--text-muted);
+    font-weight: 600;
 }
 
 .footer-col a:hover,

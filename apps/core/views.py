@@ -15,6 +15,7 @@ from apps.core.forms import LargeOrderRequestForm
 from apps.core.media import get_image_variant_url
 from apps.core.models import SiteSettings
 from apps.core.rate_limits import rate_limit
+from apps.core.services.opening_hours import opening_status
 from apps.mealdeals.models import MealDeal
 from apps.menu.models import MenuCategory, MenuItem
 from apps.menu.services import get_popular_menu_items
@@ -68,21 +69,7 @@ def home(request):
             .order_by("sort_order")[:4]
         )
 
-    # Opening-hours strip: the JSONField holds {"0": {"open","close"}, ...}
-    # keyed by weekday (0=Monday) or free text; normalise for the template.
-    opening_hours_rows = []
-    opening_hours_text = ""
-    raw_hours = SiteSettings.get().opening_hours
-    if isinstance(raw_hours, dict) and raw_hours:
-        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        for day_index, name in enumerate(day_names):
-            entry = raw_hours.get(str(day_index))
-            if isinstance(entry, dict) and entry.get("open") and entry.get("close"):
-                opening_hours_rows.append({"day": name, "open": entry["open"], "close": entry["close"]})
-            else:
-                opening_hours_rows.append({"day": name, "open": "", "close": ""})
-    elif raw_hours:
-        opening_hours_text = str(raw_hours)
+    status = opening_status(SiteSettings.get().opening_hours)
 
     favorite_items = []
     recent_orders = []
@@ -106,8 +93,7 @@ def home(request):
         "service_type": service_type,
         "meal_deals": meal_deals,
         "signature_items": signature_items,
-        "opening_hours_rows": opening_hours_rows,
-        "opening_hours_text": opening_hours_text,
+        "opening_status": status,
         "hero_rotation_images": hero_rotation_images,
     }
 

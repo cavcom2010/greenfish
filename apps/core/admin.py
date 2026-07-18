@@ -25,6 +25,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 "delivery_enabled",
                 "delivery_minimum_order_amount",
                 "delivery_default_fee",
+                "delivery_eta_text",
                 "cart_item_quantity_limit",
                 "order_personal_data_retention_years",
             )

@@ -26,6 +26,24 @@
         }
     }
 
+    // ── Offer banner (dismiss persists per offer) ─────────────────────
+    var banner = document.getElementById('offerBanner');
+    if (banner) {
+        var offerKey = 'offerBannerDismissed:' + (banner.getAttribute('data-offer-id') || '');
+        var offerDismissed = false;
+        try { offerDismissed = localStorage.getItem(offerKey) === '1'; } catch (e) { /* private mode */ }
+        if (!offerDismissed) {
+            banner.hidden = false;
+            var offerDismissBtn = banner.querySelector('[data-dismiss-offer]');
+            if (offerDismissBtn) {
+                offerDismissBtn.addEventListener('click', function () {
+                    banner.hidden = true;
+                    try { localStorage.setItem(offerKey, '1'); } catch (e) { /* ignore */ }
+                });
+            }
+        }
+    }
+
     // ── Scroll reveal ──────────────────────────────────────────────────
     if (!reducedMotion && 'IntersectionObserver' in window) {
         document.documentElement.classList.add('js-reveal');

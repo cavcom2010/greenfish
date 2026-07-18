@@ -543,3 +543,63 @@ class MediaHardeningTests(TestCase):
 
         with self.assertRaises(ValidationError):
             item.save()
+
+
+class OpeningHoursServiceTests(TestCase):
+    HOURS = {"0": {"open": "11:00", "close": "22:00"}}
+
+    def _at(self, weekday, hour, minute=0):
+        # 2026-07-13 is a Monday (weekday 0)
+        from datetime import datetime, timedelta
+
+        from django.utils import timezone as tz
+
+        base = datetime(2026, 7, 13, hour, minute)
+        return tz.make_aware(base + timedelta(days=weekday))
+
+    def test_rows_normalise_structured_hours(self):
+        from apps.core.services.opening_hours import opening_hours_rows
+
+        rows, text = opening_hours_rows(self.HOURS)
+        self.assertEqual(text, "")
+        self.assertEqual(len(rows), 7)
+        self.assertEqual(rows[0], {"day": "Monday", "open": "11:00", "close": "22:00"})
+        self.assertEqual(rows[1]["open"], "")
+
+    def test_rows_pass_through_free_text(self):
+        from apps.core.services.opening_hours import opening_hours_rows
+
+        rows, text = opening_hours_rows("Ring us for opening times")
+        self.assertEqual(rows, [])
+        self.assertEqual(text, "Ring us for opening times")
+
+    def test_status_open_and_closed_transitions(self):
+        from apps.core.services.opening_hours import opening_status
+
+        open_now = opening_status(self.HOURS, now=self._at(0, 12))
+        self.assertTrue(open_now["is_open"])
+        self.assertIn("22:00", open_now["label"])
+
+        before_open = opening_status(self.HOURS, now=self._at(0, 9))
+        self.assertFalse(before_open["is_open"])
+        self.assertIn("11:00", before_open["label"])
+
+        after_close = opening_status(self.HOURS, now=self._at(0, 23))
+        self.assertFalse(after_close["is_open"])
+
+        closed_day = opening_status(self.HOURS, now=self._at(1, 12))
+        self.assertFalse(closed_day["is_open"])
+        self.assertEqual(closed_day["label"], "Closed today")
+
+    def test_status_handles_overnight_closing(self):
+        from apps.core.services.opening_hours import opening_status
+
+        hours = {"0": {"open": "17:00", "close": "01:00"}}
+        self.assertTrue(opening_status(hours, now=self._at(0, 23))["is_open"])
+        self.assertFalse(opening_status(hours, now=self._at(0, 12))["is_open"])
+
+    def test_status_none_for_unstructured_hours(self):
+        from apps.core.services.opening_hours import opening_status
+
+        self.assertIsNone(opening_status("Ring us"))
+        self.assertIsNone(opening_status({}))

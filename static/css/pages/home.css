@@ -1,5 +1,6 @@
 /* ==========================================================================
-   Home page — hero, service bar, reorder cards, menu section
+   Home page — status band, offer banner, category chips, reorder cards,
+   menu sections, optional marketing hero
    ========================================================================== */
 
 @layer pages {
@@ -246,41 +247,156 @@
     }
 }
 
-/* ── Service bar ───────────────────────────────────────────────────── */
-.service-bar {
-    margin: -20px auto 20px;
-    position: relative;
-    z-index: 6;
+/* ── Status band: open state, delivery facts, service toggle ───────── */
+.status-band {
+    padding-block: var(--space-4);
 }
 
-.service-bar-inner {
+.status-band-card {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 14px;
-    width: min(100%, var(--content-width));
-    margin-inline: auto;
-    padding-inline: var(--space-6);
+    justify-content: space-between;
+    gap: var(--space-4);
+    background: var(--surface-warm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-4) var(--space-5);
+}
+
+.status-band-facts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    min-width: 0;
+}
+
+.open-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 800;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+.open-pill i {
+    font-size: 0.6rem;
+}
+
+.open-pill--open {
+    color: var(--success-text);
+}
+
+.open-pill--open i {
+    color: var(--success);
+}
+
+.open-pill--closed {
+    color: var(--error-text);
+}
+
+.open-pill--closed i {
+    color: var(--error);
+}
+
+.status-band-fact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.status-band-fact i {
+    color: var(--brand);
+    font-size: 1.05rem;
 }
 
 @media (max-width: 640px) {
-    .service-bar {
-        margin-top: -8px;
-    }
-
-    .service-bar-inner {
+    .status-band-card {
         flex-direction: column;
         align-items: stretch;
-        padding-inline: var(--space-4);
+        gap: var(--space-3);
     }
 
-    .service-bar-inner .service-toggle-desktop {
-        width: 100%;
-    }
-
-    .service-bar-inner .service-info {
+    .status-band-facts {
         justify-content: center;
     }
+
+    .status-band-card .service-toggle-desktop {
+        width: 100%;
+    }
+}
+
+/* ── Offer banner (dismissible) ────────────────────────────────────── */
+.offer-banner-section {
+    padding-block: 0 var(--space-2);
+}
+
+.offer-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: linear-gradient(120deg, var(--gray-900), var(--gray-800));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.offer-banner-link {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    padding: 0.8rem var(--space-4);
+    color: #fff;
+    font-size: var(--text-sm);
+    text-decoration: none;
+}
+
+.offer-banner-link > i {
+    color: var(--accent);
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.offer-banner-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.offer-banner-text strong {
+    color: #fff;
+}
+
+.offer-banner-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 800;
+    color: var(--accent);
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.offer-banner-dismiss {
+    flex-shrink: 0;
+    padding: 0.8rem var(--space-4);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1rem;
+    transition: color var(--transition);
+}
+
+.offer-banner-dismiss:hover {
+    color: #fff;
 }
 
 /* ── Reorder cards ─────────────────────────────────────────────────── */
@@ -347,9 +463,19 @@
     font-weight: 800;
 }
 
-/* ── Browse-the-menu section (category chip strip → /menu/) ────────── */
+/* ── Category chips (single unscoped full-menu CTA) ────────────────── */
 #menu-section {
     scroll-margin-top: calc(var(--header-height) + 12px);
+}
+
+.chips-section {
+    padding-block: var(--space-2) var(--space-4);
+}
+
+.category-chip--all {
+    color: var(--brand);
+    border-color: rgba(var(--brand-rgb), 0.35);
+    background: var(--brand-light);
 }
 
 .category-strip {
@@ -716,148 +842,6 @@
     .popular-strip .menu-card-desc {
         -webkit-line-clamp: 2;
     }
-}
-
-/* ── Rewards teaser ────────────────────────────────────────────────── */
-.rewards-teaser {
-    display: flex;
-    align-items: center;
-    gap: var(--space-6);
-    background:
-        radial-gradient(circle at 88% 10%, rgba(var(--brand-rgb), 0.16), transparent 42%),
-        linear-gradient(120deg, var(--gray-900), var(--gray-800));
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
-    color: #fff;
-    text-decoration: none;
-    box-shadow: var(--shadow-lg);
-    transition: transform var(--transition), box-shadow var(--transition);
-}
-
-.rewards-teaser:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-xl);
-}
-
-.rewards-teaser-icon {
-    flex: 0 0 auto;
-    width: 64px;
-    height: 64px;
-    border-radius: var(--radius-full);
-    background: var(--accent);
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.9rem;
-}
-
-.rewards-teaser-copy {
-    flex: 1;
-}
-
-.rewards-teaser-copy h3 {
-    font-size: var(--text-xl);
-    font-weight: 900;
-    color: #fff;
-    margin: 0 0 0.3rem;
-}
-
-.rewards-teaser-copy p {
-    color: rgba(255, 255, 255, 0.75);
-    margin: 0;
-    font-size: var(--text-base);
-}
-
-.rewards-teaser-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 800;
-    color: var(--accent);
-    white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-    .rewards-teaser {
-        flex-direction: column;
-        text-align: center;
-        gap: var(--space-4);
-    }
-}
-
-/* ── Visit / hours strip ───────────────────────────────────────────── */
-.info-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: var(--space-6);
-    background: var(--surface-warm);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
-    box-shadow: var(--shadow-sm);
-}
-
-.info-strip-block h3 {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: var(--text-md);
-    font-weight: 900;
-    margin-bottom: 0.85rem;
-}
-
-.info-strip-block h3 i {
-    color: var(--brand);
-}
-
-.info-strip-block p {
-    color: var(--text-secondary);
-    font-size: var(--text-base);
-    margin: 0 0 0.4rem;
-}
-
-.hours-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.hours-list li {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.3rem 0;
-    font-size: var(--text-sm);
-    border-bottom: 1px dashed var(--border-light);
-}
-
-.hours-list li span:last-child {
-    font-weight: 700;
-}
-
-.hours-list li.hours-closed span:last-child {
-    color: var(--text-muted);
-    font-weight: 600;
-}
-
-.hours-text {
-    white-space: pre-line;
-}
-
-.info-strip-phone {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--brand);
-    font-weight: 800;
-    text-decoration: none;
-}
-
-.info-strip-delivery {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
 }
 
 /* ── Scroll reveal + hero rotation motion ──────────────────────────── */

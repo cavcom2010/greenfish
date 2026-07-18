@@ -143,6 +143,20 @@
                     <button type="button" onclick="openCookiePreferences()"><i class="ph ph-cookie"></i> Cookie Preferences</button>
                 </div>
 
+                {% if opening_hours_rows %}
+                <div class="mobile-menu-section">
+                    <div class="mobile-menu-label">Opening Hours</div>
+                    <ul class="mobile-menu-hours">
+                        {% for row in opening_hours_rows %}
+                        <li{% if not row.open %} class="hours-closed"{% endif %}>
+                            <span>{{ row.day }}</span>
+                            <span>{% if row.open %}{{ row.open }} – {{ row.close }}{% else %}Closed{% endif %}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
                 {% if site_settings.phone or site_settings.email %}
                 <div class="mobile-menu-section">
                     <div class="mobile-menu-label">Get in Touch</div>
@@ -321,6 +335,24 @@
                 <a href="{% url 'account_signup' %}">Create Account</a>
                 {% endif %}
             </div>
+
+            {% if opening_hours_rows or opening_hours_text %}
+            <div class="footer-col">
+                <h4>Opening Hours</h4>
+                {% if opening_hours_rows %}
+                <ul class="footer-hours-list">
+                    {% for row in opening_hours_rows %}
+                    <li{% if not row.open %} class="hours-closed"{% endif %}>
+                        <span>{{ row.day }}</span>
+                        <span>{% if row.open %}{{ row.open }} – {{ row.close }}{% else %}Closed{% endif %}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="footer-hours-text">{{ opening_hours_text }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
 
             <div class="footer-col">
                 <h4>Contact</h4>

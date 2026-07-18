@@ -99,8 +99,13 @@ class SiteSettings(models.Model):
     favicon = models.ImageField(upload_to="site/", blank=True, validators=FAVICON_IMAGE_VALIDATORS)
     theme_color = models.CharField(max_length=7, default="#FF6B35", help_text="Hex color code for PWA theme")
     homepage_hero_enabled = models.BooleanField(
-        default=True,
+        default=False,
         help_text="Show the marketing hero banner at the top of the homepage.",
+    )
+    delivery_eta_text = models.CharField(
+        max_length=60,
+        blank=True,
+        help_text='Delivery time estimate shown on the homepage, e.g. "40–60 min". Blank hides it.',
     )
     
     # Social links
