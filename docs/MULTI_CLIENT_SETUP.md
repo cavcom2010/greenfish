@@ -240,6 +240,6 @@ git push origin main
 
 ## Need Help?
 
-- See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment details
+- See [deployment.md](deployment.md) for deployment details
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for codebase structure
-- Check [ADMIN_GUIDE.md](ADMIN_GUIDE.md) for configuration
+- Check [admin-guide.md](admin-guide.md) for configuration

@@ -167,7 +167,7 @@ export DJANGO_SETTINGS_MODULE=config.settings.production
 
 ### Option 2: Manual Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
+See [docs/deployment.md](docs/deployment.md) for detailed instructions.
 
 ### Post-Deployment Checklist
 
@@ -234,8 +234,8 @@ tar -czf media_backup_$(date +%Y%m%d).tar.gz media/
 | Document | Description |
 |----------|-------------|
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | For restaurant staff using the system |
-| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | For administrators configuring the platform |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment instructions |
+| [docs/admin-guide.md](docs/admin-guide.md) | For administrators configuring the platform |
+| [docs/deployment.md](docs/deployment.md) | Production deployment instructions |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Codebase structure and architecture |
 | [docs/MULTI_CLIENT_SETUP.md](docs/MULTI_CLIENT_SETUP.md) | **Using this for multiple clients** |
 

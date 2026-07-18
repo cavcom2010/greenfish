@@ -3,7 +3,7 @@ Staff order-board workflow services.
 """
 import logging
 
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 
 from apps.orders.models import Order, OrderItem
 from apps.payments.models import Payment
@@ -72,17 +72,23 @@ def collection_board_queryset():
 
 
 def get_board_counts():
-    paid_orders = Order.objects.filter(payment_status=Order.PaymentStatus.PAID)
+    status_counts = dict(
+        Order.objects.filter(payment_status=Order.PaymentStatus.PAID)
+        .values_list("status")
+        .annotate(count=Count("id"))
+    )
     awaiting_payment_count = awaiting_payment_queryset().count()
+    collection_count = sum(status_counts.get(status, 0) for status in COLLECTION_BOARD_STATUSES)
+    kanban_confirmed_count = sum(status_counts.get(status, 0) for status in KANBAN_COLUMNS["confirmed"])
     return {
-        "pending_count": paid_orders.filter(status=Order.OrderStatus.PENDING).count(),
-        "confirmed_count": paid_orders.filter(status=Order.OrderStatus.CONFIRMED).count(),
-        "preparing_count": paid_orders.filter(status=Order.OrderStatus.PREPARING).count(),
-        "ready_count": paid_orders.filter(status=Order.OrderStatus.READY).count(),
-        "out_for_delivery_count": paid_orders.filter(status=Order.OrderStatus.OUT_FOR_DELIVERY).count(),
+        "pending_count": status_counts.get(Order.OrderStatus.PENDING, 0),
+        "confirmed_count": status_counts.get(Order.OrderStatus.CONFIRMED, 0),
+        "preparing_count": status_counts.get(Order.OrderStatus.PREPARING, 0),
+        "ready_count": status_counts.get(Order.OrderStatus.READY, 0),
+        "out_for_delivery_count": status_counts.get(Order.OrderStatus.OUT_FOR_DELIVERY, 0),
         "awaiting_payment_count": awaiting_payment_count,
-        "collection_count": paid_orders.filter(status__in=COLLECTION_BOARD_STATUSES).count() + awaiting_payment_count,
-        "kanban_confirmed_count": paid_orders.filter(status__in=KANBAN_COLUMNS["confirmed"]).count(),
+        "collection_count": collection_count + awaiting_payment_count,
+        "kanban_confirmed_count": kanban_confirmed_count,
     }
 
 

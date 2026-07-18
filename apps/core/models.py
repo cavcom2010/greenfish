@@ -4,6 +4,7 @@ Core models for Tinashe Takeaway.
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings as django_settings
+from django.core.cache import cache
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -195,11 +196,23 @@ class SiteSettings(models.Model):
         validate_changed_image_fields(self, changed_images)
         super().save(*args, **kwargs)
         sync_instance_image_variants(self, SITE_SETTINGS_IMAGE_VARIANTS, changed_images)
-    
+        cache.delete(self.CACHE_KEY)
+
+    CACHE_KEY = "core:site-settings:v1"
+    CACHE_TTL_SECONDS = 60
+
     @classmethod
     def get(cls):
-        """Get or create the singleton site settings."""
+        """Get the singleton site settings, cached briefly to avoid a DB hit
+        on every request/template render. Saving invalidates the cache."""
+        cached = cache.get(cls.CACHE_KEY)
+        if cached is not None:
+            return cached
         settings, _ = cls.objects.get_or_create(pk=1)
+        try:
+            cache.set(cls.CACHE_KEY, settings, timeout=cls.CACHE_TTL_SECONDS)
+        except Exception:
+            pass
         return settings
 
 

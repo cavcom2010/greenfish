@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Sum
-from django.db.models.functions import ExtractHour
+from django.db.models.functions import ExtractHour, TruncDate
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -67,21 +67,28 @@ def dashboard(request):
     )
 
     last_7_days = timezone.now() - timedelta(days=7)
+    daily_rows = {
+        row["day"]: row
+        for row in Order.objects.filter(
+            created_at__gte=last_7_days,
+            payment_status=Order.PaymentStatus.PAID,
+        )
+        .annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(revenue=Sum("total_amount"), orders=Count("id"))
+    }
     daily_sales = []
     max_daily_revenue = 0
     for offset in range(7):
-        day = last_7_days + timedelta(days=offset)
-        day_orders = Order.objects.filter(
-            created_at__date=day.date(),
-            payment_status=Order.PaymentStatus.PAID,
-        )
-        day_revenue = day_orders.aggregate(total=Sum("total_amount"))["total"] or 0
+        day = (last_7_days + timedelta(days=offset)).date()
+        row = daily_rows.get(day, {})
+        day_revenue = row.get("revenue") or 0
         max_daily_revenue = max(max_daily_revenue, day_revenue)
         daily_sales.append(
             {
                 "date": day.strftime("%a"),
                 "revenue": day_revenue,
-                "orders": day_orders.count(),
+                "orders": row.get("orders") or 0,
             }
         )
 

@@ -235,9 +235,9 @@ Quick repo signals from this review:
 
 ### 10. Documentation
 
-- Consolidate duplicate docs with case-only naming differences, for example:
-  - `docs/ADMIN_GUIDE.md` and `docs/admin-guide.md`
-  - `docs/DEPLOYMENT.md` and `docs/deployment.md`
+- ~~Consolidate duplicate docs with case-only naming differences~~ Done:
+  `docs/deployment.md` and `docs/admin-guide.md` are canonical; the uppercase
+  duplicates were removed.
 - Refresh the root `README.md` so it matches the current stack and current app
   behavior.
 - Add one short "system map" document covering app boundaries, data ownership,

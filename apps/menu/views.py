@@ -52,7 +52,9 @@ def menu_list(request):
 
 def menu_item_detail(request, pk):
     """Get menu item details for modal/ajax."""
-    item = get_object_or_404(MenuItem, pk=pk, is_available=True)
+    item = get_object_or_404(
+        MenuItem.objects.prefetch_related("modifiers"), pk=pk, is_available=True
+    )
     
     # Get recommendations
     recommendations = get_recommendations(item.id, limit=4)
@@ -83,7 +85,8 @@ def menu_item_detail(request, pk):
         "dietary_tags": item.dietary_tags,
         "modifiers": [
             {"id": m.id, "name": m.name, "price": str(m.price_adjustment)}
-            for m in item.modifiers.filter(is_active=True)
+            for m in item.modifiers.all()
+            if m.is_active
         ],
         "recommendations": [
             {"id": r.id, "name": r.name, "price": str(r.price)}

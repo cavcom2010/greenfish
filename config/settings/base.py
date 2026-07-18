@@ -234,6 +234,8 @@ SHOP_NAME = env("SHOP_NAME", default="Tinashe Zimbabwean Kitchen")
 SHOP_ADDRESS = env("SHOP_ADDRESS", default="123 High Street, Harare")
 SHOP_PHONE = env("SHOP_PHONE", default="")
 SHOP_EMAIL = env("SHOP_EMAIL", default="")
+# Public site origin used in SMS/notification links, e.g. https://orders.example.com
+SHOP_URL = env("SHOP_URL", default="").rstrip("/")
 ADMIN_EMAIL = env("ADMIN_EMAIL", default=SHOP_EMAIL)
 CURRENCY = env("CURRENCY", default="GBP")
 ORDER_PREFIX = env("ORDER_PREFIX", default="TN")
