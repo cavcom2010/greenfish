@@ -20,11 +20,13 @@
             <a href="{% url 'mealdeals:detail' deal.id %}" style="text-decoration:none;color:inherit;">
                 <div class="menu-card">
                     <div class="menu-card-image">
-                        {% if deal.image %}
-                        <img src="{{ deal.image|image_variant:'card' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="640" height="640">
+                        {% with deal_image=deal.display_image %}
+                        {% if deal_image %}
+                        <img src="{{ deal_image|image_variant:'card' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="640" height="640">
                         {% else %}
                         <div class="placeholder-icon">🍽️</div>
                         {% endif %}
+                        {% endwith %}
                         <div class="menu-card-badges">
                             <span class="deal-badge">Deal</span>
                         </div>

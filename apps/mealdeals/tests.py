@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from apps.core.test_support import create_meal_deal, create_menu_item
 from apps.mealdeals.models import MealDeal
+from apps.menu.models import MenuItem
 
 
 class MealDealPricingTests(TestCase):
@@ -26,6 +27,23 @@ class MealDealPricingTests(TestCase):
         )
 
         self.assertEqual(deal.savings_percent, 0)
+
+
+class MealDealDisplayImageTests(TestCase):
+    def test_uploaded_image_wins_over_option_photos(self):
+        deal = create_meal_deal()
+        deal.image.name = "mealdeals/box.jpg"
+        self.assertEqual(deal.display_image.name, "mealdeals/box.jpg")
+
+    def test_falls_back_to_first_available_option_photo(self):
+        menu_item = create_menu_item(name="Photo Main", price=Decimal("9.00"))
+        MenuItem.objects.filter(pk=menu_item.pk).update(image="menu/items/photo-main.jpg")
+        deal = create_meal_deal(MenuItem.objects.get(pk=menu_item.pk))
+        self.assertEqual(deal.display_image.name, "menu/items/photo-main.jpg")
+
+    def test_none_when_deal_and_options_have_no_photos(self):
+        deal = create_meal_deal()
+        self.assertIsNone(deal.display_image)
 
 
 class MealDealListViewTests(TestCase):

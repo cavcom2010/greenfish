@@ -283,11 +283,13 @@
             {% for deal in meal_deals %}
             <a href="{% url 'mealdeals:detail' deal.id %}" class="deal-spotlight-card">
                 <div class="deal-spotlight-media">
-                    {% if deal.image %}
-                    <img src="{{ deal.image|image_variant:'card' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="640" height="640">
+                    {% with deal_image=deal.display_image %}
+                    {% if deal_image %}
+                    <img src="{{ deal_image|image_variant:'card' }}" alt="{{ deal.name }}" loading="lazy" decoding="async" width="640" height="640">
                     {% else %}
                     <span class="deal-spotlight-icon" aria-hidden="true">🍱</span>
                     {% endif %}
+                    {% endwith %}
                 </div>
                 <div class="deal-spotlight-body">
                     <span class="deal-badge">Deal</span>

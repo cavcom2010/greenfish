@@ -47,7 +47,11 @@ def home(request):
         if offer.is_valid()
     ][:3]
 
-    meal_deals = MealDeal.objects.filter(is_active=True).order_by("deal_price")[:2]
+    meal_deals = (
+        MealDeal.objects.filter(is_active=True)
+        .prefetch_related("items__options__menu_item")
+        .order_by("deal_price")[:2]
+    )
 
     # Chef's showcase: items of the first active "special" category
     # (e.g. Evergreen Special Roll); hidden when no such category exists.

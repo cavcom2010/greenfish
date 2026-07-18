@@ -56,6 +56,17 @@ class MealDeal(models.Model):
         return f"{self.name} (£{self.deal_price})"
     
     @property
+    def display_image(self):
+        """Card image: own upload, else the first option's dish photo."""
+        if self.image:
+            return self.image
+        for deal_item in self.items.all():
+            for option in deal_item.options.all():
+                if option.is_available and option.menu_item.image:
+                    return option.menu_item.image
+        return None
+
+    @property
     def savings(self):
         return self.original_price - self.deal_price
     
