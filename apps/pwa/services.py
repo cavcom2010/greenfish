@@ -1,12 +1,8 @@
 """
-PWA services - Push notification sending.
+PWA services — Web Push notification sending via pywebpush + VAPID.
 
-This module handles sending push notifications to subscribed users.
-
-Note: In production, you would use a library like pywebpush:
-    pip install pywebpush
-
-For now, this is a placeholder showing the structure.
+Configure VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY in the environment. Generate a
+keypair with:  python manage.py generate_vapid_keys
 """
 import json
 import logging
@@ -17,73 +13,97 @@ from .models import PushSubscription
 
 logger = logging.getLogger(__name__)
 
+try:
+    from pywebpush import WebPushException, webpush
+except Exception:  # pragma: no cover - optional dependency safety net.
+    webpush = None
+    WebPushException = None
+
+
+def push_configured():
+    """Return whether VAPID keys are available for sending push messages."""
+    return bool(
+        webpush is not None
+        and getattr(settings, "VAPID_PRIVATE_KEY", "").strip()
+        and getattr(settings, "VAPID_PUBLIC_KEY", "").strip()
+    )
+
+
+def _vapid_claims():
+    contact = (
+        getattr(settings, "VAPID_ADMIN_EMAIL", "")
+        or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+        or "admin@example.com"
+    )
+    return {"sub": f"mailto:{contact}"}
+
 
 def send_push_notification(subscription, title, body, data=None, actions=None):
+    """Send a push notification to a specific subscription.
+
+    Returns True on success. Dead subscriptions (404/410 from the push
+    service) are deactivated so they are never retried.
     """
-    Send a push notification to a specific subscription.
-    
-    Args:
-        subscription: PushSubscription object
-        title: Notification title
-        body: Notification body
-        data: Additional data to send (dict)
-        actions: Action buttons (list of dicts)
-    
-    Returns:
-        bool: Success status
-    """
+    if not push_configured():
+        logger.debug("Push not configured; skipping notification '%s'", title)
+        return False
+
+    payload = json.dumps(
+        {
+            "title": title,
+            "body": body,
+            "data": data or {},
+            "actions": actions or [],
+        }
+    )
+
     try:
-        # In production, use pywebpush:
-        # from pywebpush import webpush, WebPushException
-        # webpush(
-        #     subscription_info={
-        #         'endpoint': subscription.endpoint,
-        #         'keys': {
-        #             'p256dh': subscription.p256dh,
-        #             'auth': subscription.auth
-        #         }
-        #     },
-        #     data=json.dumps({
-        #         'title': title,
-        #         'body': body,
-        #         'data': data or {},
-        #         'actions': actions or []
-        #     }),
-        #     vapid_private_key=settings.VAPID_PRIVATE_KEY,
-        #     vapid_claims={
-        #         'sub': f'mailto:{settings.DEFAULT_FROM_EMAIL}'
-        #     }
-        # )
-        
-        logger.info(f"Would send push notification: {title} - {body}")
+        webpush(
+            subscription_info={
+                "endpoint": subscription.endpoint,
+                "keys": {
+                    "p256dh": subscription.p256dh,
+                    "auth": subscription.auth,
+                },
+            },
+            data=payload,
+            vapid_private_key=settings.VAPID_PRIVATE_KEY,
+            vapid_claims=_vapid_claims(),
+            timeout=10,
+        )
         return True
-        
-    except Exception as e:
-        logger.error(f"Failed to send push notification: {e}")
+    except WebPushException as exc:
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        if status_code in {404, 410}:
+            PushSubscription.objects.filter(pk=subscription.pk).update(is_active=False)
+            logger.info("Deactivated dead push subscription %s (HTTP %s)", subscription.pk, status_code)
+        else:
+            logger.warning("Push delivery failed for subscription %s: %s", subscription.pk, exc)
+        return False
+    except Exception:
+        logger.exception("Unexpected error sending push notification")
         return False
 
 
 def notify_order_status(order, status_message):
     """
     Send order status update to customer.
-    
+
     Args:
         order: Order object
         status_message: Human-readable status message
     """
-    if not order.user:
+    if not order or not order.user:
         return  # Can't notify anonymous users without push
-    
-    # Get active subscriptions for user
+
     subscriptions = PushSubscription.objects.filter(
         user=order.user,
         is_active=True
     )
-    
+
     if not subscriptions.exists():
         return
-    
-    # Prepare notification data
+
     notification_data = {
         'title': f'Order #{order.order_number} Update',
         'body': status_message,
@@ -95,8 +115,7 @@ def notify_order_status(order, status_message):
             {'action': 'view', 'title': 'View Order'}
         ]
     }
-    
-    # Send to all user's devices
+
     for subscription in subscriptions:
         send_push_notification(
             subscription,
@@ -133,6 +152,6 @@ def broadcast_notification(title, body, data=None):
     Use sparingly for important announcements only.
     """
     subscriptions = PushSubscription.objects.filter(is_active=True)
-    
+
     for subscription in subscriptions:
         send_push_notification(subscription, title, body, data)

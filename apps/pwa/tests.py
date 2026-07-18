@@ -129,3 +129,96 @@ class PwaViewTests(TestCase):
         self.assertIn("restaurant-static-v19", body)
         self.assertNotIn("'/accounts/app/'", body)
         self.assertNotIn("cache.put(event.request, clonedResponse)", body)
+
+
+class PushSendingTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = create_user(email="push@example.com")
+        self.subscription = PushSubscription.objects.create(
+            user=self.user,
+            endpoint="https://push.example.com/sub/1",
+            p256dh="p256dh-key",
+            auth="auth-key",
+        )
+
+    def _order(self):
+        from apps.core.test_support import create_order
+
+        return create_order(user=self.user)
+
+    def test_push_skipped_when_not_configured(self):
+        from apps.pwa import services
+
+        with self.settings(VAPID_PUBLIC_KEY="", VAPID_PRIVATE_KEY=""):
+            self.assertFalse(services.push_configured())
+            self.assertFalse(
+                services.send_push_notification(self.subscription, "Title", "Body")
+            )
+
+    def test_push_sends_payload_with_vapid(self):
+        from unittest.mock import patch
+
+        from apps.pwa import services
+
+        with self.settings(
+            VAPID_PUBLIC_KEY="public",
+            VAPID_PRIVATE_KEY="private",
+            VAPID_ADMIN_EMAIL="shop@example.com",
+        ):
+            with patch.object(services, "webpush") as mock_webpush:
+                ok = services.send_push_notification(
+                    self.subscription, "Order Update", "Your order is ready"
+                )
+
+        self.assertTrue(ok)
+        kwargs = mock_webpush.call_args.kwargs
+        self.assertEqual(
+            kwargs["subscription_info"]["endpoint"], self.subscription.endpoint
+        )
+        self.assertEqual(kwargs["vapid_claims"], {"sub": "mailto:shop@example.com"})
+        payload = json.loads(kwargs["data"])
+        self.assertEqual(payload["title"], "Order Update")
+
+    def test_dead_subscription_deactivated_on_410(self):
+        from unittest.mock import MagicMock, patch
+
+        from pywebpush import WebPushException
+
+        from apps.pwa import services
+
+        response = MagicMock()
+        response.status_code = 410
+        exc = WebPushException("Gone", response=response)
+
+        with self.settings(VAPID_PUBLIC_KEY="public", VAPID_PRIVATE_KEY="private"):
+            with patch.object(services, "webpush", side_effect=exc):
+                ok = services.send_push_notification(self.subscription, "T", "B")
+
+        self.assertFalse(ok)
+        self.subscription.refresh_from_db()
+        self.assertFalse(self.subscription.is_active)
+
+    def test_notify_order_status_sends_to_active_subscriptions_only(self):
+        from unittest.mock import patch
+
+        from apps.pwa import services
+
+        PushSubscription.objects.create(
+            user=self.user,
+            endpoint="https://push.example.com/sub/2",
+            p256dh="k",
+            auth="a",
+            is_active=False,
+        )
+
+        with self.settings(VAPID_PUBLIC_KEY="public", VAPID_PRIVATE_KEY="private"):
+            with patch.object(services, "webpush") as mock_webpush:
+                services.notify_order_status(self._order(), "Ready!")
+
+        self.assertEqual(mock_webpush.call_count, 1)
+
+    def test_vapid_public_key_exposed_to_templates(self):
+        with self.settings(VAPID_PUBLIC_KEY="test-public-key"):
+            response = self.client.get(reverse("core:home"))
+        self.assertContains(response, "test-public-key")

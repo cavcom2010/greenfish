@@ -303,6 +303,11 @@ TWILIO_TEST_PHONE_NUMBER = env("TWILIO_TEST_PHONE_NUMBER", default="+15005550006
 WHATSAPP_PHONE_NUMBER_ID = env("WHATSAPP_PHONE_NUMBER_ID", default="")
 WHATSAPP_CLOUD_API_TOKEN = env("WHATSAPP_CLOUD_API_TOKEN", default="")
 
+# Web Push (VAPID). Generate keys with: python manage.py generate_vapid_keys
+VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", default="")
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", default="")
+VAPID_ADMIN_EMAIL = env("VAPID_ADMIN_EMAIL", default="")
+
 # Async jobs
 REDIS_URL = env("REDIS_URL", default="redis://127.0.0.1:6379/0")
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)

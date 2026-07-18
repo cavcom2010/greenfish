@@ -3,6 +3,8 @@ Config context processors - Site settings in templates.
 """
 # Import from core for backward compatibility
 # In future: from .models import SiteSettings
+from django.conf import settings as django_settings
+
 from apps.core.models import SiteSettings
 
 
@@ -12,4 +14,5 @@ def site_settings(request):
     return {
         "site_settings": settings,
         "delivery_enabled": settings.is_delivery_enabled,
+        "VAPID_PUBLIC_KEY": getattr(django_settings, "VAPID_PUBLIC_KEY", ""),
     }
