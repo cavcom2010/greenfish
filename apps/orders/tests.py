@@ -200,6 +200,66 @@ class OrderFlowTests(TestCase):
         stored_item = next(iter(cart.values()))
         self.assertEqual(stored_item["name"], self.deal.name)
 
+    def test_meal_deal_multi_pick_slot_accepts_up_to_max_choices(self):
+        deal_item = self.deal.items.first()
+        deal_item.max_quantity = 2
+        deal_item.save()
+        second_item = create_menu_item(name="Second Side", price=Decimal("3.00"))
+        second_option = deal_item.options.create(
+            menu_item=second_item, upgrade_price=Decimal("0.50"), is_available=True
+        )
+        first_option = deal_item.options.exclude(pk=second_option.pk).first()
+
+        response = self.client.post(
+            reverse("orders:add_to_cart"),
+            {
+                "deal_id": self.deal.pk,
+                "quantity": 1,
+                f"item_{deal_item.id}": [first_option.menu_item_id, second_option.menu_item_id],
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        stored_item = next(iter(self.client.session["cart"].values()))
+        modifier_names = [m["name"] for m in stored_item["modifiers"]]
+        self.assertEqual(len(modifier_names), 2)
+        self.assertTrue(any("Second Side" in name for name in modifier_names))
+
+    def test_meal_deal_multi_pick_slot_rejects_too_many_or_too_few(self):
+        deal_item = self.deal.items.first()
+        deal_item.min_quantity = 2
+        deal_item.max_quantity = 2
+        deal_item.save()
+        extra_items = [
+            create_menu_item(name=f"Extra Option {n}", price=Decimal("3.00")) for n in (1, 2)
+        ]
+        for item in extra_items:
+            deal_item.options.create(menu_item=item, upgrade_price=Decimal("0.00"), is_available=True)
+        all_ids = [o.menu_item_id for o in deal_item.options.all()]
+
+        too_few = self.client.post(
+            reverse("orders:add_to_cart"),
+            {"deal_id": self.deal.pk, "quantity": 1, f"item_{deal_item.id}": all_ids[:1]},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(too_few.status_code, 400)
+        self.assertIn("at least 2", too_few.json()["error"])
+
+        too_many = self.client.post(
+            reverse("orders:add_to_cart"),
+            {"deal_id": self.deal.pk, "quantity": 1, f"item_{deal_item.id}": all_ids},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(too_many.status_code, 400)
+        self.assertIn("at most 2", too_many.json()["error"])
+
+        just_right = self.client.post(
+            reverse("orders:add_to_cart"),
+            {"deal_id": self.deal.pk, "quantity": 1, f"item_{deal_item.id}": all_ids[:2]},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(just_right.status_code, 200)
+
     def test_checkout_and_voucher_flow(self):
         self.client.force_login(self.user)
         self.client.post(

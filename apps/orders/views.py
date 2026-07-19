@@ -235,17 +235,25 @@ def _cart_state_payload(request):
 def _selected_deal_modifiers(request, deal):
     modifiers = []
     for deal_item in deal.items.prefetch_related("options__menu_item"):
-        selected_option_id = request.POST.get(f"item_{deal_item.id}")
-        option_queryset = deal_item.options.filter(is_available=True)
+        selected_ids = {value for value in request.POST.getlist(f"item_{deal_item.id}") if value}
+        options = list(
+            deal_item.options.filter(is_available=True, menu_item_id__in=selected_ids)
+        )
 
-        if not selected_option_id and deal_item.min_quantity:
-            raise ValidationError(f"Please choose an option for {deal_item.name}.")
-
-        option = option_queryset.filter(menu_item_id=selected_option_id).first()
-        if not option and selected_option_id:
+        if len(options) != len(selected_ids):
             raise ValidationError(f"Selected option for {deal_item.name} is no longer available.")
+        if len(options) < deal_item.min_quantity:
+            if deal_item.min_quantity == 1:
+                raise ValidationError(f"Please choose an option for {deal_item.name}.")
+            raise ValidationError(
+                f"Please choose at least {deal_item.min_quantity} options for {deal_item.name}."
+            )
+        if len(options) > deal_item.max_quantity:
+            raise ValidationError(
+                f"Please choose at most {deal_item.max_quantity} option{'s' if deal_item.max_quantity != 1 else ''} for {deal_item.name}."
+            )
 
-        if option:
+        for option in options:
             modifiers.append(
                 {
                     "id": option.menu_item_id,

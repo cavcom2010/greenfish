@@ -27,7 +27,9 @@
             </div>
             <div class="deal-price-display">
                 <div class="deal-price">£{{ deal.deal_price }}</div>
+                {% if deal.savings > 0 %}
                 <div class="deal-savings">Save £{{ deal.savings }} ({{ deal.savings_percent }}% off)</div>
+                {% endif %}
             </div>
         </div>
 
@@ -51,7 +53,11 @@
                     {% for option in item.options.all %}
                     {% if option.is_available %}
                     <label class="deal-option">
+                        {% if item.max_quantity > 1 %}
+                        <input type="checkbox" name="item_{{ item.id }}" value="{{ option.menu_item.id }}" data-slot-max="{{ item.max_quantity }}" {% if forloop.counter <= item.min_quantity %}checked{% endif %}>
+                        {% else %}
                         <input type="radio" name="item_{{ item.id }}" value="{{ option.menu_item.id }}" {% if forloop.first %}checked{% endif %}>
+                        {% endif %}
                         <div style="flex:1;min-width:0;">
                             <div class="deal-option-name">{{ option.menu_item.name }}</div>
                             {% if option.menu_item.description %}
@@ -106,6 +112,19 @@ if (dealServiceInput && (dealSavedService === 'pickup' || dealSavedService === '
         localStorage.setItem('service_type', dealService);
     }
 }
+
+// Multi-pick slots render as checkboxes; keep selections within the
+// slot's max — the server re-validates min/max on add-to-cart.
+document.querySelectorAll('input[type="checkbox"][data-slot-max]').forEach(function (box) {
+    box.addEventListener('change', function () {
+        const max = parseInt(this.dataset.slotMax, 10);
+        const checked = document.querySelectorAll('input[name="' + this.name + '"]:checked');
+        if (this.checked && checked.length > max) {
+            this.checked = false;
+            if (window.showToast) showToast('Choose at most ' + max + ' for this section', 'error', 1800);
+        }
+    });
+});
 
 function updateDealQuantity(change) {
     const input = document.getElementById('dealQuantityInput');

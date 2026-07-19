@@ -97,7 +97,8 @@
     border-color: rgba(var(--brand-rgb), 0.4);
 }
 
-.deal-option input[type="radio"] {
+.deal-option input[type="radio"],
+.deal-option input[type="checkbox"] {
     accent-color: var(--brand);
     width: 18px;
     height: 18px;
