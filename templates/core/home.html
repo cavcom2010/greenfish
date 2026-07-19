@@ -3,6 +3,8 @@
 
 {% block title %}{{ site_settings.shop_name }} — Order Online{% endblock %}
 
+{% block body_class %}home-page{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/home.css' %}">
 {% endblock %}
@@ -162,11 +164,8 @@
 {% if recent_orders %}
 <section class="section">
     <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Order <span>Again</span></h2>
-                <p>Your recent favourites, ready to add back to your basket.</p>
-            </div>
+        <div class="section-title">
+            <h2>Order Again</h2>
             <a href="{% url 'accounts:order_history' %}" class="section-link">
                 Order History <i class="ph-bold ph-arrow-right"></i>
             </a>
@@ -210,14 +209,8 @@
 {% if favorite_items %}
 <section class="section">
     <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Your <span>Favourites</span></h2>
-                <p>Saved dishes for faster repeat ordering.</p>
-            </div>
-            <a href="{% url 'menu:menu' %}" class="section-link">
-                Browse Menu <i class="ph-bold ph-arrow-right"></i>
-            </a>
+        <div class="section-title">
+            <h2>Your Favourites</h2>
         </div>
 
         <div class="menu-grid-desktop">
@@ -248,14 +241,8 @@
 {% if popular_items %}
 <section class="section">
     <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Popular <span>Right Now</span></h2>
-                <p>What customers are ordering most right now.</p>
-            </div>
-            <a href="{% url 'menu:menu' %}" class="section-link">
-                View Full Menu <i class="ph-bold ph-arrow-right"></i>
-            </a>
+        <div class="section-title">
+            <h2>Popular Right Now</h2>
         </div>
 
         <div class="menu-grid-desktop popular-strip">
@@ -270,11 +257,8 @@
 {% if meal_deals %}
 <section class="section">
     <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Meal <span>Deals</span></h2>
-                <p>Big boxes, small prices — build yours in a few taps.</p>
-            </div>
+        <div class="section-title">
+            <h2>Meal Deals</h2>
             <a href="{% url 'mealdeals:list' %}" class="section-link">
                 All Deals <i class="ph-bold ph-arrow-right"></i>
             </a>

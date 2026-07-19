@@ -1,7 +1,7 @@
 // Service Worker for PWA
 
-const STATIC_CACHE_NAME = 'restaurant-static-v26';
-const RUNTIME_CACHE_NAME = 'restaurant-runtime-v26';
+const STATIC_CACHE_NAME = 'restaurant-static-v27';
+const RUNTIME_CACHE_NAME = 'restaurant-runtime-v27';
 const OFFLINE_URL = '/pwa/offline/';
 const STATIC_ASSETS = [
     '/',

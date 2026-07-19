@@ -468,8 +468,29 @@
     scroll-margin-top: calc(var(--header-height) + 12px);
 }
 
-.chips-section {
+/* Homepage rhythm: roughly half the site-wide .section padding, and a
+   compact single-colour section title instead of the two-tone
+   heading + subtitle + arrow formula. */
+.home-page .section {
+    padding-block: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.home-page .chips-section {
     padding-block: var(--space-2) var(--space-4);
+}
+
+.section-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.section-title h2 {
+    font-size: var(--text-xl);
+    font-weight: 900;
+    line-height: 1.1;
 }
 
 .category-chip--all {
