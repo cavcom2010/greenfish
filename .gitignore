@@ -25,3 +25,4 @@ db.sqlite3
 # Local tool artifacts
 dump.rdb
 .kombai/
+.celerybeat-schedule
