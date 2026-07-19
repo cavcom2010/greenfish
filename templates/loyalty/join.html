@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Rewards - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/account.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<section class="rewards-page">
+    <div class="container">
+        <!-- Join hero -->
+        <div class="rewards-hero">
+            <div class="rewards-hero-text">
+                <h1>Earn points on every order</h1>
+                <p>Collect {{ points_per_pound|floatformat:"-2" }} point{{ points_per_pound|pluralize }} for every £1 you spend and turn them into free food.</p>
+            </div>
+            <div class="rewards-join-actions">
+                <a href="{% url 'account_signup' %}?next={% url 'loyalty:dashboard' %}" class="btn btn--primary btn--lg">
+                    <i class="ph-bold ph-gift"></i>
+                    Create Account
+                </a>
+                <a href="{% url 'account_login' %}?next={% url 'loyalty:dashboard' %}" class="btn btn--secondary">
+                    Sign In
+                </a>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="panel-card">
+            <h3>How it works</h3>
+            <div class="benefit-grid">
+                <div class="benefit-tile">
+                    <i class="ph-fill ph-fork-knife"></i>
+                    <span>Order your favourites for pickup{% if delivery_enabled %} or delivery{% endif %}</span>
+                </div>
+                <div class="benefit-tile">
+                    <i class="ph-fill ph-coins"></i>
+                    <span>Earn {{ points_per_pound|floatformat:"-2" }} point{{ points_per_pound|pluralize }} per £1, automatically</span>
+                </div>
+                <div class="benefit-tile">
+                    <i class="ph-fill ph-gift"></i>
+                    <span>Redeem points and unlock member-only offers</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Public offers -->
+        {% if offers %}
+        <section style="padding-top:2.5rem;" id="offers">
+            <div class="section-header">
+                <div>
+                    <h2>Offers &amp; Deals</h2>
+                    <p>Live right now — no account needed to browse.</p>
+                </div>
+            </div>
+
+            <div class="offers-grid">
+                {% for offer in offers %}
+                <a href="{% url 'offers:detail' offer.id %}" class="offer-card-desktop">
+                    <div class="offer-bg"></div>
+                    <div class="offer-card-content">
+                        <h3>{{ offer.name }}</h3>
+                        <p>{{ offer.description }}</p>
+                        {% if offer.offer_type == 'percentage' %}
+                        <span class="badge badge--gold" style="margin-bottom:1rem;">Save {{ offer.value|floatformat:0 }}%</span>
+                        {% elif offer.offer_type == 'fixed' %}
+                        <span class="badge badge--gold" style="margin-bottom:1rem;">Save £{{ offer.value }}</span>
+                        {% endif %}
+                        <span class="offer-btn-desktop">
+                            View Offer <i class="ph-bold ph-arrow-right"></i>
+                        </span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

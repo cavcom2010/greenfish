@@ -13,7 +13,7 @@ from apps.core.models import SiteSettings
 from apps.offers.models import Offer
 from apps.orders.services import clear_reward_wallet_item, store_reward_wallet_item
 
-from .models import LoyaltyTransaction, RewardWalletItem
+from .models import LoyaltySettings, LoyaltyTransaction, RewardWalletItem
 from .services import get_user_loyalty_summary
 
 
@@ -29,15 +29,29 @@ def _active_offers(user):
     ]
 
 
-@login_required
 def rewards_dashboard(request):
-    """Unified Rewards hub — loyalty dashboard + public offers."""
+    """Unified Rewards hub — loyalty dashboard + public offers.
+
+    Logged-out visitors get a public join teaser instead of a login wall,
+    so the Rewards tab sells the programme to the people it should convert.
+    """
+    title = f"{SiteSettings.get().shop_name} Rewards"
+    offers = _active_offers(request.user)
+
+    if not request.user.is_authenticated:
+        context = {
+            "offers": offers,
+            "points_per_pound": LoyaltySettings.get().points_per_pound,
+            "title": title,
+        }
+        return render(request, "loyalty/join.html", context)
+
     summary = get_user_loyalty_summary(request.user)
 
     context = {
         **summary,
-        "offers": _active_offers(request.user),
-        "title": f"{SiteSettings.get().shop_name} Rewards",
+        "offers": offers,
+        "title": title,
     }
     return render(request, "loyalty/dashboard.html", context)
 

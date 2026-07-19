@@ -21,9 +21,25 @@ class LoyaltyViewTests(TestCase):
         )
 
     def test_rewards_pages_require_login(self):
-        for name in ["loyalty:dashboard", "loyalty:transactions", "loyalty:refer"]:
+        for name in ["loyalty:transactions", "loyalty:refer"]:
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 302)
+
+    def test_rewards_dashboard_shows_public_join_teaser_when_logged_out(self):
+        response = self.client.get(reverse("loyalty:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "loyalty/join.html")
+        self.assertContains(response, "Earn points on every order")
+        self.assertContains(response, reverse("account_signup"))
+        self.assertNotContains(response, "Points Available")
+
+    def test_public_join_teaser_lists_active_offers(self):
+        offer = create_offer()
+        response = self.client.get(reverse("loyalty:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, offer.name)
 
     def test_rewards_pages_render_for_logged_in_user(self):
         self.client.force_login(self.user)

@@ -161,6 +161,33 @@
     font-size: var(--text-md);
 }
 
+/* Join CTAs on the public rewards teaser (white-on-brand hero) */
+.rewards-join-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 200px;
+}
+
+.rewards-join-actions .btn--primary {
+    background: #fff;
+    color: var(--brand-dark);
+}
+
+.rewards-join-actions .btn--primary:hover {
+    background: var(--brand-light);
+}
+
+.rewards-join-actions .btn--secondary {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.rewards-join-actions .btn--secondary:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
 .rewards-points-display {
     text-align: center;
     background: rgba(255, 255, 255, 0.15);
