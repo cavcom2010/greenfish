@@ -1,13 +1,18 @@
 """
 Staff-facing operations boards and actions.
 """
+import logging
+
 from django.core.exceptions import ValidationError
+from django.db import DatabaseError, transaction
 from django.http import JsonResponse
-from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
+from apps.core.rate_limits import rate_limit
 from apps.orders.models import Order
+
+logger = logging.getLogger(__name__)
 
 from .permissions import (
     BOARD_COLLECTION,
@@ -99,6 +104,7 @@ def order_detail_modal(request, order_id):
 
 @operations_staff_required(json_response=True)
 @require_POST
+@rate_limit("ops-order-action", limit=60, window_seconds=60)
 def order_action(request, order_id):
     action = (request.POST.get("action") or "").strip()
     expected_status = (request.POST.get("expected_status") or "").strip()
@@ -106,7 +112,7 @@ def order_action(request, order_id):
     try:
         with transaction.atomic():
             order = get_object_or_404(
-                Order.objects.select_for_update(of=("self",)).select_related("user", "payment").prefetch_related("items"),
+                Order.objects.select_for_update().select_related("user", "payment").prefetch_related("items"),
                 pk=order_id,
             )
             if expected_status and order.status != expected_status:
@@ -133,23 +139,36 @@ def order_action(request, order_id):
                 payment_notes=request.POST.get("payment_notes", ""),
                 request=request,
             )
+
+        order.available_actions = available_actions(order, user=request.user)
+
+        if request.headers.get("HX-Request"):
+            template_name = (
+                "operations/orders/kanban_card.html"
+                if request.POST.get("view") == "kanban"
+                else "operations/orders/_order_card.html"
+            )
+            return render(request, template_name, {"order": order})
+
+        return JsonResponse({"success": True, "order_id": order_id, "status": order.status, "action": action})
+
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     except ValidationError as exc:
         message = " ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
         return JsonResponse({"error": message}, status=400)
-
-    order.available_actions = available_actions(order, user=request.user)
-
-    if request.headers.get("HX-Request"):
-        template_name = (
-            "operations/orders/kanban_card.html"
-            if request.POST.get("view") == "kanban"
-            else "operations/orders/_order_card.html"
+    except DatabaseError as exc:
+        logger.exception("Database error performing %s on order %s", action, order_id)
+        return JsonResponse(
+            {"error": "A conflict occurred. Refresh the board and try again."},
+            status=409,
         )
-        return render(request, template_name, {"order": order})
-
-    return JsonResponse({"success": True, "order_id": order_id, "status": order.status, "action": action})
+    except Exception:
+        logger.exception("Unexpected error performing %s on order %s", action, order_id)
+        return JsonResponse(
+            {"error": "Something went wrong. Please try again."},
+            status=500,
+        )
 
 
 @operations_board_required(BOARD_KITCHEN)
