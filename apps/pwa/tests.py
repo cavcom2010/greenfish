@@ -119,16 +119,16 @@ class PwaViewTests(TestCase):
         self.assertEqual(blocked.status_code, 429)
         self.assertIn("Retry-After", blocked.headers)
 
-    def test_service_worker_only_caches_static_shell_routes(self):
+    def test_service_worker_caches_shell_and_excludes_sensitive_routes(self):
         response = self.client.get(reverse("pwa:service_worker"))
         self.assertEqual(response.status_code, 200)
         body = response.content.decode()
         self.assertIn("UNCACHEABLE_PREFIXES", body)
         self.assertIn("'/media/'", body)
         self.assertIn("'/payments/'", body)
-        self.assertIn("restaurant-static-v19", body)
-        self.assertNotIn("'/accounts/app/'", body)
-        self.assertNotIn("cache.put(event.request, clonedResponse)", body)
+        self.assertIn("'/accounts/app/'", body)
+        self.assertIn("greenfish-", body)
+        self.assertNotIn("clonedResponse", body)
 
 
 class PushSendingTests(TestCase):

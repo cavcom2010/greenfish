@@ -8,13 +8,14 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ site_settings.shop_name|truncatechars:12 }}">
     <meta name="description" content="{% block meta_description %}Order delicious food from {{ site_settings.shop_name }}. Fresh food available for pickup{% if delivery_enabled %} or delivery{% endif %}.{% endblock %}">
 
     <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
 
     <!-- PWA -->
     <link rel="manifest" href="{% url 'pwa:manifest' %}">
-    <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}">
     {% if site_settings.favicon %}
     <link rel="icon" type="image/png" href="{{ site_settings.favicon.url }}">
     {% else %}
@@ -37,6 +38,18 @@
 
     <!-- HTMX (self-hosted) -->
     <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+
+    <style>
+        .install-btn{display:none;align-items:center;gap:0.35rem;padding:0.4rem 0.8rem;border:1.5px solid var(--brand);border-radius:var(--radius);background:var(--brand);color:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;}
+        .install-btn.visible{display:inline-flex;}
+        .install-btn i{font-size:1.1rem;}
+        .snackbar{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);z-index:10000;padding:0.75rem 1.25rem;background:var(--text,#111);color:#fff;border-radius:var(--radius);font-weight:600;font-size:0.88rem;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:opacity .3s,transform .3s;opacity:0;pointer-events:none;white-space:nowrap;}
+        .snackbar.show{opacity:1;transform:translateX(-50%) translateY(-.5rem);}
+        .push-toggle{display:inline-flex;align-items:center;gap:0.4rem;padding:0.3rem 0.7rem;border-radius:var(--radius);font-weight:600;font-size:0.8rem;cursor:pointer;border:1px solid var(--border,#ccc);background:var(--surface,#fff);color:var(--text,#111);}
+        .push-toggle.on{border-color:var(--brand);background:var(--brand);color:#fff;}
+        .push-toggle.blocked{opacity:.5;cursor:not-allowed;}
+        .push-toggle i{font-size:1rem;}
+    </style>
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -90,6 +103,10 @@
                     Order Now <i class="ph-bold ph-arrow-right"></i>
                 </a>
                 {% endif %}
+
+                <button type="button" class="install-btn" id="installBtn" onclick="pwaInstall()" hidden>
+                    <i class="ph-bold ph-download-simple"></i> Install
+                </button>
 
                 <button type="button" class="header-icon-btn mobile-menu-btn" id="mobileMenuButton"
                         onclick="openMobileMenu()" aria-label="Open menu" aria-haspopup="true" aria-expanded="false">
@@ -244,6 +261,9 @@
 
     <!-- Toasts -->
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Snackbar for connection / update prompts -->
+    <div class="snackbar" id="snackbar" aria-live="polite"></div>
 
     {% block basket_bar %}
     {% if 'checkout' not in request.path and 'cart' not in request.path %}

@@ -681,63 +681,231 @@
 
 })();
 
-// ── PWA: Service Worker Registration & Push Scaffolding ─────────────────
+// ── PWA: Service Worker, Install Prompt, Push Toggle, Connectivity  ────
 (function() {
     'use strict';
 
-    const swUrl = window.APP_CONFIG?.serviceWorkerUrl;
-    if ('serviceWorker' in navigator && swUrl) {
-        navigator.serviceWorker.register(swUrl).catch(function() {});
+    var deferredPrompt = null;
+    var installBtn = document.getElementById('installBtn');
+    var pushToggleBtn = document.getElementById('pushToggleBtn');
+    var pushToggleLabel = document.getElementById('pushToggleLabel');
+    var snackbarTimer = null;
+
+    var swUrl = window.APP_CONFIG && window.APP_CONFIG.serviceWorkerUrl;
+    var registration = null;
+
+    function showSnackbar(msg, duration) {
+        var el = document.getElementById('snackbar');
+        if (!el) return;
+        if (snackbarTimer) clearTimeout(snackbarTimer);
+        el.textContent = msg;
+        el.classList.add('show');
+        snackbarTimer = setTimeout(function() { el.classList.remove('show'); }, duration || 4000);
     }
 
+    // ── Install prompt ──────────────────────────────────────────────
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installBtn) installBtn.hidden = false;
+    });
+
     window.addEventListener('appinstalled', function() {
+        deferredPrompt = null;
+        if (installBtn) installBtn.hidden = true;
         if (window.showToast) showToast('App installed — order in one tap!', 'success', 2500);
     });
 
-    function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
+    window.pwaInstall = function() {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(result) {
+            if (result.outcome === 'accepted') {
+                if (installBtn) installBtn.hidden = true;
+            }
+            deferredPrompt = null;
+        });
+    };
+
+    // Hide install button if already in standalone mode
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+        if (installBtn) installBtn.hidden = true;
     }
 
-    // Called on user engagement (e.g. after first order) — not on load.
-    window.subscribeToNotifications = async function() {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
-        const vapidKey = window.APP_CONFIG?.vapidPublicKey;
-        const subscribeUrl = window.APP_CONFIG?.pushSubscribeUrl;
-        if (!vapidKey || !subscribeUrl) return false;
+    // ── SW registration + update detection ──────────────────────────
+    if ('serviceWorker' in navigator && swUrl) {
+        navigator.serviceWorker.register(swUrl).then(function(reg) {
+            registration = reg;
 
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') return false;
-
-            const existing = await registration.pushManager.getSubscription();
-            const subscription = existing || await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey)
+            // Detect waiting service worker → prompt user to refresh
+            reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showSnackbar('New version available \u2014 tap to refresh', 0);
+                        document.getElementById('snackbar').style.cursor = 'pointer';
+                        document.getElementById('snackbar').onclick = function() {
+                            newWorker.postMessage('skipWaiting');
+                            window.location.reload();
+                        };
+                    }
+                });
             });
+        }).catch(function() {});
+    }
 
-            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]');
-            await fetch(subscribeUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken ? csrftoken.value : ''
-                },
-                body: JSON.stringify({ subscription: subscription })
-            });
-            return true;
-        } catch (error) {
-            return false;
+    // Detect controller change (new SW took over)
+    navigator.serviceWorker && navigator.serviceWorker.addEventListener('controllerchange', function() {
+        showSnackbar('App updated! Reloading\u2026', 2000);
+        setTimeout(function() { window.location.reload(); }, 1000);
+    });
+
+    // ── Push helpers ────────────────────────────────────────────────
+    function urlBase64ToUint8Array(b64) {
+        var padding = '='.repeat((4 - b64.length % 4) % 4);
+        var base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var raw = window.atob(base64);
+        var out = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+    }
+
+    function getCsrfHeader() {
+        var el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    function pushSubscribed() {
+        return registration && registration.pushManager.getSubscription().then(function(s) { return !!s; });
+    }
+
+    function updatePushToggleUI() {
+        if (!pushToggleBtn || !pushToggleLabel) return;
+        if (!('PushManager' in window) || !(window.APP_CONFIG && window.APP_CONFIG.vapidPublicKey)) {
+            pushToggleBtn.className = 'push-toggle blocked';
+            pushToggleLabel.textContent = 'Push unavailable';
+            return;
         }
+        if (Notification.permission === 'denied') {
+            pushToggleBtn.className = 'push-toggle blocked';
+            pushToggleBtn.onclick = null;
+            pushToggleLabel.textContent = 'Notifications blocked';
+            return;
+        }
+        pushSubscribed().then(function(sub) {
+            if (sub) {
+                pushToggleBtn.className = 'push-toggle on';
+                pushToggleLabel.textContent = 'Push: ON';
+            } else {
+                pushToggleBtn.className = 'push-toggle';
+                pushToggleLabel.textContent = 'Push: OFF';
+            }
+        });
+    }
+
+    // Called on user engagement — subscribes to push
+    window.subscribeToNotifications = function() {
+        if (!registration || !('PushManager' in window)) return Promise.resolve(false);
+        var vapidKey = window.APP_CONFIG && window.APP_CONFIG.vapidPublicKey;
+        var subscribeUrl = window.APP_CONFIG && window.APP_CONFIG.pushSubscribeUrl;
+        if (!vapidKey || !subscribeUrl) return Promise.resolve(false);
+
+        return Notification.requestPermission().then(function(perm) {
+            if (perm !== 'granted') return false;
+            return registration.pushManager.getSubscription().then(function(existing) {
+                var subPromise = existing || registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                });
+                return subPromise.then(function(subscription) {
+                    return fetch(subscribeUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfHeader() },
+                        body: JSON.stringify({
+                            subscription: subscription,
+                            device_name: navigator.userAgentData ? navigator.userAgentData.platform + ' ' + navigator.userAgentData.brands.map(function(b) { return b.brand; }).join(' ') : (navigator.platform || 'unknown')
+                        })
+                    }).then(function() { return true; });
+                });
+            });
+        }).catch(function() { return false; });
     };
+
+    window.unsubscribeFromPush = function() {
+        if (!registration) return Promise.resolve(false);
+        return registration.pushManager.getSubscription().then(function(sub) {
+            if (!sub) return false;
+            var url = window.APP_CONFIG && window.APP_CONFIG.pushSubscribeUrl;
+            return sub.unsubscribe().then(function(ok) {
+                if (ok && url) {
+                    fetch(url.replace(/subscribe_push\/$/, '') + 'unsubscribe-push/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfHeader() },
+                        body: JSON.stringify({ endpoint: sub.endpoint })
+                    }).catch(function() {});
+                }
+                return ok;
+            });
+        });
+    };
+
+    window.togglePushNotifications = function() {
+        pushSubscribed().then(function(sub) {
+            if (sub) {
+                window.unsubscribeFromPush().then(function() {
+                    if (window.showToast) showToast('Push notifications turned off', 'info', 2000);
+                    updatePushToggleUI();
+                });
+            } else {
+                window.subscribeToNotifications().then(function(ok) {
+                    if (ok) {
+                        if (window.showToast) showToast('Push notifications turned on!', 'success', 2000);
+                    } else if (Notification.permission === 'denied') {
+                        if (window.showToast) showToast('Notifications are blocked in your browser settings', 'error', 3000);
+                    }
+                    updatePushToggleUI();
+                });
+            }
+        });
+    };
+
+    // pushsubscriptionchange: browser rotated keys → resubscribe
+    registration && registration.pushManager.addEventListener('pushsubscriptionchange', function() {
+        window.subscribeToNotifications().catch(function() {});
+    });
+
+    // permissionchange: user changed notification permission in browser settings
+    if ('permissions' in navigator && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'notifications' }).then(function(permStatus) {
+            permStatus.addEventListener('change', function() {
+                updatePushToggleUI();
+                if (window.showToast) {
+                    showToast('Notification permission changed', 'info', 2000);
+                }
+            });
+        }).catch(function() {});
+    }
+
+    // Initial push toggle refresh (deferred so DOM exists)
+    if (pushToggleBtn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updatePushToggleUI);
+        } else {
+            updatePushToggleUI();
+        }
+    }
+
+    // ── Online / offline connectivity toasts ────────────────────────
+    window.addEventListener('online', function() {
+        showSnackbar('You\u2019re back online', 3000);
+    });
+    window.addEventListener('offline', function() {
+        showSnackbar('You\u2019re offline \u2014 cached pages still load', 4000);
+    });
+
 })();
+
 
 // ── Cookie Consent (GDPR / UK ICO) ─────────────────────────────────────
 (function() {

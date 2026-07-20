@@ -55,6 +55,12 @@
                 <div class="panel-card">
                     <h3>Share Via</h3>
                     <div class="share-row">
+                        {% if user_agent_is_mobile or debug %}
+                        <button onclick="shareReferral()" class="share-btn" id="nativeShareBtn">
+                            <i class="ph-fill ph-share-network" style="color:var(--brand);"></i>
+                            Share
+                        </button>
+                        {% endif %}
                         <a href="https://wa.me/?text=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}"
                            target="_blank" rel="noopener" class="share-btn">
                             <i class="ph-fill ph-whatsapp-logo" style="color:#25D366;"></i>
@@ -102,10 +108,25 @@ function copyCode() {
 }
 
 function copyLink() {
-    const text = `Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}`;
+    const text = "Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}";
     navigator.clipboard.writeText(text).then(() => {
         if (window.showToast) showToast('Message copied!', 'success', 2000);
     });
+}
+
+function shareReferral() {
+    const text = "Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}";
+    if (navigator.share) {
+        navigator.share({ title: 'Join {{ site_settings.shop_name|escapejs }}', text: text }).catch(() => {});
+    } else {
+        copyLink();
+    }
+}
+
+// Hide native share button if Web Share isn't supported
+if (!navigator.share) {
+    var btn = document.getElementById('nativeShareBtn');
+    if (btn) btn.hidden = true;
 }
 </script>
 {% endblock %}
