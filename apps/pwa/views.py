@@ -24,53 +24,59 @@ def manifest(request):
     manifest_data = {
         "name": db_settings.shop_name,
         "short_name": db_settings.shop_name[:12] if len(db_settings.shop_name) > 12 else db_settings.shop_name,
+        "description": f"Order delicious food from {db_settings.shop_name}. Fresh food available for pickup{' & delivery' if db_settings.is_delivery_enabled else ''}.",
         "start_url": "/accounts/app/",
         "display": "standalone",
-        "background_color": "#FFFFFF",
+        "background_color": db_settings.theme_color,
         "theme_color": db_settings.theme_color,
         "orientation": "portrait",
         "scope": "/",
+        "lang": "en",
+        "categories": ["food", "restaurants"],
+        "id": "/",
         "icons": [
             {
                 "src": "/static/icons/icon-72.png",
                 "sizes": "72x72",
-                "type": "image/png"
+                "type": "image/png",
             },
             {
                 "src": "/static/icons/icon-96.png",
                 "sizes": "96x96",
-                "type": "image/png"
+                "type": "image/png",
             },
             {
                 "src": "/static/icons/icon-128.png",
                 "sizes": "128x128",
-                "type": "image/png"
+                "type": "image/png",
             },
             {
                 "src": "/static/icons/icon-144.png",
                 "sizes": "144x144",
-                "type": "image/png"
+                "type": "image/png",
             },
             {
                 "src": "/static/icons/icon-152.png",
                 "sizes": "152x152",
-                "type": "image/png"
+                "type": "image/png",
             },
             {
                 "src": "/static/icons/icon-192.png",
                 "sizes": "192x192",
-                "type": "image/png"
+                "type": "image/png",
+                "purpose": "any maskable",
             },
             {
                 "src": "/static/icons/icon-384.png",
                 "sizes": "384x384",
-                "type": "image/png"
+                "type": "image/png",
             },
             {
                 "src": "/static/icons/icon-512.png",
                 "sizes": "512x512",
-                "type": "image/png"
-            }
+                "type": "image/png",
+                "purpose": "any maskable",
+            },
         ],
         "shortcuts": [
             {
@@ -106,8 +112,17 @@ def manifest(request):
 
 @require_GET
 def service_worker(request):
-    """Serve the service worker file."""
-    return render(request, "pwa/service-worker.js", content_type="application/javascript")
+    """Serve the service worker file with a dynamic cache version."""
+    import datetime
+
+    return render(
+        request,
+        "pwa/service-worker.js",
+        {
+            "CACHE_VERSION": f"v{datetime.date.today().strftime('%Y%m%d')}",
+        },
+        content_type="application/javascript",
+    )
 
 
 @require_GET

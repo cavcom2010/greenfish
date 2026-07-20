@@ -1,23 +1,31 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Offline - {{ site_settings.shop_name }}{% endblock %}
+{% block title %}Offline — {{ site_settings.shop_name }}{% endblock %}
 
 {% block content %}
 <section class="section">
     <div class="container" style="max-width:720px;">
         <div class="card card--padded">
             <div class="empty-state">
-                <i class="ph-fill ph-wifi-slash" style="color:var(--brand);"></i>
+                <i class="ph-fill ph-wifi-slash" style="color:var(--brand);font-size:3rem;margin-bottom:0.5rem;"></i>
                 <h3>You're offline</h3>
-                <p>Don't worry. You can still browse cached pages, then try again when your connection is back.</p>
-                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;">
+                <p style="margin-bottom:0.5rem;">Don't worry — you can still browse cached pages and try again when your connection is back.</p>
+
+                {% if site_settings.phone or site_settings.email %}
+                <div style="margin:0.75rem 0;padding:0.75rem 1rem;background:var(--gray-50);border-radius:var(--radius);font-size:0.9rem;display:inline-block;">
+                    <strong>{{ site_settings.shop_name }}</strong>
+                    {% if site_settings.phone %}&ensp;📞 <a href="tel:{{ site_settings.phone }}">{{ site_settings.phone }}</a>{% endif %}
+                    {% if site_settings.email %}&ensp;✉️ <a href="mailto:{{ site_settings.email }}">{{ site_settings.email }}</a>{% endif %}
+                </div>
+                {% endif %}
+
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;margin-top:1rem;">
                     <a href="{% url 'menu:menu' %}" class="btn btn--primary">
-                        <i class="ph-bold ph-fork-knife"></i>
-                        Browse Menu
+                        <i class="ph-bold ph-fork-knife"></i> Browse Menu
                     </a>
                     <button type="button" onclick="window.location.reload()" class="btn btn--secondary">
-                        <i class="ph-bold ph-arrows-clockwise"></i>
-                        Try Again
+                        <i class="ph-bold ph-arrows-clockwise"></i> Try Again
                     </button>
                 </div>
             </div>
@@ -28,7 +36,7 @@
 
 {% block extra_js %}
 <script>
-window.addEventListener('online', () => {
+window.addEventListener('online', function() {
     window.location.reload();
 });
 </script>
