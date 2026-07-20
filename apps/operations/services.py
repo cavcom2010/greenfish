@@ -7,7 +7,7 @@ from django.db.models import Count, Prefetch
 
 from apps.orders.models import Order, OrderItem
 from apps.payments.models import Payment
-from .permissions import can_perform_action
+from .permissions import can_perform_action, get_operations_roles
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def get_collection_orders(status_filter="", user=None):
 
 def get_kanban_orders(column_status, user=None):
     statuses = KANBAN_COLUMNS.get(column_status, KANBAN_COLUMNS["confirmed"])
-    return attach_available_actions(board_queryset().filter(status__in=statuses), user=user)
+    return attach_available_actions(board_queryset().filter(status__in=statuses)[:50], user=user)
 
 
 def get_all_kanban_columns(user=None):
@@ -117,12 +117,25 @@ def get_all_kanban_columns(user=None):
 
 
 def attach_available_actions(orders, user=None):
+    roles = get_operations_roles(user) if user else set()
     for order in orders:
-        order.available_actions = available_actions(order, user=user)
+        order.available_actions = _available_actions_cached(order, roles=roles)
     return orders
 
 
 def available_actions(order, user=None):
+    roles = get_operations_roles(user) if user else set()
+    return _available_actions_cached(order, roles=roles)
+
+
+def _available_actions_cached(order, *, roles):
+    actions = _build_actions_for_order(order)
+    if not roles:
+        return actions
+    return [_a for _a in actions if _action_permitted(_a["name"], roles)]
+
+
+def _build_actions_for_order(order):
     available = []
 
     if order.status == Order.OrderStatus.PENDING:
@@ -149,9 +162,21 @@ def available_actions(order, user=None):
     if order.status not in {Order.OrderStatus.COMPLETED, Order.OrderStatus.CANCELLED}:
         available.append(_action(ACTION_CANCEL_ORDER, "Cancel Order", "btn-cancel"))
 
-    if user is None:
-        return available
-    return [action for action in available if can_perform_action(user, action["name"])]
+    return available
+
+
+def _action_permitted(action_name, roles):
+    from .permissions import ROLE_MANAGER, ROLE_KITCHEN, ROLE_CASHIER
+
+    if ROLE_MANAGER in roles:
+        return True
+    kitchen_actions = {ACTION_ACCEPT_ORDER, ACTION_START_PREPARING, ACTION_MARK_READY, ACTION_SAVE_NOTES}
+    cashier_actions = {ACTION_MARK_PAID, ACTION_MARK_DISPATCHED, ACTION_MARK_COLLECTED, ACTION_MARK_DELIVERED, ACTION_SAVE_NOTES}
+    if ROLE_KITCHEN in roles and action_name in kitchen_actions:
+        return True
+    if ROLE_CASHIER in roles and action_name in cashier_actions:
+        return True
+    return False
 
 
 def _action(name, label, css_class):
@@ -264,13 +289,13 @@ def perform_order_action(
     order.update_status(target_status, actor)
 
     if target_status == Order.OrderStatus.READY and old_status != Order.OrderStatus.READY and not order.is_delivery:
-        _enqueue_push(order, "order_ready", "Your order is ready for pickup.")
+        _run_side_effect("order_ready_push", lambda o: _enqueue_push(o, "order_ready", "Your order is ready for pickup."), order)
 
     if target_status == Order.OrderStatus.OUT_FOR_DELIVERY and old_status != Order.OrderStatus.OUT_FOR_DELIVERY:
-        _enqueue_push(order, "order_out_for_delivery", "Your order is on the way.")
+        _run_side_effect("order_out_for_delivery_push", lambda o: _enqueue_push(o, "order_out_for_delivery", "Your order is on the way."), order)
 
     if target_status == Order.OrderStatus.COMPLETED and order.is_delivery and old_status != Order.OrderStatus.COMPLETED:
-        _enqueue_push(order, "order_delivered", "Your order has been delivered.")
+        _run_side_effect("order_delivered_push", lambda o: _enqueue_push(o, "order_delivered", "Your order has been delivered."), order)
 
     return order
 
