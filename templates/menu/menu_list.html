@@ -5,82 +5,96 @@
 
 {% block body_class %}page-menu{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/menu.css' %}">
+{% endblock %}
+
 {% block content %}
 
 <section class="section" style="padding-top:2rem;">
     <div class="container">
-        <div class="section-header">
-            <div>
-                <h2 id="menuSectionTitle">
-                    {% if active_category %}
-                    {{ active_category.name }}
-                    {% elif dietary_filter %}
-                    {{ dietary_filter|title }} options
-                    {% else %}
-                    Full Menu
+        <div class="menu-layout">
+            <!-- Category rail: vertical scroll-nav on desktop, horizontal chip
+                 strip on mobile. Sentinel drives the sticky shadow. -->
+            <aside class="menu-rail" aria-label="Menu categories">
+                <div class="pill-row-sentinel" aria-hidden="true"></div>
+                <div class="menu-rail-inner">
+                    {% if all_items|length > 4 %}
+                    <div class="menu-search-bar menu-rail-search">
+                        <input type="text" id="menuSearchInput" class="menu-search-input"
+                               placeholder="Search dishes…"
+                               aria-label="Search menu">
+                        <i class="ph ph-magnifying-glass menu-search-icon"></i>
+                        <button type="button" class="menu-search-clear" id="menuSearchClear" aria-label="Clear search">
+                            <i class="ph ph-x"></i>
+                        </button>
+                        <span class="menu-search-shortcut">⌘K</span>
+                    </div>
                     {% endif %}
-                </h2>
-                <p>Browse and filter — no page reloads.</p>
+
+                    <h2 class="menu-rail-heading">Menu</h2>
+                    <nav class="menu-rail-list" id="categoryNav">
+                        <a class="menu-rail-link" href="#" data-category-nav data-category-id=""
+                           data-menu-label="Full Menu">
+                            <span class="menu-rail-name">All items</span>
+                            <span class="menu-rail-count">{{ total_item_count }}</span>
+                        </a>
+                        {% for category in categories %}
+                        <a class="menu-rail-link {% if active_category == category %}is-active{% endif %}"
+                           href="#cat-{{ category.id }}" data-category-nav data-category-id="{{ category.id }}"
+                           data-menu-label="{{ category.name|escape }}">
+                            <span class="menu-rail-name">{{ category.name }}</span>
+                            <span class="menu-rail-count">{{ category.item_count }}</span>
+                        </a>
+                        {% endfor %}
+                    </nav>
+
+                    <!-- Dietary pills -->
+                    <div class="dietary-filter-row">
+                        {% for tag in unique_dietary_tags %}
+                        <button type="button" class="dietary-filter-pill {% if dietary_filter == tag %}active{% endif %}"
+                                data-menu-dietary="{{ tag }}" aria-pressed="{% if dietary_filter == tag %}true{% else %}false{% endif %}">
+                            {% if tag == 'vegetarian' %}🥬{% elif tag == 'vegan' %}🌱{% elif tag == 'gluten-free' %}🌾{% elif tag == 'halal' %}🥩{% elif tag == 'spicy' %}🌶️{% else %}🏷️{% endif %}
+                            {{ tag|title }}
+                        </button>
+                        {% endfor %}
+                        <button type="button" class="dietary-filter-pill dietary-filter-pill--clear"
+                                data-menu-dietary="" data-menu-clear aria-pressed="false"
+                                {% if not dietary_filter %}hidden{% endif %}>Clear Filter ✕</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Menu content: one section per category (anchor targets) -->
+            <div class="menu-main menu-grid-loading" id="menuMain">
+                {% for category in categories %}
+                <section class="menu-section" id="cat-{{ category.id }}" data-category-id="{{ category.id }}"
+                         aria-labelledby="cat-{{ category.id }}-heading">
+                    <div class="menu-section-head">
+                        <h2 id="cat-{{ category.id }}-heading">{{ category.name }}</h2>
+                        {% if category.description %}
+                        <p class="menu-section-desc">{{ category.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="menu-grid-desktop">
+                        {% for item in category.available_items %}
+                        {% include "partials/item_card.html" with item=item filterable=True show_number=True show_dietary=True badge=item.is_popular|yesno:"Popular," %}
+                        {% endfor %}
+                    </div>
+                </section>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="ph ph-fork-knife"></i>
+                    <h3>No items yet</h3>
+                    <p>Check back soon — we're always adding new dishes!</p>
+                </div>
+                {% endfor %}
+                <div class="empty-state" id="menuNoResults" hidden>
+                    <i class="ph ph-magnifying-glass"></i>
+                    <h3>No items match</h3>
+                    <p>Try a different search term or clear your filters.</p>
+                </div>
             </div>
-        </div>
-
-        <!-- Category pills (client-side filter; sticky under the header) -->
-        <div class="pill-row-sentinel" aria-hidden="true"></div>
-        <div class="pill-row">
-            <button type="button" class="pill {% if not active_category %}active{% endif %}"
-                    data-menu-category="" data-menu-label="Full Menu"
-                    aria-pressed="{% if not active_category %}true{% else %}false{% endif %}">All Items</button>
-            {% for category in categories %}
-            <button type="button" class="pill {% if active_category == category %}active{% endif %}"
-                    data-menu-category="{{ category.id }}" data-menu-label="{{ category.name|escape }}"
-                    aria-pressed="{% if active_category == category %}true{% else %}false{% endif %}">{{ category.name }}</button>
-            {% endfor %}
-        </div>
-
-        <!-- Dietary pills -->
-        <div class="dietary-filter-row">
-            {% for tag in unique_dietary_tags %}
-            <button type="button" class="dietary-filter-pill {% if dietary_filter == tag %}active{% endif %}"
-                    data-menu-dietary="{{ tag }}" aria-pressed="{% if dietary_filter == tag %}true{% else %}false{% endif %}">
-                {% if tag == 'vegetarian' %}🥬{% elif tag == 'vegan' %}🌱{% elif tag == 'gluten-free' %}🌾{% elif tag == 'halal' %}🥩{% elif tag == 'spicy' %}🌶️{% else %}🏷️{% endif %}
-                {{ tag|title }}
-            </button>
-            {% endfor %}
-            <button type="button" class="dietary-filter-pill dietary-filter-pill--clear"
-                    data-menu-dietary="" data-menu-clear aria-pressed="false"
-                    {% if not dietary_filter %}hidden{% endif %}>Clear Filter ✕</button>
-        </div>
-
-        <!-- Search -->
-        {% if all_items|length > 4 %}
-        <div class="menu-search-bar" style="margin-top:1.5rem;">
-            <input type="text" id="menuSearchInput" class="menu-search-input"
-                   placeholder="Search menu items…"
-                   aria-label="Search menu">
-            <i class="ph ph-magnifying-glass menu-search-icon"></i>
-            <button type="button" class="menu-search-clear" id="menuSearchClear" aria-label="Clear search">
-                <i class="ph ph-x"></i>
-            </button>
-            <span class="menu-search-shortcut">⌘K</span>
-        </div>
-        {% endif %}
-
-        <!-- Menu grid: all items rendered, filtered client-side -->
-        <div class="menu-grid-desktop menu-grid-loading" style="margin-top:1.5rem;" id="menuGrid">
-            {% for item in all_items %}
-            {% include "partials/item_card.html" with item=item filterable=True show_number=True show_dietary=True badge=item.is_popular|yesno:"Popular," %}
-            {% empty %}
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="ph ph-fork-knife"></i>
-                <h3>No items yet</h3>
-                <p>Check back soon — we're always adding new dishes!</p>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="empty-state" id="menuNoResults" style="grid-column:1/-1;" hidden>
-            <i class="ph ph-magnifying-glass"></i>
-            <h3>No items match</h3>
-            <p>Try a different search term or clear your filters.</p>
         </div>
     </div>
 </section>

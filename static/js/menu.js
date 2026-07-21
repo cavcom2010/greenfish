@@ -24,10 +24,34 @@
         };
     }
 
+    // Desktop uses the rail as a scroll-nav; mobile uses it as an in-place
+    // category filter. The 768px line matches the CSS layout switch.
+    const desktopQuery = window.matchMedia('(min-width: 768px)');
+    function isDesktop() { return desktopQuery.matches; }
+    function prefersReducedMotion() {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function railLinkFor(categoryId) {
+        return document.querySelector('[data-category-nav][data-category-id="' + categoryId + '"]');
+    }
+
+    function setActiveRailLink(categoryId) {
+        document.querySelectorAll('[data-category-nav]').forEach(function (link) {
+            const active = (link.dataset.categoryId || '') === (categoryId || '');
+            link.classList.toggle('is-active', active);
+            if (active) {
+                link.setAttribute('aria-current', 'location');
+            } else {
+                link.removeAttribute('aria-current');
+            }
+        });
+    }
+
     function getMenuTitleForFilters(filters) {
         if (filters.category) {
-            const pill = document.querySelector(`[data-menu-category="${filters.category}"]`);
-            return pill ? (pill.dataset.menuLabel || pill.textContent.trim()) : 'Full Menu';
+            const link = railLinkFor(filters.category);
+            return link ? (link.dataset.menuLabel || link.textContent.trim()) : 'Full Menu';
         }
         if (filters.dietary) {
             const label = filters.dietary
@@ -64,9 +88,8 @@
     function applyMenuFilters(nextFilters, options = {}) {
         currentMenuFilters = normalizeMenuFilters(nextFilters);
 
-        const menuGrid = document.getElementById('menuGrid');
-        const title = document.getElementById('menuSectionTitle');
-        const cards = menuGrid ? Array.from(menuGrid.querySelectorAll('.menu-card')) : [];
+        const menuMain = document.getElementById('menuMain');
+        const cards = menuMain ? Array.from(menuMain.querySelectorAll('.menu-card')) : [];
         let visibleCount = 0;
 
         cards.forEach(card => {
@@ -87,16 +110,21 @@
             if (visible) visibleCount++;
         });
 
-        if (title) {
-            title.textContent = getMenuTitleForFilters(currentMenuFilters);
+        // Hide any section left with no visible cards (search / dietary / mobile
+        // category filter). On desktop the category never filters, so untouched
+        // sections stay visible for scrolling.
+        if (menuMain) {
+            menuMain.querySelectorAll('.menu-section').forEach(section => {
+                const hasVisible = section.querySelector('.menu-card:not(.search-hidden)') !== null;
+                section.classList.toggle('is-empty', !hasVisible);
+            });
         }
 
-        document.querySelectorAll('[data-menu-category]').forEach(pill => {
-            const pillCategory = pill.dataset.menuCategory || '';
-            const isActive = pillCategory === currentMenuFilters.category;
-            pill.classList.toggle('active', isActive);
-            pill.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        });
+        // The rail's active state is filter-driven only on mobile; on desktop
+        // the scrollspy owns it (see below).
+        if (!isDesktop()) {
+            setActiveRailLink(currentMenuFilters.category);
+        }
 
         document.querySelectorAll('[data-menu-dietary]').forEach(pill => {
             const pillDietary = pill.dataset.menuDietary || '';
@@ -218,19 +246,43 @@
         applyMenuFilters({ category: '', dietary: '' });
     }
 
+    function scrollToSection(categoryId) {
+        const target = categoryId
+            ? document.getElementById('cat-' + categoryId)
+            : document.getElementById('menuMain');
+        if (!target) return;
+        const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+        if (categoryId) {
+            target.scrollIntoView({ behavior: behavior, block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: behavior });
+        }
+    }
+
+    // Category rail: desktop scroll-jumps to the section, mobile filters in place.
     document.addEventListener('click', function (event) {
-        const categoryPill = event.target.closest('[data-menu-category]');
-        const dietaryPill = event.target.closest('[data-menu-dietary]');
-        if (!categoryPill && !dietaryPill) return;
+        const railLink = event.target.closest('[data-category-nav]');
+        if (!railLink) return;
 
         event.preventDefault();
+        const categoryId = railLink.dataset.categoryId || '';
 
-        if (categoryPill) {
+        if (isDesktop()) {
+            setActiveRailLink(categoryId);   // instant feedback; scrollspy refines
+            scrollToSection(categoryId);
+        } else {
             applyMenuFilters({
-                category: categoryPill.dataset.menuCategory || '',
+                category: categoryId,
                 dietary: currentMenuFilters.dietary,
             });
         }
+    });
+
+    document.addEventListener('click', function (event) {
+        const dietaryPill = event.target.closest('[data-menu-dietary]');
+        if (!dietaryPill) return;
+
+        event.preventDefault();
 
         if (dietaryPill) {
             const selected = dietaryPill.dataset.menuDietary || '';
@@ -302,26 +354,65 @@
         });
     }
 
-    // ── Sticky chips: shadow only while actually stuck ─────────────────
-    var pillRow = document.querySelector('.pill-row');
-    var pillSentinel = document.querySelector('.pill-row-sentinel');
-    if (pillRow && pillSentinel && 'IntersectionObserver' in window) {
-        var headerHeight = parseInt(
-            getComputedStyle(document.documentElement).getPropertyValue('--header-height'), 10) || 0;
+    var headerHeight = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue('--header-height'), 10) || 0;
+
+    // ── Sticky chips (mobile): shadow only while actually stuck ────────
+    var menuRail = document.querySelector('.menu-rail');
+    var railSentinel = document.querySelector('.pill-row-sentinel');
+    if (menuRail && railSentinel && 'IntersectionObserver' in window) {
         new IntersectionObserver(function (entries) {
-            pillRow.classList.toggle('is-stuck', !entries[0].isIntersecting);
-        }, { rootMargin: '-' + headerHeight + 'px 0px 0px 0px', threshold: 0 }).observe(pillSentinel);
+            menuRail.classList.toggle('is-stuck', !entries[0].isIntersecting);
+        }, { rootMargin: '-' + headerHeight + 'px 0px 0px 0px', threshold: 0 }).observe(railSentinel);
+    }
+
+    // ── Scrollspy (desktop): highlight the rail link for the section in view ──
+    var menuSections = Array.prototype.slice.call(document.querySelectorAll('.menu-section'));
+    if (menuSections.length && 'IntersectionObserver' in window) {
+        var spy = new IntersectionObserver(function (entries) {
+            if (!isDesktop()) return;
+            // Pick the top-most section currently intersecting.
+            var candidates = entries
+                .filter(function (e) { return e.isIntersecting; })
+                .map(function (e) { return e.target; });
+            if (!candidates.length) return;
+            candidates.sort(function (a, b) {
+                return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+            });
+            setActiveRailLink(candidates[0].dataset.categoryId || '');
+        }, { rootMargin: '-' + (headerHeight + 24) + 'px 0px -70% 0px', threshold: 0 });
+        menuSections.forEach(function (section) { spy.observe(section); });
+    }
+
+    // ── Reveal cards (they start hidden to avoid an unfiltered flash) ──
+    const menuMain = document.getElementById('menuMain');
+    if (menuMain) {
+        menuMain.classList.remove('menu-grid-loading');
     }
 
     // ── Initial state from URL ─────────────────────────────────────────
+    // A #cat-<id> hash (e.g. a homepage deep-link) is a scroll target.
+    const hashMatch = /^#cat-(\d+)$/.exec(window.location.hash);
+    const hashCategory = hashMatch ? hashMatch[1] : '';
     const initialFilters = readMenuFiltersFromUrl();
-    applyMenuFilters(initialFilters, { updateUrl: false });
-    history.replaceState(initialFilters, '', window.location.href);
+    const scrollTarget = hashCategory || (isDesktop() ? initialFilters.category : '');
 
-    const menuGrid = document.getElementById('menuGrid');
-    if (menuGrid) {
-        menuGrid.classList.remove('menu-grid-loading');
+    if (isDesktop()) {
+        // Desktop: categories scroll, they don't filter — only dietary seeds a filter.
+        applyMenuFilters({ category: '', dietary: initialFilters.dietary }, { updateUrl: false });
+        if (scrollTarget) {
+            setActiveRailLink(scrollTarget);
+            requestAnimationFrame(function () { scrollToSection(scrollTarget); });
+        } else {
+            setActiveRailLink('');
+        }
+    } else {
+        applyMenuFilters(initialFilters, { updateUrl: false });
+        if (hashCategory) {
+            applyMenuFilters({ category: hashCategory, dietary: currentMenuFilters.dietary }, { updateUrl: false });
+        }
     }
+    history.replaceState(initialFilters, '', window.location.href);
 
     // ── Visibility: restart timer when tab resumes ────────────────────
     document.addEventListener('visibilitychange', function () {
