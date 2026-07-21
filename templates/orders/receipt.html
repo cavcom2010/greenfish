@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% load media_tags %}
+{% load static %}
+
+{% block title %}Receipt #{{ order.order_number }} — {{ site_settings.shop_name }}{% endblock %}
+
+{% block meta_description %}Receipt for order #{{ order.order_number }} from {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-shell { max-width: 440px; margin: 1.5rem auto 3rem; padding: 0 1rem; }
+    .receipt { background: #fff; border: 1px solid var(--border-light, #e5e7eb); border-radius: var(--radius, 8px); overflow: hidden; font-size: 0.9rem; color: #1a1a1a; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+
+    /* head */
+    .receipt-head { padding: 1.25rem 1.25rem 0.75rem; text-align: center; border-bottom: 2px dashed var(--gray-200, #e5e7eb); }
+    .receipt-logo { max-height: 52px; margin-bottom: 0.5rem; }
+    .receipt-shop-name { font-size: 1.15rem; font-weight: 800; margin: 0 0 0.15rem; }
+    .receipt-shop-addr { font-size: 0.82rem; color: var(--text-muted, #6b7280); line-height: 1.45; margin: 0; }
+    .receipt-meta { display: flex; justify-content: space-between; padding: 0.7rem 1.25rem; background: var(--gray-50, #f9fafb); font-size: 0.82rem; }
+    .receipt-meta span { font-weight: 700; }
+
+    /* items */
+    .receipt-items { padding: 0.25rem 0; }
+    .receipt-item { display: flex; justify-content: space-between; padding: 0.55rem 1.25rem; border-bottom: 1px solid var(--gray-100, #f3f4f6); }
+    .receipt-item:last-child { border-bottom: none; }
+    .receipt-item-left { flex: 1; padding-right: 0.75rem; }
+    .receipt-item-name { font-weight: 600; }
+    .receipt-item-mods { font-size: 0.78rem; color: var(--text-muted, #6b7280); margin-top: 0.15rem; }
+    .receipt-item-qty { font-weight: 600; margin-right: 0.35rem; }
+    .receipt-item-price { font-weight: 600; white-space: nowrap; min-width: 4rem; text-align: right; }
+
+    /* summary */
+    .receipt-summary { border-top: 2px solid #1a1a1a; padding: 0.75rem 1.25rem; }
+    .receipt-summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.85rem; }
+    .receipt-summary-row.total { font-size: 1.05rem; font-weight: 800; padding-top: 0.5rem; border-top: 1px solid var(--gray-200, #e5e7eb); margin-top: 0.35rem; }
+    .receipt-discount { color: #16a34a; }
+
+    /* payment */
+    .receipt-payment { padding: 0.5rem 1.25rem 0.9rem; font-size: 0.84rem; border-top: 1px solid var(--gray-200, #e5e7eb); }
+    .receipt-payment-row { display: flex; justify-content: space-between; }
+
+    /* footer */
+    .receipt-foot { padding: 0.9rem 1.25rem; text-align: center; background: var(--gray-50, #f9fafb); border-top: 1px solid var(--gray-200, #e5e7eb); font-size: 0.8rem; color: var(--text-muted, #6b7280); }
+    .receipt-foot p { margin: 0.2rem 0; }
+    .receipt-qr { width: 90px; height: 90px; margin: 0.6rem auto 0; display: block; }
+    .receipt-vat { font-size: 0.76rem; }
+
+    /* buttons */
+    .receipt-actions { display: flex; gap: 0.75rem; margin: 1.25rem 0; flex-wrap: wrap; }
+    .receipt-actions .btn { font-size: 0.88rem; padding: 0.55rem 1rem; }
+
+    /* print */
+    @media print {
+        body { background: #fff; }
+        .site-header, .site-footer, .bottom-nav, .sticky-cart-bar, .toast-container, .snackbar,
+        .cart-drawer-overlay, .modal-overlay, .cookie-consent-banner, .receipt-actions,
+        .skip-link, .messages-strip { display: none !important; }
+        .receipt-shell { max-width: 100%; margin: 0; padding: 0; }
+        .receipt { border: none; border-radius: 0; box-shadow: none; width: 100%; }
+        .receipt-head { padding-top: 0; }
+        .receipt-meta, .receipt-foot { background: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="receipt-shell">
+    <div class="receipt">
+        <!-- head -->
+        <div class="receipt-head">
+            {% if site_settings.logo %}
+            <img src="{{ site_settings.logo|image_variant:'logo' }}" alt="{{ site_settings.shop_name }}" class="receipt-logo">
+            {% endif %}
+            <h2 class="receipt-shop-name">{{ site_settings.shop_name }}</h2>
+            <p class="receipt-shop-addr">
+                {{ site_settings.address|linebreaksbr }}
+                {% if site_settings.phone %}<br>☎ {{ site_settings.phone }}{% endif %}
+            </p>
+        </div>
+
+        <!-- meta -->
+        <div class="receipt-meta">
+            <div>
+                <span>Receipt #{{ order.order_number }}</span><br>
+                {{ order.created_at|date:"d M Y" }} at {{ order.created_at|date:"H:i" }}
+            </div>
+            <div style="text-align:right;">
+                <span>{{ order.get_service_type_display }}</span><br>
+                {% if order.is_delivery and order.delivery_address_display %}
+                {{ order.delivery_address_display|truncatechars:40 }}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- line items -->
+        <div class="receipt-items">
+            {% for item in items %}
+            <div class="receipt-item">
+                <div class="receipt-item-left">
+                    <div class="receipt-item-name">
+                        <span class="receipt-item-qty">{{ item.quantity }}×</span> {{ item.item_name }}
+                    </div>
+                    {% if item.modifiers %}
+                    <div class="receipt-item-mods">
+                        {% for mod in item.modifiers %}
+                        + {{ mod.name }}{% if mod.price and mod.price > 0 %} (£{{ mod.price|floatformat:2 }}){% endif %}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="receipt-item-price">£{{ item.line_total|floatformat:2 }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- summary -->
+        <div class="receipt-summary">
+            <div class="receipt-summary-row">
+                <span>Subtotal</span>
+                <span>£{{ order.subtotal|floatformat:2 }}</span>
+            </div>
+            {% if order.discount_amount > 0 %}
+            <div class="receipt-summary-row receipt-discount">
+                <span>Discount{% if order.voucher_code %} ({{ order.voucher_code }}){% endif %}</span>
+                <span>–£{{ order.discount_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if order.delivery_fee > 0 %}
+            <div class="receipt-summary-row">
+                <span>Delivery fee</span>
+                <span>£{{ order.delivery_fee|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="receipt-summary-row total">
+                <span>Total paid</span>
+                <span>£{{ order.total_amount|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <!-- payment -->
+        <div class="receipt-payment">
+            <div class="receipt-payment-row">
+                <span>Payment method</span>
+                <strong>{{ payment_method }}</strong>
+            </div>
+            {% if manual_receipt %}
+            <div class="receipt-payment-row" style="margin-top:0.3rem;">
+                <span>Reference</span>
+                <strong>{{ manual_receipt.reference_code }}</strong>
+            </div>
+            {% if manual_receipt.change_given > 0 %}
+            <div class="receipt-payment-row" style="margin-top:0.3rem;">
+                <span>Change given</span>
+                <strong>£{{ manual_receipt.change_given|floatformat:2 }}</strong>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% if order.customer_name %}
+            <div class="receipt-payment-row" style="margin-top:0.3rem;">
+                <span>Customer</span>
+                <strong>{{ order.customer_name }}</strong>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- footer -->
+        <div class="receipt-foot">
+            <p><strong>Thank you for your order!</strong></p>
+            {% if site_settings.vat_number %}
+            <p class="receipt-vat">VAT: {{ site_settings.vat_number }}</p>
+            {% endif %}
+            {% if site_settings.refund_policy_text %}
+            <p>{{ site_settings.refund_policy_text|truncatewords:30 }}</p>
+            {% endif %}
+            <img class="receipt-qr" src="data:image/png;base64,{{ qr_code }}" alt="Order {{ order.order_number }}">
+            <p style="margin-top:0.3rem;">{{ order.order_number }}</p>
+        </div>
+    </div>
+
+    <!-- actions -->
+    <div class="receipt-actions">
+        <button type="button" onclick="window.print()" class="btn btn--secondary">
+            <i class="ph-bold ph-printer"></i> Print
+        </button>
+        <a href="{% url 'orders:receipt_pdf' order.order_number %}" class="btn btn--primary">
+            <i class="ph-bold ph-download-simple"></i> Download PDF
+        </a>
+        {% if from_tracking %}
+        <a href="{% url 'orders:tracking' order.order_number %}{% if order.public_access_token %}?token={{ order.public_access_token }}{% endif %}" class="btn btn--secondary">
+            <i class="ph-bold ph-arrow-left"></i> Track Order
+        </a>
+        {% else %}
+        <a href="{% url 'accounts:order_history' %}" class="btn btn--secondary">
+            <i class="ph-bold ph-receipt"></i> Order History
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -24,6 +24,10 @@ urlpatterns = [
     path("track/<str:order_number>/", views.order_tracking, name="tracking"),
     path("track/<str:order_number>/issue/", views.create_order_issue, name="create_issue"),
     
+    # Receipt URLs
+    path("receipt/<str:order_number>/", views.order_receipt, name="receipt"),
+    path("receipt/<str:order_number>/pdf/", views.order_receipt_pdf, name="receipt_pdf"),
+    
     # Dashboard URLs (Legacy List View)
     path("dashboard/", views.order_board, name="order_board"),
     path("dashboard/orders/fragment/", views.order_list_fragment, name="order_list_fragment"),

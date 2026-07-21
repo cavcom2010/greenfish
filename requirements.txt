@@ -27,6 +27,10 @@ resend==2.32.2
 python-dateutil==2.9.0.post0
 # Web push notifications (order status updates to installed PWA)
 pywebpush==2.3.0
+# HTML-to-PDF rendering for digital receipts
+weasyprint==69.0
+# QR code generation for receipt scanning
+qrcode==8.2
 # twilio is not installed in the current venv (SMS_BACKEND defaults to
 # "console"); kept as a floor since there's no installed version to pin to.
 twilio>=9.0

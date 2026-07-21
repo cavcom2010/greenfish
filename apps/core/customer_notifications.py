@@ -110,20 +110,37 @@ def enqueue_order_confirmed(order):
     """Queue customer receipt/confirmation notifications after payment succeeds."""
     if order.payment_status != order.PaymentStatus.PAID:
         return
+    from django.template.loader import render_to_string
+
+    from apps.payments.models import ManualPaymentReceipt
+
     shop = _shop()
     tracking_url = _tracking_url(order)
     subject = f"{shop.shop_name}: order {order.order_number} confirmed"
+
+    payment = getattr(order, "payment", None)
+    payment_method_label = "Online (Stripe)"
+    if payment:
+        if hasattr(payment, "manual_receipt") and payment.manual_receipt:
+            payment_method_label = payment.manual_receipt.get_method_display()
+        elif payment.payment_method_label:
+            payment_method_label = payment.payment_method_label
+
+    html = render_to_string(
+        "orders/email_receipt.html",
+        {
+            "order": order,
+            "items": list(order.items.all()),
+            "payment_method": payment_method_label,
+            "tracking_url": tracking_url,
+            "site_settings": shop,
+        },
+    )
     text = (
         f"Thanks for your order from {shop.shop_name}.\n\n"
         f"Order: {order.order_number}\n"
         f"Total: £{order.total_amount}\n"
         f"Track your order: {tracking_url}"
-    )
-    html = (
-        f"<p>Thanks for your order from <strong>{shop.shop_name}</strong>.</p>"
-        f"<p><strong>Order:</strong> {order.order_number}<br>"
-        f"<strong>Total:</strong> £{order.total_amount}</p>"
-        f"<p><a href=\"{tracking_url}\">Track your order</a></p>"
     )
     _enqueue_email_once(order, event_type=ORDER_CONFIRMED, subject=subject, text_body=text, html_body=html)
     _enqueue_sms_once(

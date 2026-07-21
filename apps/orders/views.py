@@ -1,6 +1,8 @@
 """
 Views for the orders app.
 """
+import base64
+import io
 import json
 from decimal import Decimal
 
@@ -806,3 +808,70 @@ def create_order_issue(request, order_number):
         "tracking_url": order_customer_url("orders:tracking", order),
     }
     return render(request, "orders/create_issue.html", context)
+
+
+def _receipt_context(order):
+    """Build the common receipt template context."""
+    from django.template.loader import render_to_string
+
+    import qrcode as qrcode_lib
+
+    from apps.payments.models import ManualPaymentReceipt
+
+    items = list(order.items.all())
+    manual_receipt = None
+    payment_method_label = "Online (Stripe)"
+    payment = getattr(order, "payment", None)
+    if payment:
+        if hasattr(payment, "manual_receipt") and payment.manual_receipt:
+            manual_receipt = payment.manual_receipt
+        if payment.payment_method_label:
+            payment_method_label = payment.payment_method_label
+        elif payment.provider == "offline_pending":
+            payment_method_label = "Pay in shop"
+        elif manual_receipt:
+            payment_method_label = manual_receipt.get_method_display()
+
+    qr_img = qrcode_lib.make(order.order_number, box_size=4, border=1)
+    buf = io.BytesIO()
+    qr_img.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+
+    return {
+        "order": order,
+        "items": items,
+        "payment_method": payment_method_label,
+        "manual_receipt": manual_receipt,
+        "qr_code": qr_b64,
+    }
+
+
+def order_receipt(request, order_number):
+    """HTML receipt page — accessible via order tracking token or login."""
+    order = get_accessible_order_or_404(
+        request, order_number,
+        queryset=Order.objects.prefetch_related("items").select_related("payment", "payment__manual_receipt"),
+    )
+    ctx = _receipt_context(order)
+    ctx["from_tracking"] = True
+    return render(request, "orders/receipt.html", ctx)
+
+
+def order_receipt_pdf(request, order_number):
+    """Downloadable PDF receipt."""
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+
+    from weasyprint import HTML
+
+    order = get_accessible_order_or_404(
+        request, order_number,
+        queryset=Order.objects.prefetch_related("items").select_related("payment", "payment__manual_receipt"),
+    )
+    ctx = _receipt_context(order)
+    ctx["from_tracking"] = True
+    html_str = render_to_string("orders/receipt_pdf.html", ctx)
+    pdf = HTML(string=html_str).write_pdf()
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="receipt-{order.order_number}.pdf"'
+    return response

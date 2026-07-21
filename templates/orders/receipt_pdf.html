@@ -1,0 +1,105 @@
+{% load media_tags %}{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A6; margin: 8mm; }
+        body { font-family: 'Inter', sans-serif; font-size: 10pt; color: #1a1a1a; margin: 0; padding: 0; }
+
+        .head { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 5mm; margin-bottom: 4mm; }
+        .head h2 { font-size: 13pt; margin: 0 0 1mm; }
+        .head p { font-size: 9pt; color: #666; margin: 0; line-height: 1.4; }
+        .head img { max-height: 40px; margin-bottom: 2mm; }
+
+        .meta { display: flex; justify-content: space-between; font-size: 8.5pt; margin-bottom: 4mm; }
+        .meta strong { font-size: 10pt; }
+
+        .items { margin-bottom: 3mm; }
+        .item { display: flex; justify-content: space-between; padding: 1.5mm 0; border-bottom: 1px solid #f0f0f0; font-size: 9pt; }
+        .item-left { flex: 1; }
+        .item-name { font-weight: 600; }
+        .item-mods { font-size: 7.5pt; color: #999; }
+        .item-price { font-weight: 600; min-width: 35mm; text-align: right; }
+
+        .summary { border-top: 2px solid #1a1a1a; padding-top: 3mm; font-size: 9pt; }
+        .sum-row { display: flex; justify-content: space-between; padding: 0.8mm 0; }
+        .sum-row.total { font-size: 11pt; font-weight: 800; border-top: 1px solid #ccc; margin-top: 2mm; padding-top: 3mm; }
+        .discount { color: #16a34a; }
+
+        .payment { margin-top: 3mm; padding-top: 3mm; border-top: 1px solid #ccc; font-size: 8.5pt; }
+        .foot { margin-top: 4mm; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #eee; padding-top: 3mm; }
+        .foot img { width: 70px; margin: 3mm 0 1mm; }
+    </style>
+</head>
+<body>
+    <div class="head">
+        {% if site_settings.logo %}
+        <img src="file://{{ site_settings.logo.path }}" alt="{{ site_settings.shop_name }}">
+        {% endif %}
+        <h2>{{ site_settings.shop_name }}</h2>
+        <p>{{ site_settings.address|linebreaksbr }}<br>☎ {{ site_settings.phone }}</p>
+    </div>
+
+    <div class="meta">
+        <div>
+            <strong>Receipt #{{ order.order_number }}</strong><br>
+            {{ order.created_at|date:"d M Y" }} at {{ order.created_at|date:"H:i" }}
+        </div>
+        <div style="text-align:right;">
+            <strong>{{ order.get_service_type_display }}</strong><br>
+            {% if order.is_delivery and order.delivery_address_display %}
+            {{ order.delivery_address_display|truncatechars:35 }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="items">
+        {% for item in items %}
+        <div class="item">
+            <div class="item-left">
+                <div class="item-name">{{ item.quantity }}× {{ item.item_name }}</div>
+                {% if item.modifiers %}
+                <div class="item-mods">
+                    {% for mod in item.modifiers %}
+                    + {{ mod.name }}{% if mod.price and mod.price > 0 %} (£{{ mod.price|floatformat:2 }}){% endif %}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="item-price">£{{ item.line_total|floatformat:2 }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="summary">
+        <div class="sum-row"><span>Subtotal</span><span>£{{ order.subtotal|floatformat:2 }}</span></div>
+        {% if order.discount_amount > 0 %}
+        <div class="sum-row discount"><span>Discount{% if order.voucher_code %} ({{ order.voucher_code }}){% endif %}</span><span>–£{{ order.discount_amount|floatformat:2 }}</span></div>
+        {% endif %}
+        {% if order.delivery_fee > 0 %}
+        <div class="sum-row"><span>Delivery fee</span><span>£{{ order.delivery_fee|floatformat:2 }}</span></div>
+        {% endif %}
+        <div class="sum-row total"><span>Total paid</span><span>£{{ order.total_amount|floatformat:2 }}</span></div>
+    </div>
+
+    <div class="payment">
+        <strong>Payment:</strong> {{ payment_method }}<br>
+        {% if manual_receipt %}
+        <strong>Reference:</strong> {{ manual_receipt.reference_code }}<br>
+        {% if manual_receipt.change_given > 0 %}
+        <strong>Change:</strong> £{{ manual_receipt.change_given|floatformat:2 }}<br>
+        {% endif %}
+        {% endif %}
+        {% if order.customer_name %}
+        <strong>Customer:</strong> {{ order.customer_name }}
+        {% endif %}
+    </div>
+
+    <div class="foot">
+        <strong>Thank you for your order!</strong>
+        {% if site_settings.vat_number %}<br>VAT: {{ site_settings.vat_number }}{% endif %}
+        <br><img src="data:image/png;base64,{{ qr_code }}" alt="QR">
+        <br>{{ order.order_number }}
+    </div>
+</body>
+</html>

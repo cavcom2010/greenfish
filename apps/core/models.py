@@ -112,6 +112,10 @@ class SiteSettings(models.Model):
     facebook_url = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True)
     twitter_url = models.URLField(blank=True)
+
+    # Business / receipt info
+    vat_number = models.CharField(max_length=30, blank=True, help_text="VAT registration number shown on receipts")
+    refund_policy_text = models.TextField(blank=True, help_text="Return/refund policy shown on receipts")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

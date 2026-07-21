@@ -82,6 +82,10 @@
                             <i class="ph ph-map-trifold"></i>
                             Track
                         </a>
+                        <a href="{% url 'orders:receipt' order.order_number %}" class="btn btn--secondary btn--sm">
+                            <i class="ph-bold ph-receipt"></i>
+                            Receipt
+                        </a>
                         {% if order.is_reorderable %}
                         <form method="post" action="{% url 'accounts:reorder' order.id %}">
                             {% csrf_token %}

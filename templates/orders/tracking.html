@@ -198,6 +198,10 @@
                 <i class="ph-bold ph-house"></i>
                 Back to Home
             </a>
+            <a href="{% url 'orders:receipt' order.order_number %}{% if order.public_access_token %}?t={{ order.public_access_token }}{% endif %}" class="btn btn--secondary">
+                <i class="ph-bold ph-receipt"></i>
+                View Receipt
+            </a>
             <button type="button" onclick="window.location.reload()" class="btn btn--secondary">
                 <i class="ph-bold ph-arrows-clockwise"></i>
                 Refresh Status
