@@ -96,6 +96,10 @@
 .menu-section:first-child { margin-top: var(--space-4); }
 .menu-section.is-empty { display: none; }
 
+/* The base .empty-state{display:flex} otherwise overrides the [hidden]
+   attribute, so the "no results" block would never hide. */
+.menu-main .empty-state[hidden] { display: none; }
+
 .menu-section-head { margin-bottom: var(--space-4); }
 .menu-section-head h2 {
     font-size: var(--text-xl);
