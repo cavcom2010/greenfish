@@ -148,8 +148,7 @@
     <div class="container">
         <div class="category-strip" aria-label="Menu categories">
             {% for category in categories %}
-            <a href="{% url 'menu:menu' %}?category={{ category.id }}" class="category-chip">
-                <span aria-hidden="true">{{ category.icon|default:"🍽️" }}</span>
+            <a href="{% url 'menu:menu' %}#cat-{{ category.id }}" class="category-chip">
                 {{ category.name }}
             </a>
             {% endfor %}

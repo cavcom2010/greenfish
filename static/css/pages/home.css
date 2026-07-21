@@ -501,15 +501,24 @@
 
 .category-strip {
     display: flex;
+    /* Desktop/tablet: enough room, so wrap all chips onto as many rows as needed. */
+    flex-wrap: wrap;
     gap: 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
     padding-block: 4px;
 }
 
-.category-strip::-webkit-scrollbar {
-    display: none;
+/* Mobile: not enough width, fall back to a single horizontal-scroll strip. */
+@media (max-width: 640px) {
+    .category-strip {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+    }
+
+    .category-strip::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 .category-chip {
