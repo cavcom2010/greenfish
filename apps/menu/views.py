@@ -1,6 +1,7 @@
 """
 Views for the menu app.
 """
+from django.db.models import Count, Prefetch, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
@@ -13,11 +14,30 @@ from .services import get_recommendations
 
 
 def menu_list(request):
-    """Full menu page. All items are rendered; category/dietary filters and
-    search run client-side (menu.js) with the URL kept in sync, so
-    ?category= and ?dietary= only seed the initial filter state here."""
-    categories = MenuCategory.objects.filter(is_active=True).order_by("sort_order")
+    """Full menu page. Items are grouped into per-category sections for the
+    desktop scroll rail; category/dietary filters and search run client-side
+    (menu.js). Desktop nav scroll-jumps between sections, mobile filters in
+    place — both driven from the same section markup.
 
+    ``?category=`` / ``?dietary=`` only seed the initial filter state here."""
+    available_items = MenuItem.objects.filter(is_available=True).order_by(
+        "sort_order", "name"
+    )
+
+    # Categories carry their available-item count (single annotated query) and
+    # their items prefetched into ``available_items`` so the template renders
+    # one section per category with no per-category query.
+    categories = (
+        MenuCategory.objects.filter(is_active=True)
+        .annotate(item_count=Count("items", filter=Q(items__is_available=True)))
+        .filter(item_count__gt=0)
+        .order_by("sort_order", "name")
+        .prefetch_related(
+            Prefetch("items", queryset=available_items, to_attr="available_items")
+        )
+    )
+
+    # Flat list retained for the dietary-tag derivation and the search gate.
     all_items = MenuItem.objects.filter(
         is_available=True
     ).select_related("category").order_by("category__sort_order", "sort_order")
@@ -41,6 +61,7 @@ def menu_list(request):
     context = {
         "categories": categories,
         "all_items": all_items,
+        "total_item_count": len(all_items),
         "active_category": active_category,
         "dietary_filter": dietary_filter,
         "unique_dietary_tags": unique_dietary_tags,
