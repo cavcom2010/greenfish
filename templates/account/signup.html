@@ -40,3 +40,16 @@
     </div>
 </section>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get('ref');
+    if (ref) {
+        var field = document.getElementById('id_referral_code');
+        if (field) field.value = ref;
+    }
+})();
+</script>
+{% endblock %}

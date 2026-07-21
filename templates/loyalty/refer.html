@@ -61,12 +61,12 @@
                             Share
                         </button>
                         {% endif %}
-                        <a href="https://wa.me/?text=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}"
+                        <a href="https://wa.me/?text=Get%20{{ settings.welcome_bonus }}%20free%20points%20at%20{{ site_settings.shop_name|urlencode }}!%20Use%20my%20code:%20{{ referral_code }}%0A{{ SHOP_URL|urlencode }}/accounts/signup/?ref={{ referral_code }}"
                            target="_blank" rel="noopener" class="share-btn">
                             <i class="ph-fill ph-whatsapp-logo" style="color:#25D366;"></i>
                             WhatsApp
                         </a>
-                        <a href="mailto:?subject=Free%20{{ settings.welcome_bonus }}%20Points%20at%20{{ site_settings.shop_name|urlencode }}&body=Hi!%20Use%20my%20code:%20{{ referral_code }}"
+                        <a href="mailto:?subject=Free%20{{ settings.welcome_bonus }}%20Points%20at%20{{ site_settings.shop_name|urlencode }}&body=Hi!%20Use%20my%20code:%20{{ referral_code }}%0A%0A{{ SHOP_URL|urlencode }}/accounts/signup/?ref={{ referral_code }}"
                            class="share-btn">
                             <i class="ph-fill ph-envelope-simple" style="color:#EA4335;"></i>
                             Email
@@ -101,29 +101,59 @@
 
 {% block extra_js %}
 <script>
+var referralUrl = "{{ SHOP_URL }}/accounts/signup/?ref={{ referral_code }}";
+var shareText = "Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}\n" + referralUrl;
+
+function copyText(text, label) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+            if (window.showToast) showToast(label + ' copied!', 'success', 2000);
+        }).catch(function () {
+            fallbackCopy(text, label);
+        });
+    } else {
+        fallbackCopy(text, label);
+    }
+}
+
+function fallbackCopy(text, label) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        var ok = document.execCommand('copy');
+        if (ok) {
+            if (window.showToast) showToast(label + ' copied!', 'success', 2000);
+        } else {
+            if (window.showToast) showToast('Failed to copy. Please copy manually.', 'error', 3000);
+        }
+    } catch (e) {
+        if (window.showToast) showToast('Failed to copy. Please copy manually.', 'error', 3000);
+    }
+    document.body.removeChild(ta);
+}
+
 function copyCode() {
-    navigator.clipboard.writeText('{{ referral_code }}').then(() => {
-        if (window.showToast) showToast('Referral code copied!', 'success', 2000);
-    });
+    copyText('{{ referral_code }}', 'Referral code');
 }
 
 function copyLink() {
-    const text = "Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}";
-    navigator.clipboard.writeText(text).then(() => {
-        if (window.showToast) showToast('Message copied!', 'success', 2000);
-    });
+    copyText(referralUrl, 'Link');
 }
 
 function shareReferral() {
-    const text = "Get {{ settings.welcome_bonus }} free points at {{ site_settings.shop_name|escapejs }}! Use my code: {{ referral_code }}";
     if (navigator.share) {
-        navigator.share({ title: 'Join {{ site_settings.shop_name|escapejs }}', text: text }).catch(() => {});
+        navigator.share({ title: 'Join {{ site_settings.shop_name|escapejs }}', text: shareText, url: referralUrl }).catch(function () {});
     } else {
         copyLink();
     }
 }
 
-// Hide native share button if Web Share isn't supported
 if (!navigator.share) {
     var btn = document.getElementById('nativeShareBtn');
     if (btn) btn.hidden = true;

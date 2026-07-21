@@ -1,4 +1,5 @@
 """Views for loyalty app."""
+from django.conf import settings as django_settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -72,10 +73,12 @@ def transaction_history(request):
 def refer_friend(request):
     """Refer a friend page."""
     summary = get_user_loyalty_summary(request.user)
+    shop_url = getattr(django_settings, "SHOP_URL", "").rstrip("/")
 
     context = {
         **summary,
         "title": "Refer a Friend",
+        "SHOP_URL": shop_url,
     }
     return render(request, "loyalty/refer.html", context)
 

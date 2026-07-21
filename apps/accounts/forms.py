@@ -13,6 +13,7 @@ class CustomSignupForm(SignupForm):
     first_name = forms.CharField(max_length=150, label="First Name")
     last_name = forms.CharField(max_length=150, label="Last Name")
     phone_number = forms.CharField(max_length=30, required=False, label="Phone Number")
+    referral_code = forms.CharField(max_length=20, required=False, widget=forms.HiddenInput())
     
     def save(self, request):
         user = super().save(request)
@@ -20,6 +21,12 @@ class CustomSignupForm(SignupForm):
         user.last_name = self.cleaned_data.get("last_name", "").strip()
         user.phone_number = self.cleaned_data.get("phone_number", "").strip()
         user.save(update_fields=["first_name", "last_name", "phone_number"])
+
+        referral = self.cleaned_data.get("referral_code", "").strip()
+        if referral:
+            from apps.loyalty.services import apply_referral_bonus
+            apply_referral_bonus(user, referral)
+
         return user
 
 
