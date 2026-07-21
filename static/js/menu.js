@@ -246,12 +246,15 @@
         applyMenuFilters({ category: '', dietary: '' });
     }
 
-    function scrollToSection(categoryId) {
+    function scrollToSection(categoryId, smooth) {
         const target = categoryId
             ? document.getElementById('cat-' + categoryId)
             : document.getElementById('menuMain');
         if (!target) return;
-        const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+        // Instant jumps are atomic; a far smooth scroll can be cancelled by the
+        // page's `scroll-behavior: smooth` and late layout, so deep-links pass
+        // smooth=false and rail clicks pass smooth=true.
+        const behavior = (smooth && !prefersReducedMotion()) ? 'smooth' : 'auto';
         if (categoryId) {
             target.scrollIntoView({ behavior: behavior, block: 'start' });
         } else {
@@ -269,7 +272,7 @@
 
         if (isDesktop()) {
             setActiveRailLink(categoryId);   // instant feedback; scrollspy refines
-            scrollToSection(categoryId);
+            scrollToSection(categoryId, true);
         } else {
             applyMenuFilters({
                 category: categoryId,
@@ -402,7 +405,11 @@
         applyMenuFilters({ category: '', dietary: initialFilters.dietary }, { updateUrl: false });
         if (scrollTarget) {
             setActiveRailLink(scrollTarget);
-            requestAnimationFrame(function () { scrollToSection(scrollTarget); });
+            // Jump now and re-assert after load, so late layout (images, fonts)
+            // can't strand the deep-link short of its section.
+            var doJump = function () { scrollToSection(scrollTarget, false); };
+            requestAnimationFrame(doJump);
+            window.addEventListener('load', function () { requestAnimationFrame(doJump); });
         } else {
             setActiveRailLink('');
         }
