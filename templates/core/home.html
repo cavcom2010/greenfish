@@ -147,7 +147,8 @@
 <section class="section chips-section" id="menu-section">
     <div class="container">
         <div class="category-strip" aria-label="Menu categories">
-            {% for category in categories %}
+            {% comment %}Curated shortcut only — the full category list lives on the /menu rail.{% endcomment %}
+            {% for category in categories|slice:":8" %}
             <a href="{% url 'menu:menu' %}#cat-{{ category.id }}" class="category-chip">
                 {{ category.name }}
             </a>
