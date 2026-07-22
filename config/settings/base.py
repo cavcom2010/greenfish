@@ -15,6 +15,17 @@ if env_file:
     env_path = Path(env_file).expanduser()
     if not env_path.is_absolute():
         env_path = BASE_DIR / env_path
+    # decouple.Config checks os.environ first, then falls back to
+    # RepositoryEnv. Pre-populate os.environ from the env file so that
+    # the file always takes precedence over the inherited environment.
+    # This prevents e.g. a CI workflow's DJANGO_SECRET_KEY leaking into
+    # production-settings subprocess probes that use a temp env file.
+    with open(env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                key, _, val = _line.partition("=")
+                os.environ[key] = val
     env = Config(RepositoryEnv(str(env_path)))
 else:
     env = AutoConfig(search_path=BASE_DIR)

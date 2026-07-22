@@ -313,6 +313,11 @@ class ProductionSettingsEmailTests(TestCase):
         probe_env.pop("EMAIL_HOST_PASSWORD", None)
         probe_env.pop("RESEND_API_KEY", None)
         probe_env.pop("SENDGRID_API_KEY", None)
+        probe_env.pop("DJANGO_SECRET_KEY", None)
+        probe_env.pop("STRIPE_SECRET_KEY", None)
+        probe_env.pop("STRIPE_WEBHOOK_SECRET", None)
+        probe_env.pop("PAYMENT_FALLBACK_ENABLED", None)
+        probe_env.pop("ADMIN_URL_PREFIX", None)
 
         try:
             return subprocess.run(
