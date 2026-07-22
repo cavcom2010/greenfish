@@ -75,8 +75,9 @@ jobs:
           host: 206.189.20.157
           username: cmazh
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script_stop: true
+          passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
           script: |
+            set -e
             cd ~/django/greenfish
             source venv/bin/activate
             git fetch origin main
