@@ -191,10 +191,10 @@ class PublicRouteTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="menuGrid"')
+        self.assertContains(response, 'id="menuMain"')
         self.assertContains(response, side_item.name)
         self.assertContains(response, self.menu_item.name)
-        self.assertContains(response, 'data-menu-category=""')
+        self.assertContains(response, 'data-category-id=""')
         self.assertContains(response, "data-menu-dietary")
         self.assertContains(response, f'data-category-id="{self.menu_item.category_id}"')
         self.assertContains(response, f'data-category-id="{side_item.category_id}"')
@@ -209,10 +209,10 @@ class PublicRouteTests(TestCase):
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
         )
         self.assertEqual(home_response.status_code, 200)
-        self.assertNotContains(home_response, 'id="menuGrid"')
+        self.assertNotContains(home_response, 'id="menuMain"')
         self.assertNotContains(home_response, "data-menu-category")
         self.assertContains(home_response, 'class="category-chip"')
-        self.assertContains(home_response, f'{reverse("menu:menu")}?category={category.id}')
+        self.assertContains(home_response, f'{reverse("menu:menu")}#cat-{category.id}')
 
     def test_category_fragment_renders(self):
         response = self.client.get(
@@ -345,6 +345,7 @@ class ProductionSettingsEmailTests(TestCase):
             "EMAIL_HOST=smtp.gmail.com",
             "EMAIL_HOST_USER=orders@example.com",
             "EMAIL_HOST_PASSWORD=app-password",
+            "ADMIN_URL_PREFIX=management/",
         ]
 
     def test_production_uses_smtp_with_google_workspace_defaults(self):

@@ -35,6 +35,8 @@ if PAYMENT_PROVIDER != "stripe":
     raise ImproperlyConfigured("PAYMENT_PROVIDER must be 'stripe'.")
 if not stripe_credentials_configured(STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) and not PAYMENT_FALLBACK_ENABLED:
     raise ImproperlyConfigured("Valid Stripe credentials are required when payment fallback is disabled.")
+if ADMIN_URL_PREFIX == "admin/":
+    raise ImproperlyConfigured("ADMIN_URL_PREFIX must not be the default 'admin/' in production.")
 
 # Security settings
 SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT", default=True, cast=bool)
@@ -88,7 +90,8 @@ CACHES["default"] = {
 
 # Static files
 MIDDLEWARE = list(MIDDLEWARE)
-MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+MIDDLEWARE.insert(0, "apps.core.middleware.SecurityHeadersMiddleware")
+MIDDLEWARE.insert(2, "whitenoise.middleware.WhiteNoiseMiddleware")
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
@@ -96,6 +99,16 @@ STORAGES = {
     },
 }
 WHITENOISE_MAX_AGE = 31536000
+
+DJANGO_SERVE_MEDIA = env("DJANGO_SERVE_MEDIA", default=True, cast=bool)
+
+ACCOUNT_EMAIL_VERIFICATION = env("ACCOUNT_EMAIL_VERIFICATION", default="mandatory")
+
+if DATABASES["default"]["ENGINE"] != "django.db.backends.sqlite3" and not DATABASES["default"].get("OPTIONS"):
+    ssl_require = env("DB_SSL_REQUIRE", default=True, cast=bool)
+    if ssl_require:
+        import psycopg
+        DATABASES["default"]["OPTIONS"] = {"ssl": True}
 
 # Logging
 LOG_DIR = BASE_DIR / "logs"

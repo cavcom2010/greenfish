@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Development tools
+django-extensions==4.1

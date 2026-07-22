@@ -11,6 +11,28 @@
     <meta name="apple-mobile-web-app-title" content="{{ site_settings.shop_name|truncatechars:12 }}">
     <meta name="description" content="{% block meta_description %}Order delicious food from {{ site_settings.shop_name }}. Fresh food available for pickup{% if delivery_enabled %} or delivery{% endif %}.{% endblock %}">
 
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="{% block og_title %}{{ site_settings.shop_name }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Order delicious food from {{ site_settings.shop_name }}. Fresh food available for pickup{% if delivery_enabled %} or delivery{% endif %}.{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    {% if site_settings.logo %}
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ site_settings.logo.url }}">
+    <meta property="og:image:width" content="1200">
+    {% elif site_settings.favicon %}
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ site_settings.favicon.url }}">
+    {% endif %}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ site_settings.shop_name }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Order delicious food from {{ site_settings.shop_name }}.{% endblock %}">
+    {% if site_settings.logo %}
+    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ site_settings.logo.url }}">
+    {% endif %}
+
+    <!-- SEO -->
+    <link rel="canonical" href="{% block canonical_url %}{{ request.build_absolute_uri }}{% endblock %}">
+    <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
+
     <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
 
     <!-- PWA -->

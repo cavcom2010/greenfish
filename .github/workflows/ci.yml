@@ -52,4 +52,30 @@ jobs:
           EMAIL_HOST: smtp.example.com
           EMAIL_HOST_USER: ci
           EMAIL_HOST_PASSWORD: ci
+          ADMIN_URL_PREFIX: management/
+          STRIPE_SECRET_KEY: sk_test_ciplaceholder00000000000000000000
+          STRIPE_WEBHOOK_SECRET: whsec_ciplaceholder00000000000000000000
         run: python manage.py check --deploy
+
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    concurrency: deploy-production
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.15
+        with:
+          host: 206.189.20.157
+          username: cmazh
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd ~/django/greenfish
+            source venv/bin/activate
+            git fetch origin main
+            git reset --hard origin/main
+            ./deploy/production/restart.sh

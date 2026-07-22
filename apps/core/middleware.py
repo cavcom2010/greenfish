@@ -13,6 +13,36 @@ from .request_meta import client_ip_from_request
 
 logger = logging.getLogger(__name__)
 
+
+class SecurityHeadersMiddleware:
+    """Add security headers to all responses."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "img-src 'self' data: https://*.stripe.com https://maps.googleapis.com https://maps.gstatic.com; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
+            "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
+            "connect-src 'self' https://api.stripe.com https://maps.googleapis.com; "
+            "media-src 'self'; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self' https://hooks.stripe.com; "
+        )
+        response["Content-Security-Policy"] = csp
+        response.setdefault("X-Content-Type-Options", "nosniff")
+        response.setdefault("Referrer-Policy", "same-origin")
+        if not response.has_header("X-Frame-Options"):
+            response["X-Frame-Options"] = "DENY"
+        response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)")
+        return response
+
 _IGNORED_ALERT_PREFIXES = (
     "/health/",
     "/static/",

@@ -257,6 +257,8 @@ SHOP_LONGITUDE = env("SHOP_LONGITUDE", default="")
 DELIVERY_RADIUS_MILES = env("DELIVERY_RADIUS_MILES", default=3, cast=float)
 PIXABAY_API_KEY = env("PIXABAY_API_KEY", default="")
 
+ADMIN_URL_PREFIX = env("ADMIN_URL_PREFIX", default="admin/")
+
 # Payment Provider Settings
 PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", default="stripe").strip().lower()
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")

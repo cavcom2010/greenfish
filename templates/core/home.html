@@ -299,5 +299,27 @@
 {% endblock %}
 
 {% block extra_js %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FoodEstablishment",
+    "name": "{{ site_settings.shop_name|escapejs }}",
+    "description": "{% block meta_description %}Order delicious food from {{ site_settings.shop_name|escapejs }}. Fresh food available for pickup{% if delivery_enabled %} or delivery{% endif %}.{% endblock %}",
+    "servesCuisine": "Zimbabwean",
+    "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "{{ site_settings.shop_address|escapejs }}"
+    },
+    "telephone": "{{ site_settings.phone|escapejs }}",
+    "url": "{{ request.build_absolute_uri }}",
+    "potentialAction": {
+        "@type": "OrderAction",
+        "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "{{ request.build_absolute_uri }}/menu/"
+        }
+    }
+}
+</script>
 <script src="{% static 'js/home.js' %}" defer></script>
 {% endblock %}

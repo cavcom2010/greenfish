@@ -289,3 +289,13 @@ def record_cookie_consent(request):
         logging.getLogger(__name__).info("Cookie consent recorded: %s", preference)
         return response
     return JsonResponse({"status": "error"}, status=400)
+
+
+def page_not_found(request, exception=None):
+    """Custom 404 handler."""
+    return render(request, "404.html", status=404)
+
+
+def server_error(request):
+    """Custom 500 handler."""
+    return render(request, "500.html", status=500)
