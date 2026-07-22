@@ -70,7 +70,7 @@ jobs:
 
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.15
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: 206.189.20.157
           username: cmazh
