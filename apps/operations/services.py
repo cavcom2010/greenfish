@@ -166,7 +166,7 @@ def _build_actions_for_order(order):
 
 
 def _action_permitted(action_name, roles):
-    from .permissions import ROLE_MANAGER, ROLE_KITCHEN, ROLE_CASHIER
+    from .permissions import ROLE_MANAGER, ROLE_KITCHEN, ROLE_CASHIER, ROLE_DRIVER
 
     if ROLE_MANAGER in roles:
         return True
@@ -175,6 +175,10 @@ def _action_permitted(action_name, roles):
     if ROLE_KITCHEN in roles and action_name in kitchen_actions:
         return True
     if ROLE_CASHIER in roles and action_name in cashier_actions:
+        return True
+    # Drivers may mark their own dispatched orders delivered; per-order
+    # ownership is enforced at the choke-point (can_perform_action with order=).
+    if ROLE_DRIVER in roles and action_name == ACTION_MARK_DELIVERED:
         return True
     return False
 
@@ -212,7 +216,7 @@ def perform_order_action(
     payment_notes="",
     request=None,
 ):
-    if not can_perform_action(actor, action):
+    if not can_perform_action(actor, action, order=order):
         raise ValueError("You do not have permission to perform this action.")
 
     unpaid_allowed_actions = {ACTION_MARK_PAID, ACTION_CANCEL_ORDER, ACTION_SAVE_NOTES}

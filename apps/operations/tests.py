@@ -436,3 +436,86 @@ class OperationsBoardTests(TestCase):
                 status=NotificationEvent.Status.PENDING,
             ).exists()
         )
+
+
+class DriverPermissionsTests(TestCase):
+    """The driver role must unlock only the driver surface — never the
+    back-office boards, order_action, or order detail."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.operations.permissions import OPERATIONS_DRIVER_GROUP
+
+        self.driver_user = create_user(email="driver@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_DRIVER_GROUP)
+        self.driver_user.groups.add(group)
+
+        self.cashier_user = create_user(email="cashier2@example.com", is_staff=True)
+        cashier_group, _ = Group.objects.get_or_create(name=OPERATIONS_CASHIER_GROUP)
+        self.cashier_user.groups.add(cashier_group)
+
+        self.manager_user = create_user(email="manager2@example.com", is_staff=True)
+        manager_group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.manager_user.groups.add(manager_group)
+
+    def _delivery_order_in_dispatched_run(self, driver_user=None):
+        from apps.orders.models import DeliveryDriver, DeliveryRun, DeliveryRunOrder
+
+        order = create_order(
+            status=Order.OrderStatus.OUT_FOR_DELIVERY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+        )
+        driver = DeliveryDriver.objects.create(name="Test Driver", user=driver_user)
+        run = DeliveryRun.objects.create(driver=driver, status=DeliveryRun.Status.DISPATCHED)
+        DeliveryRunOrder.objects.create(run=run, order=order, sequence=1)
+        return order
+
+    def test_driver_is_not_operations_staff(self):
+        from apps.operations.permissions import is_delivery_driver, is_operations_staff
+
+        self.assertFalse(is_operations_staff(self.driver_user))
+        self.assertTrue(is_delivery_driver(self.driver_user))
+        self.assertTrue(is_operations_staff(self.cashier_user))
+
+    def test_driver_cannot_access_back_office_routes(self):
+        order = self._delivery_order_in_dispatched_run(driver_user=self.driver_user)
+        self.client.force_login(self.driver_user)
+
+        blocked_gets = [
+            reverse("operations:collection_board"),
+            reverse("operations:kitchen_board"),
+            reverse("operations:order_detail_modal", args=[order.id]),
+        ]
+        for route in blocked_gets:
+            with self.subTest(route=route):
+                self.assertIn(self.client.get(route).status_code, {302, 403})
+
+        action = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {"action": "mark_delivered"},
+        )
+        self.assertEqual(action.status_code, 403)
+
+    def test_board_access_matrix(self):
+        from apps.operations.permissions import BOARD_DRIVER, can_access_board
+
+        self.assertTrue(can_access_board(self.driver_user, BOARD_DRIVER))
+        self.assertFalse(can_access_board(self.cashier_user, BOARD_DRIVER))
+        self.assertTrue(can_access_board(self.manager_user, BOARD_DRIVER))
+
+    def test_driver_mark_delivered_requires_ownership(self):
+        from apps.operations.permissions import can_perform_action
+
+        own_order = self._delivery_order_in_dispatched_run(driver_user=self.driver_user)
+        foreign_order = self._delivery_order_in_dispatched_run(driver_user=None)
+
+        self.assertTrue(can_perform_action(self.driver_user, "mark_delivered", order=own_order))
+        self.assertFalse(can_perform_action(self.driver_user, "mark_delivered", order=foreign_order))
+        # Without an order there is no ownership proof — deny.
+        self.assertFalse(can_perform_action(self.driver_user, "mark_delivered"))
+        # Other actions stay denied even on own orders.
+        self.assertFalse(can_perform_action(self.driver_user, "mark_dispatched", order=own_order))

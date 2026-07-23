@@ -6,13 +6,16 @@ from django.shortcuts import redirect, render
 OPERATIONS_MANAGER_GROUP = "Operations Manager"
 OPERATIONS_KITCHEN_GROUP = "Operations Kitchen"
 OPERATIONS_CASHIER_GROUP = "Operations Cashier"
+OPERATIONS_DRIVER_GROUP = "Operations Driver"
 
 ROLE_MANAGER = "manager"
 ROLE_KITCHEN = "kitchen"
 ROLE_CASHIER = "cashier"
+ROLE_DRIVER = "driver"
 
 BOARD_COLLECTION = "collection"
 BOARD_KITCHEN = "kitchen"
+BOARD_DRIVER = "driver"
 
 
 def get_operations_roles(user):
@@ -25,6 +28,7 @@ def get_operations_roles(user):
                 OPERATIONS_MANAGER_GROUP,
                 OPERATIONS_KITCHEN_GROUP,
                 OPERATIONS_CASHIER_GROUP,
+                OPERATIONS_DRIVER_GROUP,
             ]
         ).values_list("name", flat=True)
     )
@@ -36,6 +40,8 @@ def get_operations_roles(user):
         roles.add(ROLE_KITCHEN)
     if OPERATIONS_CASHIER_GROUP in group_names:
         roles.add(ROLE_CASHIER)
+    if OPERATIONS_DRIVER_GROUP in group_names:
+        roles.add(ROLE_DRIVER)
 
     return roles
 
@@ -45,7 +51,14 @@ def has_operations_role(user, *roles):
 
 
 def is_operations_staff(user):
-    return bool(get_operations_roles(user))
+    """Back-office staff only. Drivers are deliberately excluded so the
+    driver role never unlocks order_action/order_detail_modal or the
+    kitchen/collection boards — drivers get their own gated endpoints."""
+    return bool(get_operations_roles(user) - {ROLE_DRIVER})
+
+
+def is_delivery_driver(user):
+    return ROLE_DRIVER in get_operations_roles(user)
 
 
 def can_access_board(user, board):
@@ -56,10 +69,25 @@ def can_access_board(user, board):
         return ROLE_KITCHEN in roles
     if board == BOARD_COLLECTION:
         return ROLE_CASHIER in roles
+    if board == BOARD_DRIVER:
+        return ROLE_DRIVER in roles
     return False
 
 
-def can_perform_action(user, action):
+def _driver_owns_order(user, order):
+    """True when the order sits in a dispatched run belonging to this user's
+    linked driver record."""
+    run_order = getattr(order, "delivery_run_order", None)
+    run = getattr(run_order, "run", None)
+    driver = getattr(run, "driver", None)
+    return (
+        driver is not None
+        and driver.user_id == user.id
+        and run.status == run.Status.DISPATCHED
+    )
+
+
+def can_perform_action(user, action, order=None):
     roles = get_operations_roles(user)
     if ROLE_MANAGER in roles:
         return True
@@ -70,6 +98,13 @@ def can_perform_action(user, action):
     if ROLE_KITCHEN in roles and action in kitchen_actions:
         return True
     if ROLE_CASHIER in roles and action in cashier_actions:
+        return True
+    if (
+        ROLE_DRIVER in roles
+        and action == "mark_delivered"
+        and order is not None
+        and _driver_owns_order(user, order)
+    ):
         return True
     return False
 
