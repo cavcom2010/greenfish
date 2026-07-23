@@ -69,16 +69,20 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.5
-        with:
-          host: 206.189.20.157
-          username: cmazh
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 206.189.20.157 >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no cmazh@206.189.20.157 "
             set -e
             cd ~/django/greenfish
             source venv/bin/activate
             git fetch origin main
             git reset --hard origin/main
             ./deploy/production/restart.sh
+          "
