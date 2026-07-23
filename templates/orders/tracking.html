@@ -16,123 +16,13 @@
             <p style="font-size:1.05rem;">Order <strong>{{ order.order_number }}</strong></p>
         </div>
 
-        <!-- Status Card -->
-        <div class="tracking-card">
-            <div class="tracking-head">
-                <div>
-                    <div class="tracking-order-number">Order {{ order.order_number }}</div>
-                    <div class="tracking-meta">{{ order.created_at|date:"d M Y, H:i" }}</div>
-                    <div class="tracking-meta" style="margin-top:0.25rem;">Last updated {{ order.updated_at|time:"H:i" }}. This page refreshes automatically.</div>
-                </div>
-                <span class="status-pill {% if order.status == 'completed' %}status-pill--success{% elif order.status == 'cancelled' %}status-pill--error{% else %}status-pill--warning{% endif %}">
-                    {{ order.service_status_display }}
-                </span>
-            </div>
-
-            <div class="tracking-now">
-                <div class="tracking-now-icon">
-                    {% if order.status == 'out_for_delivery' %}
-                    <i class="ph ph-van"></i>
-                    {% elif order.status == 'ready' %}
-                    <i class="ph ph-bag-check"></i>
-                    {% elif order.status == 'preparing' %}
-                    <i class="ph ph-cooking-pot"></i>
-                    {% elif order.status == 'completed' %}
-                    <i class="ph ph-check-circle"></i>
-                    {% elif order.status == 'cancelled' %}
-                    <i class="ph ph-x-circle"></i>
-                    {% else %}
-                    <i class="ph ph-clock"></i>
-                    {% endif %}
-                </div>
-                <div>
-                    <div class="tracking-now-title">What is happening now</div>
-                    <div class="tracking-now-copy">
-                        {% if order.status == 'pending' %}
-                        {% if order.payment.provider == 'offline_pending' %}
-                        We are holding this order while waiting for shop payment. Please call or visit the shop to pay{% if order.payment.expires_at %} before {{ order.payment.expires_at|time:"H:i" }}{% endif %}. The kitchen will not start until payment is received.
-                        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-top:1rem;">
-                            {% if site_settings.phone %}
-                            <a href="tel:{{ site_settings.phone }}" class="btn btn--primary btn--sm"><i class="ph-bold ph-phone"></i> Call store</a>
-                            {% endif %}
-                            {% if site_settings.address %}
-                            <a href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address|urlencode }}" class="btn btn--secondary btn--sm" target="_blank" rel="noopener"><i class="ph-bold ph-map-pin"></i> Get directions</a>
-                            {% endif %}
-                        </div>
-                        {% else %}
-                        We are waiting for payment before the kitchen starts this order.
-                        {% endif %}
-                        {% elif order.status == 'confirmed' %}
-                        The kitchen has your order and will start preparing it shortly.
-                        {% elif order.status == 'preparing' %}
-                        Your food is being prepared fresh.
-                        {% elif order.status == 'ready' %}
-                        {% if order.is_delivery %}Your order is ready for dispatch.{% else %}Your order is ready to collect. Quote {{ order.order_number }} when you arrive.{% endif %}
-                        {% elif order.status == 'out_for_delivery' %}
-                        Your order is on the way to your delivery address.
-                        {% elif order.status == 'completed' %}
-                        This order is complete. Thanks for ordering with us.
-                        {% elif order.status == 'cancelled' %}
-                        This order has been cancelled. Contact the shop if you need help.
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Steps -->
-            <div class="tracking-steps">
-                <div class="tracking-step {% if order.status != 'pending' and order.status != 'cancelled' %}is-done{% endif %}">
-                    <i class="ph-fill ph-check-circle"></i>
-                    <div class="tracking-step-label">Confirmed</div>
-                </div>
-                <div class="tracking-step {% if order.status == 'preparing' or order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}is-done{% endif %}">
-                    <i class="ph-fill ph-fire"></i>
-                    <div class="tracking-step-label">Preparing</div>
-                </div>
-                <div class="tracking-step {% if order.status == 'ready' or order.status == 'out_for_delivery' or order.status == 'completed' %}is-done{% endif %}">
-                    <i class="ph-fill ph-bag-check"></i>
-                    <div class="tracking-step-label">
-                        {% if order.is_delivery %}On the Way{% else %}Ready{% endif %}
-                    </div>
-                </div>
-                <div class="tracking-step {% if order.status == 'completed' %}is-done{% endif %}">
-                    <i class="ph-fill ph-check"></i>
-                    <div class="tracking-step-label">
-                        {% if order.is_delivery %}Delivered{% else %}Collected{% endif %}
-                    </div>
-                </div>
-            </div>
+        <!-- Live status: polled fragment replaces the old full-page reload -->
+        <div id="trackingStatus"
+             hx-get="{% url 'orders:tracking_fragment' order.order_number %}{% if order.public_access_token %}?t={{ order.public_access_token }}{% endif %}"
+             hx-trigger="every 20s"
+             hx-swap="innerHTML">
+            {% include "orders/_tracking_status.html" %}
         </div>
-
-        {% if order.is_delivery %}
-        <div class="tracking-card">
-            <h3>Delivery Confidence</h3>
-            <div class="tracking-stat-grid">
-                <div class="tracking-stat">
-                    <div class="tracking-stat-label">ETA</div>
-                    <div class="tracking-stat-value">{% if order.delivery_eta_minutes %}{{ order.delivery_eta_minutes }} mins{% else %}Confirming{% endif %}</div>
-                </div>
-                <div class="tracking-stat">
-                    <div class="tracking-stat-label">Fee</div>
-                    <div class="tracking-stat-value">£{{ order.delivery_fee|floatformat:2 }}</div>
-                </div>
-                <div class="tracking-stat">
-                    <div class="tracking-stat-label">Zone</div>
-                    <div class="tracking-stat-value">{{ order.delivery_zone_name|default:"Local delivery" }}</div>
-                </div>
-                <div class="tracking-stat">
-                    <div class="tracking-stat-label">Run</div>
-                    <div class="tracking-stat-value">{% if order.delivery_run_order %}{{ order.delivery_run_order.run.get_status_display }}{% elif order.delivery_driver %}Assigned{% else %}Not assigned{% endif %}</div>
-                </div>
-            </div>
-            {% if order.delivery_address_display or order.delivery_driver %}
-            <div style="margin-top:1rem;color:var(--text-secondary);line-height:1.6;">
-                {% if order.delivery_address_display %}<div>Delivery address: {{ order.delivery_address_display }}</div>{% endif %}
-                {% if order.delivery_driver %}<div>Driver/run: {{ order.delivery_driver.name }}{% if order.delivery_run_order.eta_at %} · ETA {{ order.delivery_run_order.eta_at|time:"H:i" }}{% endif %}</div>{% endif %}
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
 
         {% if can_prompt_guest_claim %}
         <div class="tracking-cta-card">
@@ -212,10 +102,3 @@
 
 {% endblock %}
 
-{% block extra_js %}
-<script>
-setTimeout(function() {
-    window.location.reload();
-}, 60000);
-</script>
-{% endblock %}
