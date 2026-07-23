@@ -682,3 +682,109 @@ class DeliveryRunServiceTests(TestCase):
         order.refresh_from_db()
         self.assertIsNone(order.delivery_driver)
         self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())
+
+
+class DispatchPanelTests(TestCase):
+    """HTTP surface of the staff delivery dispatch panel."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.operations.permissions import OPERATIONS_DRIVER_GROUP
+        from apps.orders.models import DeliveryDriver
+
+        self.cashier = create_user(email="panel-cashier@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_CASHIER_GROUP)
+        self.cashier.groups.add(group)
+
+        self.kitchen = create_user(email="panel-kitchen@example.com", is_staff=True)
+        kitchen_group, _ = Group.objects.get_or_create(name=OPERATIONS_KITCHEN_GROUP)
+        self.kitchen.groups.add(kitchen_group)
+
+        self.driver_user = create_user(email="panel-driver@example.com", is_staff=True)
+        driver_group, _ = Group.objects.get_or_create(name=OPERATIONS_DRIVER_GROUP)
+        self.driver_user.groups.add(driver_group)
+
+        self.driver = DeliveryDriver.objects.create(name="Panel Driver")
+
+    def _delivery_order(self, **overrides):
+        defaults = dict(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+            delivery_eta_minutes=25,
+        )
+        defaults.update(overrides)
+        return create_order(**defaults)
+
+    def test_panel_requires_collection_role(self):
+        routes = [
+            reverse("operations:delivery_panel"),
+            reverse("operations:delivery_panel_fragment"),
+        ]
+        for user in (None, self.kitchen, self.driver_user):
+            if user:
+                self.client.force_login(user)
+            else:
+                self.client.logout()
+            for route in routes:
+                with self.subTest(route=route, user=user):
+                    self.assertIn(self.client.get(route).status_code, {302, 403})
+
+        self.client.force_login(self.cashier)
+        for route in routes:
+            with self.subTest(route=route):
+                self.assertEqual(self.client.get(route).status_code, 200)
+
+    def test_panel_excludes_unpaid_delivery_orders(self):
+        paid = self._delivery_order()
+        unpaid = self._delivery_order(payment_status=Order.PaymentStatus.PENDING)
+        self.client.force_login(self.cashier)
+
+        body = self.client.get(reverse("operations:delivery_panel_fragment")).content.decode()
+        self.assertIn(paid.order_number, body)
+        self.assertNotIn(unpaid.order_number, body)
+
+    def test_assign_dispatch_flow_over_http(self):
+        from apps.orders.models import DeliveryRun
+
+        order = self._delivery_order()
+        self.client.force_login(self.cashier)
+
+        assign = self.client.post(
+            reverse("operations:delivery_assign"),
+            {"order_id": order.id, "driver_id": self.driver.id},
+        )
+        self.assertEqual(assign.status_code, 200)
+
+        run = DeliveryRun.objects.get(driver=self.driver, status=DeliveryRun.Status.DRAFT)
+        dispatch = self.client.post(reverse("operations:delivery_dispatch", args=[run.id]))
+        self.assertEqual(dispatch.status_code, 200)
+
+        order.refresh_from_db()
+        run.refresh_from_db()
+        self.assertEqual(order.status, Order.OrderStatus.OUT_FOR_DELIVERY)
+        self.assertEqual(run.status, DeliveryRun.Status.DISPATCHED)
+
+        second = self.client.post(reverse("operations:delivery_dispatch", args=[run.id]))
+        self.assertEqual(second.status_code, 409)
+
+    def test_unassign_over_http(self):
+        from apps.orders.models import DeliveryRun
+
+        order = self._delivery_order()
+        self.client.force_login(self.cashier)
+        self.client.post(
+            reverse("operations:delivery_assign"),
+            {"order_id": order.id, "driver_id": self.driver.id},
+        )
+
+        unassign = self.client.post(
+            reverse("operations:delivery_unassign"), {"order_id": order.id}
+        )
+        self.assertEqual(unassign.status_code, 200)
+        order.refresh_from_db()
+        self.assertIsNone(order.delivery_driver)
+        self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())

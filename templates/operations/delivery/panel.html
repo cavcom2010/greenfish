@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery Dispatch - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}Delivery Dispatch{% endblock %}
+
+{% block header %}
+<div class="status-bar" style="background: var(--text); color: white;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div>
+            <h1 style="color: white; margin-bottom: 6px;">Delivery Dispatch</h1>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                {% if can_access_collection_board %}
+                <a href="{% url 'operations:collection_board' %}" style="color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700;">Collection</a>
+                {% endif %}
+                {% if can_access_kitchen_board %}
+                <a href="{% url 'operations:kitchen_board' %}" style="color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700;">Kitchen</a>
+                {% endif %}
+                {% if can_access_delivery_panel %}
+                <a href="{% url 'operations:delivery_panel' %}" style="color: white; font-size: 13px; font-weight: 700; text-decoration: underline;">Delivery</a>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px; font-size: 14px; flex-wrap: wrap;">
+            <span style="background: #2563EB; padding: 4px 12px; border-radius: 12px;">
+                Out for Delivery: {{ out_for_delivery_count }}
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<style>
+    .dispatch-panel {
+        padding: 16px;
+        padding-bottom: 100px;
+        display: grid;
+        gap: 20px;
+    }
+
+    .dispatch-section h2 {
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+    }
+
+    .dispatch-card {
+        background: white;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        box-shadow: var(--shadow);
+        border-left: 4px solid var(--brand);
+    }
+
+    .dispatch-card.run-draft { border-left-color: #F59E0B; }
+    .dispatch-card.run-dispatched { border-left-color: #2563EB; }
+
+    .dispatch-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .dispatch-meta {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .dispatch-stop {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-top: 1px dashed var(--border);
+        font-size: 14px;
+    }
+
+    .dispatch-btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 9px 16px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        color: white;
+        background: var(--brand);
+    }
+
+    .dispatch-btn.secondary { background: var(--text-secondary); }
+    .dispatch-btn.warn { background: #F59E0B; }
+    .dispatch-btn:disabled { opacity: 0.6; cursor: default; }
+
+    .dispatch-select {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        font: inherit;
+        font-size: 13px;
+    }
+
+    .dispatch-empty {
+        color: var(--text-secondary);
+        font-size: 14px;
+        padding: 8px 2px;
+    }
+
+    .stop-delivered { color: var(--success); font-weight: 700; }
+</style>
+
+<div class="dispatch-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 13px;">
+        <span id="dispatchPanelStatus">Live — updates every 5s</span>
+        <button type="button" class="dispatch-btn secondary" onclick="refreshDispatchPanel()">Refresh</button>
+    </div>
+
+    <div id="dispatchContainer" hx-get="{% url 'operations:delivery_panel_fragment' %}" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <div style="text-align: center; padding: 40px;">
+            <i class="ph ph-spinner animate-spin" style="font-size: 32px; color: var(--brand);"></i>
+            <p style="margin-top: 16px; color: var(--text-secondary);">Loading delivery orders...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const assignUrl = '{% url "operations:delivery_assign" %}';
+const unassignUrl = '{% url "operations:delivery_unassign" %}';
+const dispatchUrlTemplate = '{% url "operations:delivery_dispatch" 0 %}';
+const panelStatus = document.getElementById('dispatchPanelStatus');
+
+function refreshDispatchPanel() {
+    htmx.trigger(document.getElementById('dispatchContainer'), 'load');
+}
+
+function setPanelStatus(message, isError = false) {
+    if (!panelStatus) return;
+    panelStatus.textContent = message;
+    panelStatus.style.color = isError ? 'var(--error)' : 'var(--text-secondary)';
+}
+
+function postDeliveryAction(url, fields) {
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
+    formData.set('csrfmiddlewaretoken', '{{ csrf_token }}');
+    return fetch(url, { method: 'POST', body: formData }).then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Unable to update.');
+        return data;
+    });
+}
+
+function runDeliveryAction(button, url, fields) {
+    if (button) { button.disabled = true; }
+    postDeliveryAction(url, fields)
+        .then(() => { setPanelStatus('Updated.'); refreshDispatchPanel(); })
+        .catch(error => {
+            setPanelStatus(error.message, true);
+            window.alert(error.message);
+            refreshDispatchPanel();
+        })
+        .finally(() => { if (button) { button.disabled = false; } });
+}
+
+function assignOrder(button, orderId) {
+    const select = document.getElementById(`driverSelect-${orderId}`);
+    if (!select || !select.value) {
+        window.alert('Choose a driver first.');
+        return;
+    }
+    runDeliveryAction(button, assignUrl, { order_id: orderId, driver_id: select.value });
+}
+
+function unassignOrder(button, orderId) {
+    runDeliveryAction(button, unassignUrl, { order_id: orderId });
+}
+
+function dispatchRun(button, runId) {
+    runDeliveryAction(button, dispatchUrlTemplate.replace('/0/dispatch/', `/${runId}/dispatch/`), {});
+}
+</script>
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
