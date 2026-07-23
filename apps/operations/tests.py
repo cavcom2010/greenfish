@@ -519,3 +519,166 @@ class DriverPermissionsTests(TestCase):
         self.assertFalse(can_perform_action(self.driver_user, "mark_delivered"))
         # Other actions stay denied even on own orders.
         self.assertFalse(can_perform_action(self.driver_user, "mark_dispatched", order=own_order))
+
+
+class DeliveryRunServiceTests(TestCase):
+    """Assignment, dispatch, ETA, and run-completion orchestration."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.orders.models import DeliveryDriver
+
+        self.manager = create_user(email="run-manager@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.manager.groups.add(group)
+        self.driver = DeliveryDriver.objects.create(name="Runner")
+
+    def _delivery_order(self, **overrides):
+        defaults = dict(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+            delivery_eta_minutes=25,
+        )
+        defaults.update(overrides)
+        return create_order(**defaults)
+
+    def test_assign_creates_single_draft_run_per_driver(self):
+        from apps.operations import delivery_services as ds
+        from apps.orders.models import DeliveryRun
+
+        first = ds.assign_order_to_run(self._delivery_order(), self.driver)
+        second = ds.assign_order_to_run(self._delivery_order(), self.driver)
+
+        self.assertEqual(first.run_id, second.run_id)
+        self.assertEqual(second.sequence, 2)
+        self.assertEqual(
+            DeliveryRun.objects.filter(driver=self.driver, status=DeliveryRun.Status.DRAFT).count(), 1
+        )
+        first.order.refresh_from_db()
+        self.assertEqual(first.order.delivery_driver, self.driver)
+
+    def test_assign_rejects_unpaid_and_pickup_orders(self):
+        from apps.operations import delivery_services as ds
+
+        unpaid = self._delivery_order(payment_status=Order.PaymentStatus.PENDING)
+        with self.assertRaises(ValueError):
+            ds.assign_order_to_run(unpaid, self.driver)
+
+        pickup = create_order(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.PICKUP,
+        )
+        with self.assertRaises(ValueError):
+            ds.assign_order_to_run(pickup, self.driver)
+
+    def test_unassign_resequences_and_deletes_empty_run(self):
+        from apps.operations import delivery_services as ds
+        from apps.orders.models import DeliveryRun
+
+        order_a = self._delivery_order()
+        order_b = self._delivery_order()
+        ds.assign_order_to_run(order_a, self.driver)
+        run_order_b = ds.assign_order_to_run(order_b, self.driver)
+
+        ds.unassign_order(order_a)
+        run_order_b.refresh_from_db()
+        self.assertEqual(run_order_b.sequence, 1)
+        order_a.refresh_from_db()
+        self.assertIsNone(order_a.delivery_driver)
+
+        ds.unassign_order(order_b)
+        self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())
+
+    def test_dispatch_prunes_cancelled_orders_and_sets_etas(self):
+        from apps.operations import delivery_services as ds
+
+        keep = self._delivery_order()
+        cancelled = self._delivery_order()
+        ds.assign_order_to_run(keep, self.driver)
+        run = ds.assign_order_to_run(cancelled, self.driver).run
+        cancelled.update_status(Order.OrderStatus.CANCELLED, self.manager)
+
+        ds.dispatch_run(run, self.manager)
+        run.refresh_from_db()
+        keep.refresh_from_db()
+
+        self.assertEqual(run.status, run.Status.DISPATCHED)
+        self.assertEqual(run.run_orders.count(), 1)
+        self.assertEqual(keep.status, Order.OrderStatus.OUT_FOR_DELIVERY)
+        run_order = run.run_orders.get()
+        self.assertIsNotNone(run_order.eta_at)
+
+    def test_dispatch_eta_increments_by_sequence(self):
+        from apps.operations import delivery_services as ds
+
+        first = self._delivery_order()
+        second = self._delivery_order()
+        ds.assign_order_to_run(first, self.driver)
+        run = ds.assign_order_to_run(second, self.driver).run
+
+        ds.dispatch_run(run, self.manager)
+        stops = list(run.run_orders.order_by("sequence"))
+        gap = (stops[1].eta_at - stops[0].eta_at).total_seconds() / 60
+        self.assertEqual(round(gap), 7)  # DELIVERY_PER_STOP_MINUTES default
+
+    def test_dispatch_enqueues_push_notifications(self):
+        from apps.operations import delivery_services as ds
+
+        customer = create_user(email="push-customer@example.com")
+        order = self._delivery_order(user=customer)
+        run = ds.assign_order_to_run(order, self.driver).run
+        ds.dispatch_run(run, self.manager)
+
+        self.assertTrue(
+            NotificationEvent.objects.filter(
+                order=order,
+                channel=NotificationEvent.Channel.PUSH,
+                event_type="order_out_for_delivery",
+                status=NotificationEvent.Status.PENDING,
+            ).exists()
+        )
+
+    def test_run_autocompletes_on_mixed_delivered_and_cancelled(self):
+        from apps.operations import delivery_services as ds
+
+        delivered = self._delivery_order()
+        cancelled_later = self._delivery_order()
+        ds.assign_order_to_run(delivered, self.driver)
+        run = ds.assign_order_to_run(cancelled_later, self.driver).run
+        ds.dispatch_run(run, self.manager)
+
+        from apps.operations.services import ACTION_CANCEL_ORDER, perform_order_action
+
+        perform_order_action(
+            cancelled_later, ACTION_CANCEL_ORDER, self.manager, cancel_reason="No answer"
+        )
+        run.refresh_from_db()
+        self.assertEqual(run.status, run.Status.DISPATCHED)  # one stop still open
+
+        delivered.refresh_from_db()  # dispatch updated status in the DB
+        ds.driver_mark_delivered(delivered, self.manager)
+        run.refresh_from_db()
+        self.assertEqual(run.status, run.Status.COMPLETED)
+        self.assertIsNotNone(run.completed_at)
+
+        run_order = run.run_orders.get(order=delivered)
+        self.assertIsNotNone(run_order.delivered_at)
+
+    def test_cancel_unassigns_from_draft_run(self):
+        from apps.operations import delivery_services as ds
+        from apps.orders.models import DeliveryRun
+
+        order = self._delivery_order()
+        ds.assign_order_to_run(order, self.driver)
+
+        from apps.operations.services import ACTION_CANCEL_ORDER, perform_order_action
+
+        perform_order_action(order, ACTION_CANCEL_ORDER, self.manager, cancel_reason="Test")
+        order.refresh_from_db()
+        self.assertIsNone(order.delivery_driver)
+        self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())

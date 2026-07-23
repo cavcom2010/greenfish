@@ -301,7 +301,17 @@ def perform_order_action(
     if target_status == Order.OrderStatus.COMPLETED and order.is_delivery and old_status != Order.OrderStatus.COMPLETED:
         _run_side_effect("order_delivered_push", lambda o: _enqueue_push(o, "order_delivered", "Your order has been delivered."), order)
 
+    if target_status in {Order.OrderStatus.COMPLETED, Order.OrderStatus.CANCELLED}:
+        _run_side_effect("delivery_run_sync", _sync_delivery_run, order)
+
     return order
+
+
+def _sync_delivery_run(order):
+    # Lazy import: delivery_services imports helpers from this module.
+    from .delivery_services import sync_delivery_run_for_order
+
+    sync_delivery_run_for_order(order)
 
 
 def _enqueue_push(order, event_type, message):
