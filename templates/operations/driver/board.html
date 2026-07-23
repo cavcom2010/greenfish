@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}My Deliveries - {{ site_settings.shop_name }}{% endblock %}
+{% block page_title %}My Deliveries{% endblock %}
+
+{% block header %}
+<div class="status-bar" style="background: var(--text); color: white;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+        <h1 style="color: white; font-size: 20px;">
+            <i class="ph-fill ph-moped"></i>
+            My Deliveries
+        </h1>
+        {% if driver %}<span style="font-size: 14px; opacity: 0.85;">{{ driver.name }}</span>{% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block location_picker %}{% endblock %}
+
+{% block content %}
+<style>
+    .driver-board {
+        padding: 14px;
+        padding-bottom: 90px;
+        max-width: 640px;
+        margin: 0 auto;
+    }
+
+    .driver-board h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-secondary);
+        margin: 18px 0 10px;
+    }
+
+    .stop-card {
+        background: white;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow);
+        border-left: 4px solid #2563EB;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .stop-card.is-done { border-left-color: var(--success); opacity: 0.75; }
+    .stop-card.is-cancelled { border-left-color: var(--error); opacity: 0.6; }
+    .stop-card.is-draft { border-left-color: #F59E0B; }
+
+    .stop-seq {
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+    }
+
+    .stop-body { flex: 1; min-width: 0; font-size: 14px; }
+    .stop-body strong { font-size: 15px; }
+    .stop-address { color: var(--text-secondary); margin: 2px 0 6px; }
+    .stop-meta { color: var(--text-secondary); font-size: 13px; margin-bottom: 8px; }
+
+    .stop-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .driver-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        text-decoration: none;
+        color: var(--text);
+        background: var(--bg);
+    }
+
+    .driver-btn.primary { background: var(--success); color: white; }
+    .driver-btn.start { background: #2563EB; color: white; width: 100%; justify-content: center; padding: 15px; font-size: 16px; }
+    .driver-btn:disabled { opacity: 0.6; cursor: default; }
+
+    .driver-empty {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 48px 20px;
+        font-size: 15px;
+    }
+
+    .driver-empty i { font-size: 44px; display: block; margin-bottom: 12px; }
+</style>
+
+<div class="driver-board">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 13px;">
+        <span id="driverBoardStatus">Live — updates every 10s</span>
+        <button type="button" class="driver-btn" style="padding: 8px 14px;" onclick="refreshDriverBoard()">Refresh</button>
+    </div>
+
+    <div id="driverRunsContainer" hx-get="{% url 'operations:driver_board_fragment' %}" hx-trigger="load, every 10s" hx-swap="innerHTML">
+        <div style="text-align: center; padding: 40px;">
+            <i class="ph ph-spinner animate-spin" style="font-size: 32px; color: var(--brand);"></i>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const driverDispatchUrlTemplate = '{% url "operations:driver_dispatch" 0 %}';
+const driverDeliveredUrlTemplate = '{% url "operations:driver_order_delivered" 0 %}';
+const driverBoardStatus = document.getElementById('driverBoardStatus');
+
+function refreshDriverBoard() {
+    htmx.trigger(document.getElementById('driverRunsContainer'), 'load');
+}
+
+function setDriverStatus(message, isError = false) {
+    if (!driverBoardStatus) return;
+    driverBoardStatus.textContent = message;
+    driverBoardStatus.style.color = isError ? 'var(--error)' : 'var(--text-secondary)';
+}
+
+function postDriverAction(url, fields) {
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
+    formData.set('csrfmiddlewaretoken', '{{ csrf_token }}');
+    return fetch(url, { method: 'POST', body: formData }).then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Unable to update.');
+        return data;
+    });
+}
+
+function runDriverAction(button, url, fields) {
+    if (button) { button.disabled = true; }
+    postDriverAction(url, fields)
+        .then(() => { setDriverStatus('Updated.'); refreshDriverBoard(); })
+        .catch(error => {
+            setDriverStatus(error.message, true);
+            window.alert(error.message);
+            refreshDriverBoard();
+        })
+        .finally(() => { if (button) { button.disabled = false; } });
+}
+
+function startRun(button, runId) {
+    runDriverAction(button, driverDispatchUrlTemplate.replace('/0/dispatch/', `/${runId}/dispatch/`), {});
+}
+
+function markDelivered(button, orderId, expectedStatus) {
+    runDriverAction(
+        button,
+        driverDeliveredUrlTemplate.replace('/0/delivered/', `/${orderId}/delivered/`),
+        { expected_status: expectedStatus }
+    );
+}
+</script>
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}

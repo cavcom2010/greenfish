@@ -1,0 +1,76 @@
+{# Pollable driver-board body: the driver's dispatched run, then their draft. #}
+
+{% if not driver %}
+<div class="driver-empty">
+    <i class="ph ph-link-break"></i>
+    Your account is not linked to a driver profile yet.<br>
+    Ask the shop to link it in the admin.
+</div>
+{% else %}
+
+{% if dispatched_run %}
+<h2>Current run</h2>
+{% for run_order in dispatched_run.run_orders.all %}
+<div class="stop-card {% if run_order.order.status == 'completed' %}is-done{% elif run_order.order.status == 'cancelled' %}is-cancelled{% endif %}">
+    <div class="stop-seq">{{ run_order.sequence }}</div>
+    <div class="stop-body">
+        <strong>#{{ run_order.order.order_number }}</strong> · {{ run_order.order.customer_name }}
+        <div class="stop-address">{{ run_order.order.delivery_address_display }}</div>
+        <div class="stop-meta">
+            {% if run_order.order.status == 'completed' %}
+            Delivered{% if run_order.delivered_at %} {{ run_order.delivered_at|time:"H:i" }}{% endif %}
+            {% elif run_order.order.status == 'cancelled' %}
+            Cancelled — skip this stop
+            {% elif run_order.eta_at %}
+            ETA {{ run_order.eta_at|time:"H:i" }}
+            {% endif %}
+            {% if run_order.order.handover_notes %} · {{ run_order.order.handover_notes }}{% endif %}
+        </div>
+        <div class="stop-actions">
+            {% if run_order.order.customer_phone %}
+            <a class="driver-btn" href="tel:{{ run_order.order.customer_phone }}">
+                <i class="ph ph-phone"></i> Call
+            </a>
+            {% endif %}
+            <a class="driver-btn" target="_blank" rel="noopener"
+               href="https://www.google.com/maps/search/?api=1&query={{ run_order.order.delivery_address_display|urlencode }}">
+                <i class="ph ph-map-pin"></i> Directions
+            </a>
+            {% if run_order.order.status == 'out_for_delivery' %}
+            <button type="button" class="driver-btn primary"
+                    onclick="markDelivered(this, {{ run_order.order_id }}, 'out_for_delivery')">
+                <i class="ph ph-check-circle"></i> Delivered
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if draft_run %}
+<h2>Next run ({{ draft_run.run_orders.count }} stop{{ draft_run.run_orders.count|pluralize }})</h2>
+{% for run_order in draft_run.run_orders.all %}
+<div class="stop-card is-draft">
+    <div class="stop-seq">{{ run_order.sequence }}</div>
+    <div class="stop-body">
+        <strong>#{{ run_order.order.order_number }}</strong> · {{ run_order.order.customer_name }}
+        <div class="stop-address">{{ run_order.order.delivery_address_display }}</div>
+        <div class="stop-meta">{{ run_order.order.get_status_display }}</div>
+    </div>
+</div>
+{% endfor %}
+<button type="button" class="driver-btn start" onclick="startRun(this, {{ draft_run.id }})">
+    <i class="ph ph-rocket-launch"></i> Picked up — start deliveries
+</button>
+{% endif %}
+
+{% if not dispatched_run and not draft_run %}
+<div class="driver-empty">
+    <i class="ph ph-coffee"></i>
+    No deliveries assigned right now.<br>
+    This page refreshes automatically.
+</div>
+{% endif %}
+
+{% endif %}
