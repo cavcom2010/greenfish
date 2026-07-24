@@ -116,6 +116,9 @@ run_sudo() {
 
 echo "Restarting production release ${RELEASE_VERSION}"
 
+echo "Syncing Python dependencies..."
+"$PYTHON_BIN" -m pip install --quiet --requirement "$ROOT/requirements.txt"
+
 run_manage "Running Django deployment checks" check --deploy
 run_manage "Checking for missing migration files" makemigrations --check --dry-run
 
