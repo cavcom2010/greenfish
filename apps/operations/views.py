@@ -75,6 +75,7 @@ def order_board(request):
 
 
 @operations_board_required(BOARD_COLLECTION, json_response=True)
+@rate_limit("ops-board-read", limit=240, window_seconds=60, methods=("GET",))
 def collection_list_fragment(request):
     return render(
         request,
@@ -92,6 +93,7 @@ def order_list_fragment(request):
 
 
 @operations_staff_required(json_response=True)
+@rate_limit("ops-board-read", limit=240, window_seconds=60, methods=("GET",))
 def order_detail_modal(request, order_id):
     order = get_object_or_404(
         Order.objects.select_related("user", "payment", "payment__manual_receipt").prefetch_related("items"),
@@ -190,6 +192,7 @@ def delivery_panel(request):
 
 
 @operations_board_required(BOARD_COLLECTION, json_response=True)
+@rate_limit("ops-board-read", limit=240, window_seconds=60, methods=("GET",))
 def delivery_panel_fragment(request):
     from .delivery_services import get_dispatch_panel_context
 
@@ -293,6 +296,7 @@ def driver_board(request):
 
 
 @operations_board_required(BOARD_DRIVER, json_response=True)
+@rate_limit("ops-board-read", limit=240, window_seconds=60, methods=("GET",))
 def driver_board_fragment(request):
     return render(request, "operations/driver/_run_list.html", _driver_board_context(request))
 
@@ -366,6 +370,7 @@ def kanban_board(request):
 
 
 @operations_board_required(BOARD_KITCHEN, json_response=True)
+@rate_limit("ops-board-read", limit=240, window_seconds=60, methods=("GET",))
 def kanban_column_fragment(request, status):
     return render(
         request,
@@ -378,6 +383,7 @@ def kanban_column_fragment(request, status):
 
 
 @operations_board_required(BOARD_KITCHEN, json_response=True)
+@rate_limit("ops-board-read", limit=240, window_seconds=60, methods=("GET",))
 def kanban_all_orders(request):
     return render(
         request,
