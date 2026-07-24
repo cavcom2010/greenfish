@@ -1289,6 +1289,12 @@ class OrderFlowTests(TestCase):
 
         manager_group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
         self.staff_user.groups.add(manager_group)
+        # Managers must have MFA enrolled to pass OpsSecurityMiddleware.
+        from allauth.mfa.models import Authenticator
+
+        Authenticator.objects.create(
+            user=self.staff_user, type=Authenticator.Type.TOTP, data={"secret": "test"}
+        )
         self.client.force_login(self.staff_user)
         for url in [
             reverse("orders:order_board"),

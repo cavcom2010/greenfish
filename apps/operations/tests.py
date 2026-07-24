@@ -15,10 +15,20 @@ from apps.orders.models import Order
 from apps.payments.models import ManualPaymentReceipt, Payment, PaymentLog
 
 
+def enrol_mfa(user):
+    """Give a test user an MFA authenticator so OpsSecurityMiddleware passes."""
+    from allauth.mfa.models import Authenticator
+
+    Authenticator.objects.create(
+        user=user, type=Authenticator.Type.TOTP, data={"secret": "test-secret"}
+    )
+
+
 class OperationsBoardTests(TestCase):
     def setUp(self):
         ensure_site_settings()
         self.manager_user = self._create_ops_user("ops-manager@example.com", OPERATIONS_MANAGER_GROUP)
+        enrol_mfa(self.manager_user)
         self.cashier_user = self._create_ops_user("ops-cashier@example.com", OPERATIONS_CASHIER_GROUP)
         self.kitchen_user = self._create_ops_user("ops-kitchen@example.com", OPERATIONS_KITCHEN_GROUP)
         self.ungrouped_staff_user = create_user(email="ops-staff@example.com", is_staff=True)
@@ -814,6 +824,7 @@ class DriverBoardTests(TestCase):
         self.manager = create_user(email="board-manager@example.com", is_staff=True)
         manager_group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
         self.manager.groups.add(manager_group)
+        enrol_mfa(self.manager)
 
     def _delivery_order(self, **overrides):
         defaults = dict(
@@ -929,3 +940,92 @@ class DriverBoardTests(TestCase):
 
         response = self.client.post(reverse("operations:driver_dispatch", args=[run.id]))
         self.assertEqual(response.status_code, 403)
+
+
+class OpsHardeningTests(TestCase):
+    """MFA enforcement for managers, capped staff sessions, read rate limits."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.operations.permissions import OPERATIONS_DRIVER_GROUP
+
+        self.manager = create_user(email="mfa-manager@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.manager.groups.add(group)
+
+        self.cashier = create_user(email="mfa-cashier@example.com", is_staff=True)
+        cashier_group, _ = Group.objects.get_or_create(name=OPERATIONS_CASHIER_GROUP)
+        self.cashier.groups.add(cashier_group)
+
+        self.driver_user = create_user(email="mfa-driver@example.com", is_staff=True)
+        driver_group, _ = Group.objects.get_or_create(name=OPERATIONS_DRIVER_GROUP)
+        self.driver_user.groups.add(driver_group)
+
+        self.customer = create_user(email="mfa-customer@example.com")
+
+    # ── Manager MFA enforcement ────────────────────────────────────────
+
+    def test_manager_without_mfa_is_redirected_to_enrolment(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("operations:collection_board"))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith("/accounts/2fa/"))
+        # The site as a whole is also gated, not just /ops/.
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 302)
+        self.assertTrue(home.url.startswith("/accounts/2fa/"))
+
+    def test_manager_can_reach_enrolment_and_logout(self):
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get("/accounts/2fa/").status_code, 200)
+        self.assertIn(self.client.get("/accounts/logout/").status_code, {200, 302})
+
+    def test_manager_with_mfa_passes(self):
+        from allauth.mfa.models import Authenticator
+
+        Authenticator.objects.create(
+            user=self.manager, type=Authenticator.Type.TOTP, data={"secret": "x"}
+        )
+        self.client.force_login(self.manager)
+        self.assertEqual(
+            self.client.get(reverse("operations:collection_board")).status_code, 200
+        )
+
+    def test_non_manager_roles_are_not_forced(self):
+        self.client.force_login(self.cashier)
+        self.assertEqual(
+            self.client.get(reverse("operations:collection_board")).status_code, 200
+        )
+        self.client.force_login(self.driver_user)
+        self.assertEqual(self.client.get(reverse("operations:driver_board")).status_code, 200)
+        self.client.force_login(self.customer)
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_enforcement_is_toggleable(self):
+        from django.test import override_settings
+
+        with override_settings(OPS_MANAGER_MFA_REQUIRED=False):
+            self.client.force_login(self.manager)
+            self.assertEqual(
+                self.client.get(reverse("operations:collection_board")).status_code, 200
+            )
+
+    # ── Session lifetime ───────────────────────────────────────────────
+
+    def test_staff_session_is_capped_and_customer_session_is_not(self):
+        # The cap applies per-request via middleware, so any page hit clamps
+        # an ops-role session — including sessions predating the policy.
+        from django.conf import settings as dj_settings
+
+        self.client.force_login(self.cashier)
+        self.client.get("/")
+        self.assertLessEqual(
+            self.client.session.get_expiry_age(), dj_settings.OPS_SESSION_MAX_AGE
+        )
+
+        self.client.logout()
+        self.client.force_login(self.customer)
+        self.client.get("/")
+        self.assertGreater(
+            self.client.session.get_expiry_age(), dj_settings.OPS_SESSION_MAX_AGE
+        )

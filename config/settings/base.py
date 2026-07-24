@@ -72,6 +72,7 @@ THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "allauth.mfa",
 ]
 
 LOCAL_APPS = [
@@ -112,6 +113,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # Staff session cap + manager two-factor enforcement.
+    "apps.operations.middleware.OpsSecurityMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -229,6 +232,18 @@ ACCOUNT_RATE_LIMITS = {
     "confirm_email": "3/10m/key",
 }
 ALLAUTH_TRUSTED_PROXY_COUNT = env("ALLAUTH_TRUSTED_PROXY_COUNT", default=0, cast=int)
+
+# Two-factor authentication (allauth.mfa): TOTP apps + recovery codes.
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
+MFA_TOTP_ISSUER = env("MFA_TOTP_ISSUER", default="")  # blank -> allauth uses the site name
+
+# Operations managers hold the keys to every board, so they must enrol in MFA
+# before touching any staff surface. Toggleable per deployment for rollout.
+OPS_MANAGER_MFA_REQUIRED = env("OPS_MANAGER_MFA_REQUIRED", default=True, cast=bool)
+
+# Staff/driver sessions expire far sooner than the two-week customer default:
+# a lost driver phone should not stay logged in for a fortnight.
+OPS_SESSION_MAX_AGE = env("OPS_SESSION_MAX_AGE", default=12 * 60 * 60, cast=int)
 
 # REST Framework
 REST_FRAMEWORK = {

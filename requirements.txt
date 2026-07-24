@@ -16,6 +16,7 @@ psycopg[binary]==3.3.4
 djangorestframework==3.17.1
 django-htmx==1.27.0
 django-allauth==65.18.0
+fido2==2.2.1  # required by allauth.mfa (imported even when WebAuthn is off)
 
 # Mollie Payments
 stripe==15.2.0
