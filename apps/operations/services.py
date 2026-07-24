@@ -166,7 +166,7 @@ def _build_actions_for_order(order):
 
 
 def _action_permitted(action_name, roles):
-    from .permissions import ROLE_MANAGER, ROLE_KITCHEN, ROLE_CASHIER
+    from .permissions import ROLE_MANAGER, ROLE_KITCHEN, ROLE_CASHIER, ROLE_DRIVER
 
     if ROLE_MANAGER in roles:
         return True
@@ -175,6 +175,10 @@ def _action_permitted(action_name, roles):
     if ROLE_KITCHEN in roles and action_name in kitchen_actions:
         return True
     if ROLE_CASHIER in roles and action_name in cashier_actions:
+        return True
+    # Drivers may mark their own dispatched orders delivered; per-order
+    # ownership is enforced at the choke-point (can_perform_action with order=).
+    if ROLE_DRIVER in roles and action_name == ACTION_MARK_DELIVERED:
         return True
     return False
 
@@ -212,7 +216,7 @@ def perform_order_action(
     payment_notes="",
     request=None,
 ):
-    if not can_perform_action(actor, action):
+    if not can_perform_action(actor, action, order=order):
         raise ValueError("You do not have permission to perform this action.")
 
     unpaid_allowed_actions = {ACTION_MARK_PAID, ACTION_CANCEL_ORDER, ACTION_SAVE_NOTES}
@@ -297,7 +301,17 @@ def perform_order_action(
     if target_status == Order.OrderStatus.COMPLETED and order.is_delivery and old_status != Order.OrderStatus.COMPLETED:
         _run_side_effect("order_delivered_push", lambda o: _enqueue_push(o, "order_delivered", "Your order has been delivered."), order)
 
+    if target_status in {Order.OrderStatus.COMPLETED, Order.OrderStatus.CANCELLED}:
+        _run_side_effect("delivery_run_sync", _sync_delivery_run, order)
+
     return order
+
+
+def _sync_delivery_run(order):
+    # Lazy import: delivery_services imports helpers from this module.
+    from .delivery_services import sync_delivery_run_for_order
+
+    sync_delivery_run_for_order(order)
 
 
 def _enqueue_push(order, event_type, message):

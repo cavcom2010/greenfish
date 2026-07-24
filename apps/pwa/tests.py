@@ -126,6 +126,7 @@ class PwaViewTests(TestCase):
         self.assertIn("UNCACHEABLE_PREFIXES", body)
         self.assertIn("'/media/'", body)
         self.assertIn("'/payments/'", body)
+        self.assertIn("'/ops/'", body)
         self.assertIn("'/accounts/app/'", body)
         self.assertIn("greenfish-", body)
         self.assertNotIn("clonedResponse", body)

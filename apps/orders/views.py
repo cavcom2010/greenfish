@@ -758,6 +758,19 @@ def order_tracking(request, order_number):
     )
 
 
+@rate_limit("order-tracking", limit=120, window_seconds=60, methods=("GET",), response_type="plain")
+def order_tracking_fragment(request, order_number):
+    """Pollable status slice of the tracking page (same access rules)."""
+    order = get_accessible_order_or_404(
+        request,
+        order_number,
+        queryset=Order.objects.select_related(
+            "delivery_driver", "delivery_run_order__run"
+        ),
+    )
+    return render(request, "orders/_tracking_status.html", {"order": order})
+
+
 @rate_limit("order-issues", limit=5, window_seconds=3600)
 def create_order_issue(request, order_number):
     """Let a customer raise a structured issue for their own order."""

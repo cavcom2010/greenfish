@@ -46,7 +46,7 @@ const CACHEABLE_NAVIGATION_PATHS = new Set([
 const STATIC_PREFIXES = ['/static/'];
 
 const UNCACHEABLE_PREFIXES = [
-    '/admin/', '/media/', '/payments/', '/pwa/push/',
+    '/admin/', '/media/', '/payments/', '/pwa/push/', '/ops/',
     '/orders/checkout/', '/orders/cart/', '/orders/confirmation/',
 ];
 

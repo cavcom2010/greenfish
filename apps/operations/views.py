@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 from .permissions import (
     BOARD_COLLECTION,
+    BOARD_DRIVER,
     BOARD_KITCHEN,
     can_access_board,
     get_operations_roles,
@@ -51,6 +52,8 @@ def _board_nav_context(request):
     return {
         "can_access_collection_board": can_access_board(request.user, BOARD_COLLECTION),
         "can_access_kitchen_board": can_access_board(request.user, BOARD_KITCHEN),
+        # The dispatch panel shares the collection gate (cashier + manager).
+        "can_access_delivery_panel": can_access_board(request.user, BOARD_COLLECTION),
         "operations_roles": sorted(get_operations_roles(request.user)),
     }
 
@@ -169,6 +172,182 @@ def order_action(request, order_id):
             {"error": "Something went wrong. Please try again."},
             status=500,
         )
+
+
+# ── Delivery dispatch panel (cashier + manager) ─────────────────────────
+
+
+@operations_board_required(BOARD_COLLECTION)
+def delivery_panel(request):
+    from .delivery_services import get_dispatch_panel_context
+
+    context = {
+        **get_dispatch_panel_context(),
+        **_counts_context(),
+        **_board_nav_context(request),
+    }
+    return render(request, "operations/delivery/panel.html", context)
+
+
+@operations_board_required(BOARD_COLLECTION, json_response=True)
+def delivery_panel_fragment(request):
+    from .delivery_services import get_dispatch_panel_context
+
+    return render(request, "operations/delivery/_panel_content.html", get_dispatch_panel_context())
+
+
+def _delivery_action(handler):
+    """Shared error ladder for dispatch-panel POSTs (mirrors order_action)."""
+    try:
+        with transaction.atomic():
+            return handler()
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except ValidationError as exc:
+        message = " ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+        return JsonResponse({"error": message}, status=400)
+    except DatabaseError:
+        logger.exception("Database error in delivery action")
+        return JsonResponse(
+            {"error": "A conflict occurred. Refresh the panel and try again."},
+            status=409,
+        )
+    except Exception:
+        logger.exception("Unexpected error in delivery action")
+        return JsonResponse({"error": "Something went wrong. Please try again."}, status=500)
+
+
+@operations_board_required(BOARD_COLLECTION, json_response=True)
+@require_POST
+@rate_limit("ops-delivery-action", limit=60, window_seconds=60)
+def delivery_assign(request):
+    from apps.orders.models import DeliveryDriver
+
+    from .delivery_services import assign_order_to_run
+
+    def handler():
+        order = get_object_or_404(
+            Order.objects.select_for_update(), pk=request.POST.get("order_id")
+        )
+        driver = get_object_or_404(
+            DeliveryDriver, pk=request.POST.get("driver_id"), is_active=True
+        )
+        assign_order_to_run(order, driver, request.user)
+        return JsonResponse({"success": True})
+
+    return _delivery_action(handler)
+
+
+@operations_board_required(BOARD_COLLECTION, json_response=True)
+@require_POST
+@rate_limit("ops-delivery-action", limit=60, window_seconds=60)
+def delivery_unassign(request):
+    from .delivery_services import unassign_order
+
+    def handler():
+        order = get_object_or_404(
+            Order.objects.select_for_update(), pk=request.POST.get("order_id")
+        )
+        unassign_order(order, request.user)
+        return JsonResponse({"success": True})
+
+    return _delivery_action(handler)
+
+
+@operations_board_required(BOARD_COLLECTION, json_response=True)
+@require_POST
+@rate_limit("ops-delivery-action", limit=60, window_seconds=60)
+def delivery_dispatch(request, run_id):
+    from apps.orders.models import DeliveryRun
+
+    from .delivery_services import dispatch_run
+
+    def handler():
+        run = get_object_or_404(DeliveryRun.objects.select_for_update(), pk=run_id)
+        if run.status != DeliveryRun.Status.DRAFT:
+            return JsonResponse(
+                {"error": "Run already dispatched. Refresh the panel."}, status=409
+            )
+        dispatch_run(run, request.user)
+        return JsonResponse({"success": True})
+
+    return _delivery_action(handler)
+
+
+# ── Driver board (driver + manager) ─────────────────────────────────────
+
+
+def _driver_board_context(request):
+    from .delivery_services import get_driver_profile, get_driver_runs
+
+    profile = get_driver_profile(request.user)
+    context = {"driver": profile, "draft_run": None, "dispatched_run": None}
+    if profile is not None:
+        context.update(get_driver_runs(profile))
+    return context
+
+
+@operations_board_required(BOARD_DRIVER)
+def driver_board(request):
+    return render(request, "operations/driver/board.html", _driver_board_context(request))
+
+
+@operations_board_required(BOARD_DRIVER, json_response=True)
+def driver_board_fragment(request):
+    return render(request, "operations/driver/_run_list.html", _driver_board_context(request))
+
+
+@operations_board_required(BOARD_DRIVER, json_response=True)
+@require_POST
+@rate_limit("ops-driver-action", limit=60, window_seconds=60)
+def driver_dispatch(request, run_id):
+    from apps.orders.models import DeliveryRun
+
+    from .delivery_services import dispatch_run
+    from .permissions import ROLE_MANAGER
+
+    def handler():
+        run = get_object_or_404(
+            DeliveryRun.objects.select_for_update().select_related("driver"), pk=run_id
+        )
+        is_manager = ROLE_MANAGER in get_operations_roles(request.user)
+        owns_run = run.driver is not None and run.driver.user_id == request.user.id
+        if not owns_run and not is_manager:
+            return JsonResponse({"error": "This run belongs to another driver."}, status=403)
+        if run.status != DeliveryRun.Status.DRAFT:
+            return JsonResponse({"error": "Run already dispatched. Refresh."}, status=409)
+        dispatch_run(run, request.user)
+        return JsonResponse({"success": True})
+
+    return _delivery_action(handler)
+
+
+@operations_board_required(BOARD_DRIVER, json_response=True)
+@require_POST
+@rate_limit("ops-driver-action", limit=60, window_seconds=60)
+def driver_order_delivered(request, order_id):
+    from .delivery_services import driver_mark_delivered
+    from .permissions import can_perform_action
+
+    def handler():
+        order = get_object_or_404(
+            Order.objects.select_for_update().select_related(
+                "delivery_run_order__run__driver"
+            ),
+            pk=order_id,
+        )
+        expected_status = (request.POST.get("expected_status") or "").strip()
+        if expected_status and order.status != expected_status:
+            return JsonResponse(
+                {"error": "Order changed. Refresh and try again."}, status=409
+            )
+        # Explicit ownership pre-check so the failure surfaces as 403, not 400.
+        if not can_perform_action(request.user, "mark_delivered", order=order):
+            return JsonResponse({"error": "This stop is not on your run."}, status=403)
+        driver_mark_delivered(order, request.user, request=request)
+        return JsonResponse({"success": True, "status": order.status})
+
+    return _delivery_action(handler)
 
 
 @operations_board_required(BOARD_KITCHEN)

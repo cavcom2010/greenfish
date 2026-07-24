@@ -1991,3 +1991,46 @@ class PaymentFlowTests(TestCase):
             },
             event_type="checkout.session.completed",
         )
+
+
+class TrackingFragmentTests(TestCase):
+    """The pollable status fragment shares the tracking page's access rules."""
+
+    def setUp(self):
+        ensure_site_settings()
+
+    def _guest_delivery_order(self):
+        return create_order(
+            status=Order.OrderStatus.OUT_FOR_DELIVERY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+        )
+
+    def test_fragment_requires_token_for_guest_order(self):
+        order = self._guest_delivery_order()
+        url = reverse("orders:tracking_fragment", args=[order.order_number])
+
+        self.assertEqual(self.client.get(url).status_code, 404)
+        with_token = self.client.get(f"{url}?t={order.public_access_token}")
+        self.assertEqual(with_token.status_code, 200)
+
+    def test_fragment_shows_driver_and_eta(self):
+        from apps.orders.models import DeliveryDriver, DeliveryRun, DeliveryRunOrder
+
+        order = self._guest_delivery_order()
+        driver = DeliveryDriver.objects.create(name="Fragment Driver")
+        run = DeliveryRun.objects.create(driver=driver, status=DeliveryRun.Status.DISPATCHED)
+        eta = timezone.now() + timezone.timedelta(minutes=25)
+        DeliveryRunOrder.objects.create(run=run, order=order, sequence=1, eta_at=eta)
+        order.delivery_driver = driver
+        order.save(update_fields=["delivery_driver"])
+
+        url = reverse("orders:tracking_fragment", args=[order.order_number])
+        body = self.client.get(f"{url}?t={order.public_access_token}").content.decode()
+
+        self.assertIn("Fragment Driver", body)
+        self.assertIn(eta.astimezone(timezone.get_current_timezone()).strftime("%H:%M"), body)
+        self.assertIn("on the way", body)

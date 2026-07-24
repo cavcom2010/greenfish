@@ -22,6 +22,7 @@ urlpatterns = [
     path("confirmation/<str:order_number>/", views.order_confirmation, name="confirmation"),
     path("confirmation/<str:order_number>/instore/", views.confirmation_instore, name="confirmation_instore"),
     path("track/<str:order_number>/", views.order_tracking, name="tracking"),
+    path("track/<str:order_number>/fragment/", views.order_tracking_fragment, name="tracking_fragment"),
     path("track/<str:order_number>/issue/", views.create_order_issue, name="create_issue"),
     
     # Receipt URLs

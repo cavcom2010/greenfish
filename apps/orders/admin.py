@@ -232,9 +232,10 @@ class DeliveryZoneAdmin(admin.ModelAdmin):
 
 @admin.register(DeliveryDriver)
 class DeliveryDriverAdmin(admin.ModelAdmin):
-    list_display = ["name", "phone", "is_active", "updated_at"]
+    list_display = ["name", "phone", "user", "is_active", "updated_at"]
     list_filter = ["is_active"]
-    search_fields = ["name", "phone"]
+    search_fields = ["name", "phone", "user__email"]
+    autocomplete_fields = ["user"]
 
 
 class DeliveryRunOrderInline(admin.TabularInline):

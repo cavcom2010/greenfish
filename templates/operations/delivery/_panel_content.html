@@ -1,0 +1,85 @@
+{# Pollable dispatch-panel body: unassigned orders, draft runs, active runs. #}
+
+<div class="dispatch-section">
+    <h2>Unassigned delivery orders</h2>
+    {% for order in unassigned_orders %}
+    <div class="dispatch-card">
+        <div class="dispatch-row">
+            <div>
+                <strong>#{{ order.order_number }}</strong> · {{ order.customer_name }}
+                <div class="dispatch-meta">
+                    {{ order.delivery_address_display }} · {{ order.get_status_display }}
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="driverSelect-{{ order.id }}" class="dispatch-select">
+                    <option value="">Driver…</option>
+                    {% for driver in drivers %}
+                    <option value="{{ driver.id }}">{{ driver.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" class="dispatch-btn" onclick="assignOrder(this, {{ order.id }})">Assign</button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <p class="dispatch-empty">No unassigned delivery orders.</p>
+    {% endfor %}
+</div>
+
+<div class="dispatch-section">
+    <h2>Draft runs</h2>
+    {% for run in draft_runs %}
+    <div class="dispatch-card run-draft">
+        <div class="dispatch-row">
+            <div>
+                <strong>{{ run.driver.name|default:"No driver" }}</strong>
+                <span class="dispatch-meta">· {{ run.run_orders.count }} stop{{ run.run_orders.count|pluralize }}</span>
+            </div>
+            <button type="button" class="dispatch-btn warn" onclick="dispatchRun(this, {{ run.id }})">Dispatch</button>
+        </div>
+        {% for run_order in run.run_orders.all %}
+        <div class="dispatch-stop">
+            <span>{{ run_order.sequence }}. #{{ run_order.order.order_number }} — {{ run_order.order.delivery_address_display }}
+                {% if run_order.order.status != 'ready' %}
+                <span class="dispatch-meta">({{ run_order.order.get_status_display }})</span>
+                {% endif %}
+            </span>
+            <button type="button" class="dispatch-btn secondary" onclick="unassignOrder(this, {{ run_order.order_id }})">Remove</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% empty %}
+    <p class="dispatch-empty">No draft runs — assign an order to start one.</p>
+    {% endfor %}
+</div>
+
+<div class="dispatch-section">
+    <h2>Out for delivery</h2>
+    {% for run in dispatched_runs %}
+    <div class="dispatch-card run-dispatched">
+        <div class="dispatch-row">
+            <div>
+                <strong>{{ run.driver.name|default:"No driver" }}</strong>
+                <span class="dispatch-meta">· dispatched {{ run.dispatched_at|time:"H:i" }}</span>
+            </div>
+        </div>
+        {% for run_order in run.run_orders.all %}
+        <div class="dispatch-stop">
+            <span>{{ run_order.sequence }}. #{{ run_order.order.order_number }} — {{ run_order.order.delivery_address_display }}</span>
+            <span>
+                {% if run_order.delivered_at %}
+                <span class="stop-delivered">Delivered {{ run_order.delivered_at|time:"H:i" }}</span>
+                {% elif run_order.order.status == 'cancelled' %}
+                <span class="dispatch-meta">Cancelled</span>
+                {% elif run_order.eta_at %}
+                <span class="dispatch-meta">ETA {{ run_order.eta_at|time:"H:i" }}</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% empty %}
+    <p class="dispatch-empty">No runs out right now.</p>
+    {% endfor %}
+</div>

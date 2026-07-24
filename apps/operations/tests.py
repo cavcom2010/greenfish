@@ -436,3 +436,496 @@ class OperationsBoardTests(TestCase):
                 status=NotificationEvent.Status.PENDING,
             ).exists()
         )
+
+
+class DriverPermissionsTests(TestCase):
+    """The driver role must unlock only the driver surface — never the
+    back-office boards, order_action, or order detail."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.operations.permissions import OPERATIONS_DRIVER_GROUP
+
+        self.driver_user = create_user(email="driver@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_DRIVER_GROUP)
+        self.driver_user.groups.add(group)
+
+        self.cashier_user = create_user(email="cashier2@example.com", is_staff=True)
+        cashier_group, _ = Group.objects.get_or_create(name=OPERATIONS_CASHIER_GROUP)
+        self.cashier_user.groups.add(cashier_group)
+
+        self.manager_user = create_user(email="manager2@example.com", is_staff=True)
+        manager_group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.manager_user.groups.add(manager_group)
+
+    def _delivery_order_in_dispatched_run(self, driver_user=None):
+        from apps.orders.models import DeliveryDriver, DeliveryRun, DeliveryRunOrder
+
+        order = create_order(
+            status=Order.OrderStatus.OUT_FOR_DELIVERY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+        )
+        driver = DeliveryDriver.objects.create(name="Test Driver", user=driver_user)
+        run = DeliveryRun.objects.create(driver=driver, status=DeliveryRun.Status.DISPATCHED)
+        DeliveryRunOrder.objects.create(run=run, order=order, sequence=1)
+        return order
+
+    def test_driver_is_not_operations_staff(self):
+        from apps.operations.permissions import is_delivery_driver, is_operations_staff
+
+        self.assertFalse(is_operations_staff(self.driver_user))
+        self.assertTrue(is_delivery_driver(self.driver_user))
+        self.assertTrue(is_operations_staff(self.cashier_user))
+
+    def test_driver_cannot_access_back_office_routes(self):
+        order = self._delivery_order_in_dispatched_run(driver_user=self.driver_user)
+        self.client.force_login(self.driver_user)
+
+        blocked_gets = [
+            reverse("operations:collection_board"),
+            reverse("operations:kitchen_board"),
+            reverse("operations:order_detail_modal", args=[order.id]),
+        ]
+        for route in blocked_gets:
+            with self.subTest(route=route):
+                self.assertIn(self.client.get(route).status_code, {302, 403})
+
+        action = self.client.post(
+            reverse("operations:order_action", args=[order.id]),
+            {"action": "mark_delivered"},
+        )
+        self.assertEqual(action.status_code, 403)
+
+    def test_board_access_matrix(self):
+        from apps.operations.permissions import BOARD_DRIVER, can_access_board
+
+        self.assertTrue(can_access_board(self.driver_user, BOARD_DRIVER))
+        self.assertFalse(can_access_board(self.cashier_user, BOARD_DRIVER))
+        self.assertTrue(can_access_board(self.manager_user, BOARD_DRIVER))
+
+    def test_driver_mark_delivered_requires_ownership(self):
+        from apps.operations.permissions import can_perform_action
+
+        own_order = self._delivery_order_in_dispatched_run(driver_user=self.driver_user)
+        foreign_order = self._delivery_order_in_dispatched_run(driver_user=None)
+
+        self.assertTrue(can_perform_action(self.driver_user, "mark_delivered", order=own_order))
+        self.assertFalse(can_perform_action(self.driver_user, "mark_delivered", order=foreign_order))
+        # Without an order there is no ownership proof — deny.
+        self.assertFalse(can_perform_action(self.driver_user, "mark_delivered"))
+        # Other actions stay denied even on own orders.
+        self.assertFalse(can_perform_action(self.driver_user, "mark_dispatched", order=own_order))
+
+
+class DeliveryRunServiceTests(TestCase):
+    """Assignment, dispatch, ETA, and run-completion orchestration."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.orders.models import DeliveryDriver
+
+        self.manager = create_user(email="run-manager@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.manager.groups.add(group)
+        self.driver = DeliveryDriver.objects.create(name="Runner")
+
+    def _delivery_order(self, **overrides):
+        defaults = dict(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+            delivery_eta_minutes=25,
+        )
+        defaults.update(overrides)
+        return create_order(**defaults)
+
+    def test_assign_creates_single_draft_run_per_driver(self):
+        from apps.operations import delivery_services as ds
+        from apps.orders.models import DeliveryRun
+
+        first = ds.assign_order_to_run(self._delivery_order(), self.driver)
+        second = ds.assign_order_to_run(self._delivery_order(), self.driver)
+
+        self.assertEqual(first.run_id, second.run_id)
+        self.assertEqual(second.sequence, 2)
+        self.assertEqual(
+            DeliveryRun.objects.filter(driver=self.driver, status=DeliveryRun.Status.DRAFT).count(), 1
+        )
+        first.order.refresh_from_db()
+        self.assertEqual(first.order.delivery_driver, self.driver)
+
+    def test_assign_rejects_unpaid_and_pickup_orders(self):
+        from apps.operations import delivery_services as ds
+
+        unpaid = self._delivery_order(payment_status=Order.PaymentStatus.PENDING)
+        with self.assertRaises(ValueError):
+            ds.assign_order_to_run(unpaid, self.driver)
+
+        pickup = create_order(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.PICKUP,
+        )
+        with self.assertRaises(ValueError):
+            ds.assign_order_to_run(pickup, self.driver)
+
+    def test_unassign_resequences_and_deletes_empty_run(self):
+        from apps.operations import delivery_services as ds
+        from apps.orders.models import DeliveryRun
+
+        order_a = self._delivery_order()
+        order_b = self._delivery_order()
+        ds.assign_order_to_run(order_a, self.driver)
+        run_order_b = ds.assign_order_to_run(order_b, self.driver)
+
+        ds.unassign_order(order_a)
+        run_order_b.refresh_from_db()
+        self.assertEqual(run_order_b.sequence, 1)
+        order_a.refresh_from_db()
+        self.assertIsNone(order_a.delivery_driver)
+
+        ds.unassign_order(order_b)
+        self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())
+
+    def test_dispatch_prunes_cancelled_orders_and_sets_etas(self):
+        from apps.operations import delivery_services as ds
+
+        keep = self._delivery_order()
+        cancelled = self._delivery_order()
+        ds.assign_order_to_run(keep, self.driver)
+        run = ds.assign_order_to_run(cancelled, self.driver).run
+        cancelled.update_status(Order.OrderStatus.CANCELLED, self.manager)
+
+        ds.dispatch_run(run, self.manager)
+        run.refresh_from_db()
+        keep.refresh_from_db()
+
+        self.assertEqual(run.status, run.Status.DISPATCHED)
+        self.assertEqual(run.run_orders.count(), 1)
+        self.assertEqual(keep.status, Order.OrderStatus.OUT_FOR_DELIVERY)
+        run_order = run.run_orders.get()
+        self.assertIsNotNone(run_order.eta_at)
+
+    def test_dispatch_eta_increments_by_sequence(self):
+        from apps.operations import delivery_services as ds
+
+        first = self._delivery_order()
+        second = self._delivery_order()
+        ds.assign_order_to_run(first, self.driver)
+        run = ds.assign_order_to_run(second, self.driver).run
+
+        ds.dispatch_run(run, self.manager)
+        stops = list(run.run_orders.order_by("sequence"))
+        gap = (stops[1].eta_at - stops[0].eta_at).total_seconds() / 60
+        self.assertEqual(round(gap), 7)  # DELIVERY_PER_STOP_MINUTES default
+
+    def test_dispatch_enqueues_push_notifications(self):
+        from apps.operations import delivery_services as ds
+
+        customer = create_user(email="push-customer@example.com")
+        order = self._delivery_order(user=customer)
+        run = ds.assign_order_to_run(order, self.driver).run
+        ds.dispatch_run(run, self.manager)
+
+        self.assertTrue(
+            NotificationEvent.objects.filter(
+                order=order,
+                channel=NotificationEvent.Channel.PUSH,
+                event_type="order_out_for_delivery",
+                status=NotificationEvent.Status.PENDING,
+            ).exists()
+        )
+
+    def test_run_autocompletes_on_mixed_delivered_and_cancelled(self):
+        from apps.operations import delivery_services as ds
+
+        delivered = self._delivery_order()
+        cancelled_later = self._delivery_order()
+        ds.assign_order_to_run(delivered, self.driver)
+        run = ds.assign_order_to_run(cancelled_later, self.driver).run
+        ds.dispatch_run(run, self.manager)
+
+        from apps.operations.services import ACTION_CANCEL_ORDER, perform_order_action
+
+        perform_order_action(
+            cancelled_later, ACTION_CANCEL_ORDER, self.manager, cancel_reason="No answer"
+        )
+        run.refresh_from_db()
+        self.assertEqual(run.status, run.Status.DISPATCHED)  # one stop still open
+
+        delivered.refresh_from_db()  # dispatch updated status in the DB
+        ds.driver_mark_delivered(delivered, self.manager)
+        run.refresh_from_db()
+        self.assertEqual(run.status, run.Status.COMPLETED)
+        self.assertIsNotNone(run.completed_at)
+
+        run_order = run.run_orders.get(order=delivered)
+        self.assertIsNotNone(run_order.delivered_at)
+
+    def test_cancel_unassigns_from_draft_run(self):
+        from apps.operations import delivery_services as ds
+        from apps.orders.models import DeliveryRun
+
+        order = self._delivery_order()
+        ds.assign_order_to_run(order, self.driver)
+
+        from apps.operations.services import ACTION_CANCEL_ORDER, perform_order_action
+
+        perform_order_action(order, ACTION_CANCEL_ORDER, self.manager, cancel_reason="Test")
+        order.refresh_from_db()
+        self.assertIsNone(order.delivery_driver)
+        self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())
+
+
+class DispatchPanelTests(TestCase):
+    """HTTP surface of the staff delivery dispatch panel."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.operations.permissions import OPERATIONS_DRIVER_GROUP
+        from apps.orders.models import DeliveryDriver
+
+        self.cashier = create_user(email="panel-cashier@example.com", is_staff=True)
+        group, _ = Group.objects.get_or_create(name=OPERATIONS_CASHIER_GROUP)
+        self.cashier.groups.add(group)
+
+        self.kitchen = create_user(email="panel-kitchen@example.com", is_staff=True)
+        kitchen_group, _ = Group.objects.get_or_create(name=OPERATIONS_KITCHEN_GROUP)
+        self.kitchen.groups.add(kitchen_group)
+
+        self.driver_user = create_user(email="panel-driver@example.com", is_staff=True)
+        driver_group, _ = Group.objects.get_or_create(name=OPERATIONS_DRIVER_GROUP)
+        self.driver_user.groups.add(driver_group)
+
+        self.driver = DeliveryDriver.objects.create(name="Panel Driver")
+
+    def _delivery_order(self, **overrides):
+        defaults = dict(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+            delivery_eta_minutes=25,
+        )
+        defaults.update(overrides)
+        return create_order(**defaults)
+
+    def test_panel_requires_collection_role(self):
+        routes = [
+            reverse("operations:delivery_panel"),
+            reverse("operations:delivery_panel_fragment"),
+        ]
+        for user in (None, self.kitchen, self.driver_user):
+            if user:
+                self.client.force_login(user)
+            else:
+                self.client.logout()
+            for route in routes:
+                with self.subTest(route=route, user=user):
+                    self.assertIn(self.client.get(route).status_code, {302, 403})
+
+        self.client.force_login(self.cashier)
+        for route in routes:
+            with self.subTest(route=route):
+                self.assertEqual(self.client.get(route).status_code, 200)
+
+    def test_panel_excludes_unpaid_delivery_orders(self):
+        paid = self._delivery_order()
+        unpaid = self._delivery_order(payment_status=Order.PaymentStatus.PENDING)
+        self.client.force_login(self.cashier)
+
+        body = self.client.get(reverse("operations:delivery_panel_fragment")).content.decode()
+        self.assertIn(paid.order_number, body)
+        self.assertNotIn(unpaid.order_number, body)
+
+    def test_assign_dispatch_flow_over_http(self):
+        from apps.orders.models import DeliveryRun
+
+        order = self._delivery_order()
+        self.client.force_login(self.cashier)
+
+        assign = self.client.post(
+            reverse("operations:delivery_assign"),
+            {"order_id": order.id, "driver_id": self.driver.id},
+        )
+        self.assertEqual(assign.status_code, 200)
+
+        run = DeliveryRun.objects.get(driver=self.driver, status=DeliveryRun.Status.DRAFT)
+        dispatch = self.client.post(reverse("operations:delivery_dispatch", args=[run.id]))
+        self.assertEqual(dispatch.status_code, 200)
+
+        order.refresh_from_db()
+        run.refresh_from_db()
+        self.assertEqual(order.status, Order.OrderStatus.OUT_FOR_DELIVERY)
+        self.assertEqual(run.status, DeliveryRun.Status.DISPATCHED)
+
+        second = self.client.post(reverse("operations:delivery_dispatch", args=[run.id]))
+        self.assertEqual(second.status_code, 409)
+
+    def test_unassign_over_http(self):
+        from apps.orders.models import DeliveryRun
+
+        order = self._delivery_order()
+        self.client.force_login(self.cashier)
+        self.client.post(
+            reverse("operations:delivery_assign"),
+            {"order_id": order.id, "driver_id": self.driver.id},
+        )
+
+        unassign = self.client.post(
+            reverse("operations:delivery_unassign"), {"order_id": order.id}
+        )
+        self.assertEqual(unassign.status_code, 200)
+        order.refresh_from_db()
+        self.assertIsNone(order.delivery_driver)
+        self.assertFalse(DeliveryRun.objects.filter(driver=self.driver).exists())
+
+
+class DriverBoardTests(TestCase):
+    """The driver's own mobile board: visibility, actions, ownership."""
+
+    def setUp(self):
+        ensure_site_settings()
+        from apps.operations.permissions import OPERATIONS_DRIVER_GROUP
+        from apps.orders.models import DeliveryDriver
+
+        driver_group, _ = Group.objects.get_or_create(name=OPERATIONS_DRIVER_GROUP)
+
+        self.driver_user = create_user(email="board-driver@example.com", is_staff=True)
+        self.driver_user.groups.add(driver_group)
+        self.driver = DeliveryDriver.objects.create(name="Board Driver", user=self.driver_user)
+
+        self.other_driver_user = create_user(email="other-driver@example.com", is_staff=True)
+        self.other_driver_user.groups.add(driver_group)
+        self.other_driver = DeliveryDriver.objects.create(name="Other Driver", user=self.other_driver_user)
+
+        self.unlinked_driver_user = create_user(email="unlinked-driver@example.com", is_staff=True)
+        self.unlinked_driver_user.groups.add(driver_group)
+
+        self.manager = create_user(email="board-manager@example.com", is_staff=True)
+        manager_group, _ = Group.objects.get_or_create(name=OPERATIONS_MANAGER_GROUP)
+        self.manager.groups.add(manager_group)
+
+    def _delivery_order(self, **overrides):
+        defaults = dict(
+            status=Order.OrderStatus.READY,
+            payment_status=Order.PaymentStatus.PAID,
+            service_type=Order.ServiceType.DELIVERY,
+            delivery_address_line1="12 Test Street",
+            delivery_city="Leeds",
+            delivery_postcode="LS1 1AA",
+            delivery_eta_minutes=25,
+        )
+        defaults.update(overrides)
+        return create_order(**defaults)
+
+    def _dispatched_run_for(self, driver, order=None):
+        from apps.operations import delivery_services as ds
+
+        order = order or self._delivery_order()
+        run = ds.assign_order_to_run(order, driver).run
+        ds.dispatch_run(run, self.manager)
+        order.refresh_from_db()
+        return run, order
+
+    def test_board_requires_driver_role(self):
+        customer = create_user(email="board-customer@example.com")
+        for user in (None, customer):
+            if user:
+                self.client.force_login(user)
+            else:
+                self.client.logout()
+            self.assertIn(
+                self.client.get(reverse("operations:driver_board")).status_code, {302, 403}
+            )
+
+        self.client.force_login(self.driver_user)
+        self.assertEqual(self.client.get(reverse("operations:driver_board")).status_code, 200)
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get(reverse("operations:driver_board")).status_code, 200)
+
+    def test_unlinked_driver_sees_empty_state(self):
+        self.client.force_login(self.unlinked_driver_user)
+        response = self.client.get(reverse("operations:driver_board_fragment"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("not linked", response.content.decode())
+
+    def test_driver_sees_only_own_runs(self):
+        _run, own_order = self._dispatched_run_for(self.driver)
+        _other_run, other_order = self._dispatched_run_for(self.other_driver)
+
+        self.client.force_login(self.driver_user)
+        body = self.client.get(reverse("operations:driver_board_fragment")).content.decode()
+        self.assertIn(own_order.order_number, body)
+        self.assertNotIn(other_order.order_number, body)
+
+    def test_driver_marks_stop_delivered_and_run_completes(self):
+        run, order = self._dispatched_run_for(self.driver)
+        self.client.force_login(self.driver_user)
+
+        response = self.client.post(
+            reverse("operations:driver_order_delivered", args=[order.id]),
+            {"expected_status": "out_for_delivery"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        order.refresh_from_db()
+        run.refresh_from_db()
+        run_order = run.run_orders.get()
+        self.assertEqual(order.status, Order.OrderStatus.COMPLETED)
+        self.assertIsNotNone(run_order.delivered_at)
+        self.assertEqual(run.status, run.Status.COMPLETED)
+
+    def test_other_drivers_stop_is_rejected(self):
+        _run, other_order = self._dispatched_run_for(self.other_driver)
+        self.client.force_login(self.driver_user)
+
+        response = self.client.post(
+            reverse("operations:driver_order_delivered", args=[other_order.id]),
+            {"expected_status": "out_for_delivery"},
+        )
+        self.assertEqual(response.status_code, 403)
+        other_order.refresh_from_db()
+        self.assertEqual(other_order.status, Order.OrderStatus.OUT_FOR_DELIVERY)
+
+    def test_double_tap_delivered_returns_409(self):
+        _run, order = self._dispatched_run_for(self.driver)
+        self.client.force_login(self.driver_user)
+        url = reverse("operations:driver_order_delivered", args=[order.id])
+
+        first = self.client.post(url, {"expected_status": "out_for_delivery"})
+        self.assertEqual(first.status_code, 200)
+        second = self.client.post(url, {"expected_status": "out_for_delivery"})
+        self.assertEqual(second.status_code, 409)
+
+    def test_driver_self_dispatches_draft_run(self):
+        from apps.operations import delivery_services as ds
+
+        order = self._delivery_order()
+        run = ds.assign_order_to_run(order, self.driver).run
+        self.client.force_login(self.driver_user)
+
+        response = self.client.post(reverse("operations:driver_dispatch", args=[run.id]))
+        self.assertEqual(response.status_code, 200)
+        run.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(run.status, run.Status.DISPATCHED)
+        self.assertEqual(order.status, Order.OrderStatus.OUT_FOR_DELIVERY)
+
+    def test_driver_cannot_dispatch_another_drivers_run(self):
+        from apps.operations import delivery_services as ds
+
+        run = ds.assign_order_to_run(self._delivery_order(), self.other_driver).run
+        self.client.force_login(self.driver_user)
+
+        response = self.client.post(reverse("operations:driver_dispatch", args=[run.id]))
+        self.assertEqual(response.status_code, 403)

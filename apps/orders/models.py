@@ -690,6 +690,15 @@ class DeliveryDriver(models.Model):
 
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=30, blank=True)
+    # Optional login for the driver board; drivers without a linked account are
+    # dispatch-only records managed by staff.
+    user = models.OneToOneField(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="delivery_driver_profile",
+    )
     is_active = models.BooleanField(default=True)
     current_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     current_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -723,6 +732,20 @@ class DeliveryRun(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            # Staff build the next draft while the driver is out, so one DRAFT
+            # and one DISPATCHED run may coexist — but never two of either.
+            models.UniqueConstraint(
+                fields=["driver"],
+                condition=models.Q(status="draft"),
+                name="uniq_draft_run_per_driver",
+            ),
+            models.UniqueConstraint(
+                fields=["driver"],
+                condition=models.Q(status="dispatched"),
+                name="uniq_dispatched_run_per_driver",
+            ),
+        ]
 
     def __str__(self):
         return f"Delivery run #{self.pk or 'new'} ({self.status})"
