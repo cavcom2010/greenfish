@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirm Access - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-head">
+        <div class="auth-icon">
+            <i class="ph-fill ph-lock-key"></i>
+        </div>
+        <h1>Confirm Access</h1>
+        <p>Please re-enter your password to safeguard your account.</p>
+    </div>
+
+    <div class="auth-card">
+        {% include "partials/form_errors.html" with form=form %}
+        <form method="post" action="{% url 'account_reauthenticate' %}">
+            {% csrf_token %}
+            {% for field in form.visible_fields %}
+            {% include "partials/form_field.html" with field=field %}
+            {% endfor %}
+            {{ redirect_field }}
+            <button type="submit" class="btn btn--primary btn--block btn--lg">Confirm</button>
+        </form>
+    </div>
+
+    {% if reauthentication_alternatives %}
+    <div class="auth-divider">
+        <p>Or use another method</p>
+        {% for alt in reauthentication_alternatives %}
+        <a href="{{ alt.url }}" class="btn btn--secondary">{{ alt.description }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

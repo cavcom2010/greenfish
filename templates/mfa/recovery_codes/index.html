@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}Recovery Codes - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-head">
+        <div class="auth-icon">
+            <i class="ph-fill ph-key"></i>
+        </div>
+        <h1>Recovery Codes</h1>
+        <p>Keep these somewhere safe. Each code signs you in once if you lose your authenticator.</p>
+    </div>
+
+    <div class="auth-card">
+        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:1rem;">
+            {% blocktranslate count unused_count=unused_codes|length %}There is {{ unused_count }} out of {{ total_count }} recovery codes available.{% plural %}There are {{ unused_count }} out of {{ total_count }} recovery codes available.{% endblocktranslate %}
+        </p>
+
+        {% if can_view_codes %}
+        <div class="form-field">
+            <label for="recovery_codes">Unused codes</label>
+            <textarea id="recovery_codes" rows="{{ unused_codes|length }}" readonly
+                      style="font-family:monospace;letter-spacing:0.08em;line-height:1.7;background:var(--gray-100);resize:none;">{% for code in unused_codes %}{% if forloop.counter0 %}
+{% endif %}{{ code }}{% endfor %}</textarea>
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+            {% if can_download_codes %}
+            <a href="{% url 'mfa_download_recovery_codes' %}" class="btn btn--secondary"><i class="ph-bold ph-download-simple"></i> Download</a>
+            {% endif %}
+            {% if can_generate_codes %}
+            <a href="{% url 'mfa_generate_recovery_codes' %}" class="btn btn--secondary"><i class="ph-bold ph-arrows-clockwise"></i> Generate new</a>
+            {% endif %}
+        </div>
+
+        {% if MFA_RECOVERY_CODES_SHOW_ONCE and can_view_codes %}
+        <div class="form-field form-field--checkbox" style="margin-top:1rem;">
+            <input type="checkbox" id="codes_saved">
+            <label for="codes_saved">I have saved my recovery codes</label>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="auth-alt">
+        <a href="{% url 'mfa_index' %}"><i class="ph-bold ph-arrow-left"></i> Back to 2FA</a>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'mfa/js/recovery_codes.js' %}"></script>
+    <script src="{% static 'account/js/onload.js' %}"></script>
+    <script data-allauth-onload="allauth.recoveryCodes.forms.viewForm" type="application/json">{
+    "ids": {
+        "saveConfirmation": "codes_saved",
+        "recoveryCodes": "recovery_codes"
+    }
+}
+    </script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Activate Authenticator - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-head">
+        <div class="auth-icon">
+            <i class="ph-fill ph-device-mobile"></i>
+        </div>
+        <h1>Activate Authenticator App</h1>
+        <p>Scan the QR code with your authenticator app, then enter the 6-digit code it shows.</p>
+    </div>
+
+    <div class="auth-card">
+        {% include "partials/form_errors.html" with form=form %}
+
+        <div style="display:flex;justify-content:center;margin-bottom:1.25rem;">
+            <img src="{{ totp_svg_data_uri }}" alt="Authenticator QR code"
+                 style="width:200px;height:200px;border:1px solid var(--border);border-radius:var(--radius);padding:0.5rem;background:#fff;">
+        </div>
+
+        <div class="form-field">
+            <label for="authenticator_secret">Can't scan? Enter this key manually</label>
+            <input type="text" id="authenticator_secret" value="{{ form.secret }}" readonly
+                   style="font-family:monospace;letter-spacing:0.05em;background:var(--gray-100);color:var(--text-secondary);">
+            <span class="form-field-help">Store this secret to reinstall your authenticator later.</span>
+        </div>
+
+        <form method="post" action="{% url 'mfa_activate_totp' %}">
+            {% csrf_token %}
+            {% for field in form.visible_fields %}
+            {% if field.name != 'secret' %}
+            {% include "partials/form_field.html" with field=field %}
+            {% endif %}
+            {% endfor %}
+            <button type="submit" class="btn btn--primary btn--block btn--lg">Activate</button>
+        </form>
+    </div>
+
+    <div class="auth-alt">
+        <a href="{% url 'mfa_index' %}"><i class="ph-bold ph-arrow-left"></i> Back</a>
+    </div>
+</section>
+{% endblock %}

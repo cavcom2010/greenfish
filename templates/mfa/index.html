@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Two-Factor Authentication - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-head">
+        <div class="auth-icon">
+            <i class="ph-fill ph-shield-check"></i>
+        </div>
+        <h1>Two-Factor Authentication</h1>
+        <p>Add a second lock to your account with an authenticator app and recovery codes.</p>
+    </div>
+
+    {% if "totp" in MFA_SUPPORTED_TYPES %}
+    <div class="auth-card" style="margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div>
+                <h3 style="font-size:var(--text-md);margin-bottom:0.3rem;display:flex;align-items:center;gap:0.5rem;">
+                    <i class="ph-fill ph-device-mobile" style="color:var(--brand);"></i>
+                    Authenticator app
+                </h3>
+                {% if authenticators.totp %}
+                <p style="color:var(--success);font-size:var(--text-sm);font-weight:700;">
+                    <i class="ph-fill ph-check-circle"></i> Active — codes required at sign-in
+                </p>
+                {% else %}
+                <p style="color:var(--text-secondary);font-size:var(--text-sm);">Not set up yet.</p>
+                {% endif %}
+            </div>
+            {% if authenticators.totp %}
+            <a href="{% url 'mfa_deactivate_totp' %}" class="btn btn--secondary" style="color:var(--error);">Deactivate</a>
+            {% else %}
+            <a href="{% url 'mfa_activate_totp' %}" class="btn btn--primary">Activate</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if "recovery_codes" in MFA_SUPPORTED_TYPES %}
+    {% with total_count=authenticators.recovery_codes.generate_codes|length unused_count=authenticators.recovery_codes.get_unused_codes|length %}
+    <div class="auth-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div>
+                <h3 style="font-size:var(--text-md);margin-bottom:0.3rem;display:flex;align-items:center;gap:0.5rem;">
+                    <i class="ph-fill ph-key" style="color:var(--brand);"></i>
+                    Recovery codes
+                </h3>
+                {% if authenticators.recovery_codes %}
+                <p style="color:var(--text-secondary);font-size:var(--text-sm);">
+                    {{ unused_count }} of {{ total_count }} single-use codes remaining.
+                </p>
+                {% else %}
+                <p style="color:var(--text-secondary);font-size:var(--text-sm);">Backup codes for when your phone isn't to hand.</p>
+                {% endif %}
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                {% if is_mfa_enabled %}
+                {% if authenticators.recovery_codes and unused_count > 0 and not MFA_RECOVERY_CODES_SHOW_ONCE %}
+                <a href="{% url 'mfa_view_recovery_codes' %}" class="btn btn--secondary">View</a>
+                {% endif %}
+                <a href="{% url 'mfa_generate_recovery_codes' %}" class="btn btn--secondary">
+                    {% if authenticators.recovery_codes %}Regenerate{% else %}Generate{% endif %}
+                </a>
+                {% else %}
+                <span style="color:var(--text-muted);font-size:var(--text-sm);">Activate the app first</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+
+    <div class="auth-alt">
+        <a href="{% url 'accounts:profile' %}"><i class="ph-bold ph-arrow-left"></i> Back to profile</a>
+    </div>
+</section>
+{% endblock %}

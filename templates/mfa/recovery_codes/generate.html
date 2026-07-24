@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}Generate Recovery Codes - {{ site_settings.shop_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-head">
+        <div class="auth-icon">
+            <i class="ph-fill ph-key"></i>
+        </div>
+        <h1>Generate Recovery Codes</h1>
+        <p>
+            {% blocktranslate %}You are about to generate a new set of recovery codes for your account.{% endblocktranslate %}
+            {% if unused_code_count %}<strong>{% blocktranslate %}This will invalidate your existing codes.{% endblocktranslate %}</strong>{% endif %}
+        </p>
+    </div>
+
+    <div class="auth-card">
+        <form method="post" action="{% url 'mfa_generate_recovery_codes' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn--primary btn--block btn--lg"{% if unused_code_count %} style="background:var(--error);border-color:var(--error);"{% endif %}>Generate</button>
+        </form>
+    </div>
+
+    <div class="auth-alt">
+        <a href="{% url 'mfa_index' %}"><i class="ph-bold ph-arrow-left"></i> Cancel</a>
+    </div>
+</section>
+{% endblock %}
